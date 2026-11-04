@@ -70,10 +70,10 @@
   },
   "controls": {
     ".gamos-protected-surfaces.json": "cd755457f8c84e5877663f77aed6a1f1ba3bce445fe25bd78854ab323aa368ab",
-    ".gamos-authorized-modifications.json": "314f4b394f03963a79ce6a2d16c1eec1b7e0e37bceb13f3ba8b1b578add41d8e",
+    ".gamos-authorized-modifications.json": "f1bb6a4899a5dbe87cc7389f4e7ab69e93156719dbdd3cd04f019d0d9e88b6da",
     "scripts/gamos/governance-check.mjs": "cfeb548b11d405e92784753c378bcbc9219b9d5a593c0bd9e5960bf643921def",
     "scripts/gamos/governance-self-test.mjs": "14560b858aa99a4b92c00f23a9bc660a5007ac08efefb7e30ddec0e5d5e121d3",
-    "scripts/gamos/governance-rebaseline.mjs": "b1bd86540f5154c6031325183972d2f622211598d251cee4193076f0bfc935ad",
+    "scripts/gamos/governance-rebaseline.mjs": "296b78dce9dd5d5d59559e360f2d163b0fbd8b58d1beb6744f91f61c0cb18d39",
     ".github/CODEOWNERS": "f463977b1b129987ea7e42ffb0c51c71b5101f510a6457a51f5004cb691b6843"
   }
 }

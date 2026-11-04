@@ -46,7 +46,7 @@
         {
           "action": "modify",
           "path": "scripts/gamos/governance-rebaseline.mjs",
-          "content_sha256": "b1bd86540f5154c6031325183972d2f622211598d251cee4193076f0bfc935ad"
+          "content_sha256": "296b78dce9dd5d5d59559e360f2d163b0fbd8b58d1beb6744f91f61c0cb18d39"
         },
         {
           "action": "modify",

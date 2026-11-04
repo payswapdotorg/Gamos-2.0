@@ -117,8 +117,8 @@ if (WRITE_PIN) {
   } else {
     const before = readFileSync(wfPath, "utf8");
     const after = before.replace(
-      /(GAMOS_BASELINE_SHA256:\s*")[0-9a-fA-Z_<>"-]*(")/,
-      `GAMOS_BASELINE_SHA256: "${pin}"$2`
+      /(GAMOS_BASELINE_SHA256:\s*)(["'])[\x21-\x7e]*?\2/,
+      `GAMOS_BASELINE_SHA256: "${pin}"`
     );
     if (after === before && !before.includes(`GAMOS_BASELINE_SHA256: "${pin}"`)) {
       fail(`could not update GAMOS_BASELINE_SHA256 in ${WORKFLOW} (env line not found)`);
