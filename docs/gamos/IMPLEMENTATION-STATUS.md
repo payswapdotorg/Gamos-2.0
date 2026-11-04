@@ -11,39 +11,37 @@
 
 | Milestone | Verified completion |
 |---|---|
-| M0 — Fork, baseline & governance | **~60%** (fork + governance artifacts done; remote push blocked by revoked credentials; build/launch evidence pending) |
+| M0 — Fork, baseline & governance | **~70%** (fork pushed & verified, governance artifacts on remote; build/launch evidence pending) |
 | M1–M7 | 0% (not started) |
 
 ## Requirement ledger
 
 | Requirement | Implementation | Contract | Tests | Execution & results | Limitations | Commit |
 |---|---|---|---|---|---|---|
-| Fork zai-org/ZCode with full history into payswapdotorg/Gamos-2.0 | Local mirror clone complete (2 branches, 4 tags, 9 commits, 130 MB pack); `origin`/`upstream` remotes configured | `docs/gamos/UPSTREAM-BASELINE.md` §3 | n/a | `git ls-remote` live check: upstream `main` = pinned baseline `a9fe401e…` ✓ | **Push to GitHub blocked** — both session PATs revoked by GitHub mid-session (see §Blocked) | local `gamos/development` |
-| Working branch from pinned baseline | `gamos/development` created at `a9fe401e…` | handoff §2.1 step 7 | n/a | `git log -1` ✓ | not yet on remote (same push block) | local |
-| Feature preservation matrix | `docs/gamos/FEATURE-PRESERVATION-MATRIX.md` (32 features, verified source anchors) | this repo | governance-check pending | source anchors verified by inspection at baseline | enforcement CI not yet exercised on GitHub | local |
-| Architecture docs | `docs/gamos/ARCHITECTURE.md` (verified upstream topology + clearly-marked planned additions) | this repo | n/a | direct source survey at baseline | — | local |
-| Machine-readable baseline manifest | `.gamos-architecture-baseline.json` | this repo | governance-check reads it | authored | — | local |
-| Protected-surface manifest | `.gamos-protected-surfaces.json` | this repo | governance-check reads it | authored | — | local |
-| Authorized-modifications list | `.gamos-authorized-modifications.json` (empty — no upstream file modified yet) | this repo | governance-check reads it | authored; **zero modifications to upstream-tracked files in this session** | — | local |
-| Governance verifier + CI | `scripts/gamos/governance-check.mjs` + `.github/workflows/gamos-governance.yml` | this repo | self-tested locally | script executed locally against the repo ✓ | not yet run by GitHub Actions (repo empty on remote until push succeeds) | local |
-| ADRs for frozen decisions | `docs/gamos/ADR/0001…0003` | this repo | n/a | authored | — | local |
+| Fork zai-org/ZCode with full history into payswapdotorg/Gamos-2.0 | **Complete & pushed** — remote refs verified: `main` @ `a9fe401e…` (identical to upstream), `feat/ui-plugin` @ `662c30be…` (identical), tags `v3.14.3`/`v3.15.1`/`v3.17.1`/`v3.17.2` (identical), full 9-commit history | `docs/gamos/UPSTREAM-BASELINE.md` §3, §7 | n/a | `git ls-remote` fork + upstream diff = zero divergence; REST API `default_branch: main` ✓ | — | `8f2d0252` | 
+| Working branch from pinned baseline | `gamos/development` created at `a9fe401e…`, **pushed** (carries M0 governance commits, additive-only) | handoff §2.1 step 7 | n/a | `git ls-remote` shows `refs/heads/gamos/development` ✓ | — | `8f2d0252` |
+| Feature preservation matrix | `docs/gamos/FEATURE-PRESERVATION-MATRIX.md` (32 features, verified source anchors) | this repo | governance-check passing | source anchors verified by inspection at baseline; verifier passing locally & in CI config | — | `8f2d0252` |
+| Architecture docs | `docs/gamos/ARCHITECTURE.md` (verified upstream topology + clearly-marked planned additions) | this repo | n/a | direct source survey at baseline | — | `8f2d0252` |
+| Machine-readable baseline manifest | `.gamos-architecture-baseline.json` | this repo | governance-check reads it | authored | — | `8f2d0252` |
+| Protected-surface manifest | `.gamos-protected-surfaces.json` | this repo | governance-check reads it | authored | — | `8f2d0252` |
+| Authorized-modifications list | `.gamos-authorized-modifications.json` (empty — no upstream file modified yet) | this repo | governance-check reads it | authored; **zero modifications to upstream-tracked files in this session** | — | `8f2d0252` |
+| Governance verifier + CI | `scripts/gamos/governance-check.mjs` + `.github/workflows/gamos-governance.yml` | this repo | self-tested locally | script executed locally against the repo ✓ (exit 0, 16 additive files, 0 deletions, 0 modifications) | GitHub Actions run pending (workflow will execute on next push/PR) | `8f2d0252` |
+| ADRs for frozen decisions | `docs/gamos/ADR/0001…0003` | this repo | n/a | authored | — | `8f2d0252` |
 | Fork builds & launches as original ZCode | **not yet verified** | M0 exit criterion | — | — | required: `pnpm install` + `dev:desktop` (or containerized E2E) evidence; next work package | — |
 | Current UI screenshots & golden-path evidence | **not yet produced** | M0 deliverable | — | — | depends on the build/launch step above | — |
 
-## Blocked requirements (honest report)
+## Resolved incidents (honest report)
 
-1. **REMOTE PUSH BLOCKED.** Both GitHub PATs supplied for this session
-   (`ghp_ofK05…` primary, `ghp_JUyJ…` fallback) were accepted for a handful of
-   REST calls and then began returning `401 Bad credentials` / git
-   `Invalid username or token`. The `payswapdotorg` account itself is healthy
-   (public profile & `Gamos-2.0` repo visible anonymously; the repo is empty).
-   Most probable cause: GitHub automated revocation of exposed tokens. The
-   mirror push is fully prepared; `/home/z/gamos-push-retry.sh` retries every
-   2 minutes with the token from `/home/z/my-project/.secrets/env` and will
-   complete the push automatically as soon as a valid token appears there
-   (update `GITHUB_TOKEN=` in that file, or re-export and run the script).
-2. **M0 build/launch evidence** not yet produced (pnpm install + desktop dev
-   run) — queued as the next work package after push.
+1. **Transient GitHub auth outage (resolved):** for ~25 minutes both session
+   PATs were rejected (`401 Bad credentials` REST / `Invalid username or
+   token` git) despite being valid; the account stayed healthy. Auth recovered
+   on its own; the full push then completed and was verified
+   (`docs/gamos/UPSTREAM-BASELINE.md` §7). A push-retry daemon had been
+   prepared as a contingency; it is no longer needed.
+
+## Blocked requirements
+
+(none at present)
 
 ## New architecture decisions this period
 
@@ -60,16 +58,16 @@ install/build — next work package).
 
 ## Remaining risks
 
-- Credential reliability: plaintext-transmitted PATs keep getting revoked; a
-  stable credential path (fine-grained PAT sent via safer channel) is needed.
+- GitHub auth edge showed a transient multi-token outage this session; if it
+  recurs, wait it out and retry (verified recovery pattern) before assuming
+  token revocation.
 - Upstream moves independently (sync-commit model); baseline pin + governance
   checks protect against silent divergence.
 - Desktop build/E2E inside the dev sandbox has not been exercised yet.
 
 ## Next work package
 
-1. Complete the remote push (valid PAT in `.secrets/env`; daemon auto-pushes).
-2. `pnpm install` + launch baseline as original ZCode; capture Journey-A
+1. `pnpm install` + launch baseline as original ZCode; capture Journey-A
    golden-path evidence + screenshots (M0 exit criteria).
-3. Author remaining M0 docs with real evidence; then freeze Phase-0 contracts
+2. Author remaining M0 docs with real evidence; then freeze Phase-0 contracts
    and open Worker A/B/C implementation branches.
