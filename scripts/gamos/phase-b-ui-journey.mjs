@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/* eslint-disable max-lines -- Phase B evidence journey: launch orchestration + CDP client +
+   10 journey stages in one reproducible script; splitting would hide the evidence chain
+   (same pattern as packages/desktop/wdio.conf.ts). */
 /**
  * Gamos Phase B — original ZCode desktop application UI journey (CDP-driven).
  *
@@ -42,7 +45,6 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, app
 import { request as httpRequest } from "node:http";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { homedir } from "node:os";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DESKTOP_DIR = join(REPO_ROOT, "packages", "desktop");
@@ -866,7 +868,6 @@ async function stageS8() {
 
 async function stageS9() {
   // Session recovery: kill the app, relaunch, verify the session/history is restored
-  const beforeText = await bodyText();
   await stopApp();
   page = null;
   await new Promise((r) => setTimeout(r, 2000));
