@@ -1,17 +1,30 @@
 name: gamos-governance
 
-# Gamos preservation gate (ADR-0003).
-#   Job 1 "governance": dependency-free structural verification against the pinned
-#     upstream baseline (ancestor check, protected-file existence, unauthorized
-#     deletions/modifications of baseline-tracked files).
-#   Job 2 "architecture": upstream's own module/layering gate
+# Gamos preservation gate (ADR-0003 + ADR-0004).
+#   Job 1 "governance": hash-pinned structural verification against the pinned
+#     upstream baseline (trust-anchor pin, control-file hashes, authorization
+#     schema v2 with content binding, protected-file existence, unauthorized
+#     deletions/modifications of baseline-tracked files, history-rewrite guard).
+#   Job 2 "self-test": tamper-rejection suite proving unauthorized changes to
+#     governance controls are rejected (13 scenarios, synthetic fixtures).
+#   Job 3 "architecture": upstream's own module/layering gate
 #     (pnpm run architecture:check), so upstream governance semantics keep applying.
+#
+# Trust anchor: GAMOS_BASELINE_SHA256 below is sha256 of
+# .gamos-architecture-baseline.json. Rotated only via
+# scripts/gamos/governance-rebaseline.mjs in a TL-reviewed change (ADR-0004).
 
 on:
   push:
     branches: ["main", "gamos/**"]
   pull_request:
     branches: ["main", "gamos/**"]
+  schedule:
+    - cron: "17 3 * * *" # daily independent verification of the default branch
+  workflow_dispatch:
+
+env:
+  GAMOS_BASELINE_SHA256: "3236b12a80e8cedce43ddfa13dffe7e9d0850d529b51b1c13630f82dcf2efcc4""
 
 permissions:
   contents: read
@@ -23,12 +36,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # full history: baseline-ancestor verification needs it
+          fetch-depth: 0 # full history: baseline-ancestor + tag verification need it
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Run Gamos governance verifier
-        run: node scripts/gamos/governance-check.mjs
+      - name: Run Gamos governance verifier (trust-anchor pinned)
+        run: node scripts/gamos/governance-check.mjs --pin "$GAMOS_BASELINE_SHA256"
+
+  self-test:
+    name: Governance self-test (tamper rejection)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run tamper-rejection self-tests (13 scenarios)
+        run: node scripts/gamos/governance-self-test.mjs
 
   architecture:
     name: Upstream architecture gate

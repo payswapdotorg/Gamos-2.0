@@ -1,0 +1,21 @@
+# Gamos governance ownership (ADR-0004).
+# Changes to governance controls require TL review; branch rulesets
+# (gamos-main-lockdown, gamos-development-governance) enforce required
+# reviews and required status checks on these paths.
+
+# Governance control files — TL approval required for any change.
+/.gamos-architecture-baseline.json @payswapdotorg
+/.gamos-protected-surfaces.json @payswapdotorg
+/.gamos-authorized-modifications.json @payswapdotorg
+/scripts/gamos/ @payswapdotorg
+/.github/workflows/gamos-governance.yml @payswapdotorg
+/.github/CODEOWNERS @payswapdotorg
+/.github/ @payswapdotorg
+
+# Architecture contracts & governance documentation — TL review.
+/docs/gamos/ @payswapdotorg
+/architecture-policy.yaml @payswapdotorg
+/.architecture-baseline.json @payswapdotorg
+
+# Default: the TL owns the repository. Worker PRs are integrated by the TL.
+* @payswapdotorg

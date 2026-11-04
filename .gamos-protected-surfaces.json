@@ -1,8 +1,17 @@
 {
-  "version": 1,
+  "version": 2,
   "mode": "baseline-tree",
-  "description": "Every file present in the pinned baseline tree is a protected surface. Deleting or modifying any of them requires an entry in .gamos-authorized-modifications.json (with TL approval). New files are additive and allowed; that is the default Gamos integration path.",
+  "description": "Every file present in the pinned baseline tree is a protected surface. Deleting or modifying any of them requires a COMPLETE entry in .gamos-authorized-modifications.json (schema gamos/authorization@2 — structured TL approval, content-bound hashes; a truthy tl_approval alone is rejected). New files are additive and allowed; that is the default Gamos integration path. Governance control files themselves are hash-protected via baseline.controls (see scripts/gamos/governance-check.mjs v2 and ADR-0004).",
   "baseline_sha": "a9fe401eede6e6e5e01be9048679c206fe6f02d9",
+  "control_files": [
+    ".gamos-protected-surfaces.json",
+    ".gamos-authorized-modifications.json",
+    "scripts/gamos/governance-check.mjs",
+    "scripts/gamos/governance-self-test.mjs",
+    "scripts/gamos/governance-rebaseline.mjs",
+    ".github/CODEOWNERS"
+  ],
+  "control_integrity": "sha256 of each control_files path is recorded in .gamos-architecture-baseline.json (controls) and verified on every push/PR/daily-schedule by .github/workflows/gamos-governance.yml, which itself pins sha256 of the baseline file (trust anchor, ADR-0004). Changing a control file requires scripts/gamos/governance-rebaseline.mjs, a complete authorization entry, and a TL-reviewed PR (CODEOWNERS + branch rulesets).",
   "hard_requirements": {
     "must_exist": [
       "LICENSE",
@@ -24,9 +33,20 @@
       "packages/services/src/session/taskIndexRepo.ts",
       "packages/services/src/session/zcodeTaskService.ts",
       "apps/zcode-cli/packages/core/package.json",
-      "apps/zcode-cli/packages/contracts/package.json"
+      "apps/zcode-cli/packages/contracts/package.json",
+      ".gamos-architecture-baseline.json",
+      ".gamos-protected-surfaces.json",
+      ".gamos-authorized-modifications.json",
+      "scripts/gamos/governance-check.mjs",
+      "scripts/gamos/governance-self-test.mjs",
+      "scripts/gamos/governance-rebaseline.mjs",
+      ".github/workflows/gamos-governance.yml",
+      ".github/CODEOWNERS",
+      "docs/gamos/IMPLEMENTATION-STATUS.md",
+      "docs/gamos/FEATURE-PRESERVATION-MATRIX.md",
+      "docs/gamos/ADR/0004-governance-v2-tamper-resistance.md"
     ],
-    "notes": "Existence of these files is necessary, not sufficient: operational preservation of every feature is tracked in docs/gamos/FEATURE-PRESERVATION-MATRIX.md."
+    "notes": "Existence of these files is necessary, not sufficient: operational preservation of every feature is tracked in docs/gamos/FEATURE-PRESERVATION-MATRIX.md. Control files are additionally hash-bound (control_files above)."
   },
   "identifier_freeze": [
     "@zcode/* package identifiers",

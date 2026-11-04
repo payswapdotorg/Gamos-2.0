@@ -1,5 +1,65 @@
 {
-  "version": 1,
-  "description": "Authorized modifications to protected (baseline) surfaces. Every entry requires: file & symbol, reason, affected functionality, new functionality, regression tests, TL approval, verification evidence. Entries without tl_approval are rejected by the governance gate. Workers must not self-serve entries.",
-  "entries": []
+  "version": 2,
+  "schema": "gamos/authorization@2",
+  "description": "Authorized modifications to protected (baseline) surfaces and governance controls. Schema v2: every entry must be COMPLETE — id, phase, dates, requester {login,role}, rationale, risk, affected_functionality, new_functionality, regression_tests, evidence {summary,links}, changes[] with per-file content_sha256, and a structured tl_approval {approved:true, approver, date, decision_ref} whose approver is a baseline.governance.approvers login. A truthy tl_approval value alone is rejected by the governance gate. Entries that fail any schema check grant no authorization at all. Workers must not self-serve entries.",
+  "entries": [
+    {
+      "id": "GAMOS-AUTH-0001",
+      "phase": "M0",
+      "date": "2026-11-04T19:05:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "Architect review (Phase A — repair governance): upgrade the M0 governance gate to v2. Hash-protected governance control files, complete authorization schema with content-bound hashes, tamper-rejection self-tests, workflow trust-anchor pin, CODEOWNERS and branch rulesets. The v1 gate accepted a truthy tl_approval field alone, which is insufficient.",
+      "risk": "medium",
+      "affected_functionality": "Gamos governance gate only: verifier script, self-tests, re-baselining tool, protected-surfaces policy, authorization ledger, governance CI workflow, CODEOWNERS. No ZCode application surface is touched.",
+      "new_functionality": "scripts/gamos/governance-check.mjs v2 (control-file hash verification, trust-anchor pin, tag cross-check, authorization schema v2 with content binding); scripts/gamos/governance-self-test.mjs (13 tamper-rejection scenarios); scripts/gamos/governance-rebaseline.mjs (sanctioned re-baselining); workflow self-test job + daily schedule; CODEOWNERS + rulesets.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin <GAMOS_BASELINE_SHA256>",
+        "node scripts/gamos/governance-self-test.mjs"
+      ],
+      "evidence": {
+        "summary": "Tamper-rejection suite: 13/13 scenarios behave as specified (unauthorized modification/deletion, missing protected file, modified baseline SHA, forged baseline without pin, weakened verifier, truthy-only approval, incomplete record, content drift, history rewrite rejected; pristine and complete-evidence control cases pass). GitHub Actions runs recorded in evidence/phase-a/ and docs/gamos/IMPLEMENTATION-STATUS.md.",
+        "links": [
+          "docs/gamos/ADR/0004-governance-v2-tamper-resistance.md",
+          "docs/gamos/IMPLEMENTATION-STATUS.md",
+          "evidence/phase-a/"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": ".gamos-protected-surfaces.json",
+          "content_sha256": "cd755457f8c84e5877663f77aed6a1f1ba3bce445fe25bd78854ab323aa368ab"
+        },
+        {
+          "action": "modify",
+          "path": "scripts/gamos/governance-check.mjs",
+          "content_sha256": "cfeb548b11d405e92784753c378bcbc9219b9d5a593c0bd9e5960bf643921def"
+        },
+        {
+          "action": "modify",
+          "path": "scripts/gamos/governance-self-test.mjs",
+          "content_sha256": "14560b858aa99a4b92c00f23a9bc660a5007ac08efefb7e30ddec0e5d5e121d3"
+        },
+        {
+          "action": "modify",
+          "path": "scripts/gamos/governance-rebaseline.mjs",
+          "content_sha256": "b1bd86540f5154c6031325183972d2f622211598d251cee4193076f0bfc935ad"
+        },
+        {
+          "action": "modify",
+          "path": ".github/CODEOWNERS",
+          "content_sha256": "f463977b1b129987ea7e42ffb0c51c71b5101f510a6457a51f5004cb691b6843"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-04T19:05:00Z",
+        "decision_ref": "gamos/development Phase-A governance-v2 commit; architect review directive 'Repair governance' items 1-4; evidence in docs/gamos/IMPLEMENTATION-STATUS.md#phase-a"
+      }
+    }
+  ]
 }

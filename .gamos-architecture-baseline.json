@@ -1,7 +1,8 @@
 {
-  "version": 1,
+  "version": 2,
+  "governance_version": 2,
   "product": "gamos",
-  "description": "ZCode evolved into a specialized gaming development harness. Frozen fork/baseline record; enforced by scripts/gamos/governance-check.mjs and .github/workflows/gamos-governance.yml.",
+  "description": "ZCode evolved into a specialized gaming development harness. Frozen fork/baseline record; enforced by scripts/gamos/governance-check.mjs (v2, tamper-resistant controls), scripts/gamos/governance-self-test.mjs (tamper-rejection suite) and .github/workflows/gamos-governance.yml (trust anchor). See docs/gamos/ADR/0004-governance-v2-tamper-resistance.md.",
   "fork": {
     "destination": "payswapdotorg/Gamos-2.0",
     "origin_url": "https://github.com/payswapdotorg/Gamos-2.0.git",
@@ -18,8 +19,25 @@
     "verified_at": "2026-11-04",
     "verification": "git ls-remote https://github.com/zai-org/ZCode.git refs/heads/main -> a9fe401eede6e6e5e01be9048679c206fe6f02d9",
     "initial_working_branch": "gamos/development",
-    "branches": ["main", "feat/ui-plugin"],
-    "tags": ["v3.14.3", "v3.15.1", "v3.17.1", "v3.17.2"]
+    "branches": [
+      "main",
+      "feat/ui-plugin"
+    ],
+    "tags": [
+      "v3.14.3",
+      "v3.15.1",
+      "v3.17.1",
+      "v3.17.2"
+    ]
+  },
+  "governance": {
+    "approvers": [
+      "payswapdotorg"
+    ],
+    "authorization_schema": "gamos/authorization@2",
+    "trust_anchor": ".github/workflows/gamos-governance.yml env GAMOS_BASELINE_SHA256 = sha256 of this file (the workflow is guarded by CODEOWNERS + branch rulesets; recording the workflow inside this file would be circular — ADR-0004)",
+    "self_test": "scripts/gamos/governance-self-test.mjs",
+    "rebaseline_tool": "scripts/gamos/governance-rebaseline.mjs"
   },
   "preservation": {
     "protected_surfaces": ".gamos-protected-surfaces.json",
@@ -27,10 +45,14 @@
     "upstream_gate": {
       "policy": "architecture-policy.yaml",
       "baseline": ".architecture-baseline.json",
-      "commands": ["pnpm run architecture:check", "pnpm run verify:pre-push"]
+      "commands": [
+        "pnpm run architecture:check",
+        "pnpm run verify:pre-push"
+      ]
     },
     "gamos_gate": {
       "script": "scripts/gamos/governance-check.mjs",
+      "self_test": "scripts/gamos/governance-self-test.mjs",
       "ci": ".github/workflows/gamos-governance.yml"
     }
   },
@@ -45,5 +67,13 @@
     ],
     "platform_package": "packages/gamos-platform",
     "status": "planned-not-implemented"
+  },
+  "controls": {
+    ".gamos-protected-surfaces.json": "cd755457f8c84e5877663f77aed6a1f1ba3bce445fe25bd78854ab323aa368ab",
+    ".gamos-authorized-modifications.json": "314f4b394f03963a79ce6a2d16c1eec1b7e0e37bceb13f3ba8b1b578add41d8e",
+    "scripts/gamos/governance-check.mjs": "cfeb548b11d405e92784753c378bcbc9219b9d5a593c0bd9e5960bf643921def",
+    "scripts/gamos/governance-self-test.mjs": "14560b858aa99a4b92c00f23a9bc660a5007ac08efefb7e30ddec0e5d5e121d3",
+    "scripts/gamos/governance-rebaseline.mjs": "b1bd86540f5154c6031325183972d2f622211598d251cee4193076f0bfc935ad",
+    ".github/CODEOWNERS": "f463977b1b129987ea7e42ffb0c51c71b5101f510a6457a51f5004cb691b6843"
   }
 }
