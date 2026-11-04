@@ -1,0 +1,195 @@
+﻿2026-11-04T19:09:02.0150211Z Current runner version: '2.338.2'
+2026-11-04T19:09:02.0174376Z ##[group]Runner Image Provisioner
+2026-11-04T19:09:02.0175334Z Hosted Compute Agent
+2026-11-04T19:09:02.0175977Z Version: 20261028.624
+2026-11-04T19:09:02.0177030Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+2026-11-04T19:09:02.0177810Z Build Date: 2026-10-28T21:51:42Z
+2026-11-04T19:09:02.0178519Z Worker ID: {c546a592-3a01-497b-8e53-c30d3c004c2e}
+2026-11-04T19:09:02.0179299Z Region: eastus
+2026-11-04T19:09:02.0179941Z Cloud: Azure
+2026-11-04T19:09:02.0180539Z ##[endgroup]
+2026-11-04T19:09:02.0182100Z ##[group]Operating System
+2026-11-04T19:09:02.0182753Z Ubuntu
+2026-11-04T19:09:02.0183381Z 24.04.5
+2026-11-04T19:09:02.0183949Z LTS
+2026-11-04T19:09:02.0184513Z ##[endgroup]
+2026-11-04T19:09:02.0185099Z ##[group]Runner Image
+2026-11-04T19:09:02.0185704Z Image: ubuntu-24.04
+2026-11-04T19:09:02.0186796Z Version: 20261101.360.1
+2026-11-04T19:09:02.0188179Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261101.360/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-04T19:09:02.0189880Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261101.360
+2026-11-04T19:09:02.0190858Z ##[endgroup]
+2026-11-04T19:09:02.0192100Z ##[group]GITHUB_TOKEN Permissions
+2026-11-04T19:09:02.0194613Z Contents: read
+2026-11-04T19:09:02.0195280Z Metadata: read
+2026-11-04T19:09:02.0195854Z ##[endgroup]
+2026-11-04T19:09:02.0198342Z Secret source: Actions
+2026-11-04T19:09:02.0199355Z Cache mode: write
+2026-11-04T19:09:02.0200390Z Prepare workflow directory
+2026-11-04T19:09:02.0584936Z Prepare all required actions
+2026-11-04T19:09:02.0632356Z Getting action download info
+2026-11-04T19:09:02.2665611Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-04T19:09:02.3810295Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-11-04T19:09:02.5672574Z Complete job name: Governance (baseline & protected surfaces)
+2026-11-04T19:09:02.6510037Z ##[group]Run actions/checkout@v4
+2026-11-04T19:09:02.6510919Z with:
+2026-11-04T19:09:02.6511356Z   fetch-depth: 0
+2026-11-04T19:09:02.6511847Z   repository: payswapdotorg/Gamos-2.0
+2026-11-04T19:09:02.6515825Z   token: ***
+2026-11-04T19:09:02.6516485Z   ssh-strict: true
+2026-11-04T19:09:02.6516949Z   ssh-user: git
+2026-11-04T19:09:02.6517410Z   persist-credentials: true
+2026-11-04T19:09:02.6517911Z   clean: true
+2026-11-04T19:09:02.6518367Z   sparse-checkout-cone-mode: true
+2026-11-04T19:09:02.6518905Z   fetch-tags: false
+2026-11-04T19:09:02.6519366Z   show-progress: true
+2026-11-04T19:09:02.6519838Z   lfs: false
+2026-11-04T19:09:02.6520273Z   submodules: false
+2026-11-04T19:09:02.6520732Z   set-safe-directory: true
+2026-11-04T19:09:02.6521249Z   allow-unsafe-pr-checkout: false
+2026-11-04T19:09:02.6522029Z env:
+2026-11-04T19:09:02.6522741Z   GAMOS_BASELINE_SHA256: 07679a8a41c25f6417e2a3ddf415aee35e75276070941c8f8db70ea690954332
+2026-11-04T19:09:02.6523587Z ##[endgroup]
+2026-11-04T19:09:02.9060182Z Syncing repository: payswapdotorg/Gamos-2.0
+2026-11-04T19:09:02.9062682Z ##[group]Getting Git version info
+2026-11-04T19:09:02.9064136Z Working directory is '/home/runner/work/Gamos-2.0/Gamos-2.0'
+2026-11-04T19:09:02.9065361Z [command]/usr/bin/git version
+2026-11-04T19:09:02.9139482Z git version 2.56.0
+2026-11-04T19:09:02.9167662Z ##[endgroup]
+2026-11-04T19:09:02.9179059Z Temporarily overriding HOME='/home/runner/work/_temp/54082e23-d782-4412-9243-17d1abc1fb87' before making global git config changes
+2026-11-04T19:09:02.9181687Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-04T19:09:02.9184697Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Gamos-2.0/Gamos-2.0
+2026-11-04T19:09:02.9235864Z Deleting the contents of '/home/runner/work/Gamos-2.0/Gamos-2.0'
+2026-11-04T19:09:02.9240044Z ##[group]Initializing the repository
+2026-11-04T19:09:02.9243568Z [command]/usr/bin/git init /home/runner/work/Gamos-2.0/Gamos-2.0
+2026-11-04T19:09:02.9357939Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-04T19:09:02.9360054Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-04T19:09:02.9361813Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-04T19:09:02.9363154Z hint: call:
+2026-11-04T19:09:02.9363864Z hint:
+2026-11-04T19:09:02.9364742Z hint: 	git config --global init.defaultBranch <name>
+2026-11-04T19:09:02.9365812Z hint:
+2026-11-04T19:09:02.9367081Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-04T19:09:02.9369013Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-04T19:09:02.9370656Z hint:
+2026-11-04T19:09:02.9371604Z hint: 	git branch -m <name>
+2026-11-04T19:09:02.9372622Z hint:
+2026-11-04T19:09:02.9373853Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-04T19:09:02.9377913Z Initialized empty Git repository in /home/runner/work/Gamos-2.0/Gamos-2.0/.git/
+2026-11-04T19:09:02.9386525Z [command]/usr/bin/git remote add origin https://github.com/payswapdotorg/Gamos-2.0
+2026-11-04T19:09:02.9433919Z ##[endgroup]
+2026-11-04T19:09:02.9435262Z ##[group]Disabling automatic garbage collection
+2026-11-04T19:09:02.9438550Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-04T19:09:02.9474028Z ##[endgroup]
+2026-11-04T19:09:02.9475387Z ##[group]Setting up auth
+2026-11-04T19:09:02.9480353Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-04T19:09:02.9516409Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-04T19:09:02.9892095Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-04T19:09:02.9940109Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-04T19:09:03.0229065Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-04T19:09:03.0263685Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-04T19:09:03.0553948Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-04T19:09:03.0607232Z ##[endgroup]
+2026-11-04T19:09:03.0609186Z ##[group]Fetching the repository
+2026-11-04T19:09:03.0621881Z [command]/usr/bin/git -c protocol.version=2 fetch --prune --no-recurse-submodules origin +refs/heads/*:refs/remotes/origin/* +refs/tags/*:refs/tags/*
+2026-11-04T19:09:06.4452948Z From https://github.com/payswapdotorg/Gamos-2.0
+2026-11-04T19:09:06.4467497Z  * [new branch]        feat/ui-plugin    -> origin/feat/ui-plugin
+2026-11-04T19:09:06.4469415Z  * [new branch]        gamos/development -> origin/gamos/development
+2026-11-04T19:09:06.4470696Z  * [new branch]        main              -> origin/main
+2026-11-04T19:09:06.4471738Z  * [new tag]           v3.14.3           -> v3.14.3
+2026-11-04T19:09:06.4472739Z  * [new tag]           v3.15.1           -> v3.15.1
+2026-11-04T19:09:06.4473747Z  * [new tag]           v3.17.1           -> v3.17.1
+2026-11-04T19:09:06.4474750Z  * [new tag]           v3.17.2           -> v3.17.2
+2026-11-04T19:09:06.4477602Z [command]/usr/bin/git branch --list --remote origin/gamos/development
+2026-11-04T19:09:06.4504430Z   origin/gamos/development
+2026-11-04T19:09:06.4514904Z [command]/usr/bin/git rev-parse refs/remotes/origin/gamos/development
+2026-11-04T19:09:06.4550923Z 5ef39f2c22864243d88d30163a14b219a1d3352a
+2026-11-04T19:09:06.4555171Z ##[endgroup]
+2026-11-04T19:09:06.4556980Z ##[group]Determining the checkout info
+2026-11-04T19:09:06.4558630Z ##[endgroup]
+2026-11-04T19:09:06.4560290Z [command]/usr/bin/git sparse-checkout disable
+2026-11-04T19:09:06.4617221Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-04T19:09:06.4658090Z ##[group]Checking out the ref
+2026-11-04T19:09:06.4660255Z [command]/usr/bin/git checkout --progress --force -B gamos/development refs/remotes/origin/gamos/development
+2026-11-04T19:09:07.4904405Z Updating files:  77% (13377/17257)
+2026-11-04T19:09:07.5076992Z Updating files:  78% (13461/17257)
+2026-11-04T19:09:07.5182037Z Updating files:  79% (13634/17257)
+2026-11-04T19:09:07.5281800Z Updating files:  80% (13806/17257)
+2026-11-04T19:09:07.5396218Z Updating files:  81% (13979/17257)
+2026-11-04T19:09:07.5543862Z Updating files:  82% (14151/17257)
+2026-11-04T19:09:07.5642051Z Updating files:  83% (14324/17257)
+2026-11-04T19:09:07.5740336Z Updating files:  84% (14496/17257)
+2026-11-04T19:09:07.5852636Z Updating files:  85% (14669/17257)
+2026-11-04T19:09:07.5991300Z Updating files:  86% (14842/17257)
+2026-11-04T19:09:07.6127255Z Updating files:  87% (15014/17257)
+2026-11-04T19:09:07.6260842Z Updating files:  88% (15187/17257)
+2026-11-04T19:09:07.6407692Z Updating files:  89% (15359/17257)
+2026-11-04T19:09:07.6476336Z Updating files:  90% (15532/17257)
+2026-11-04T19:09:07.6547440Z Updating files:  91% (15704/17257)
+2026-11-04T19:09:07.6617110Z Updating files:  92% (15877/17257)
+2026-11-04T19:09:07.6684980Z Updating files:  93% (16050/17257)
+2026-11-04T19:09:07.6757230Z Updating files:  94% (16222/17257)
+2026-11-04T19:09:07.6829010Z Updating files:  95% (16395/17257)
+2026-11-04T19:09:07.6911722Z Updating files:  96% (16567/17257)
+2026-11-04T19:09:07.7154815Z Updating files:  97% (16740/17257)
+2026-11-04T19:09:07.7293800Z Updating files:  98% (16912/17257)
+2026-11-04T19:09:07.7378829Z Updating files:  99% (17085/17257)
+2026-11-04T19:09:07.7379413Z Updating files: 100% (17257/17257)
+2026-11-04T19:09:07.7379954Z Updating files: 100% (17257/17257), done.
+2026-11-04T19:09:07.7556386Z Switched to a new branch 'gamos/development'
+2026-11-04T19:09:07.7562502Z branch 'gamos/development' set up to track 'origin/gamos/development'.
+2026-11-04T19:09:07.7596416Z ##[endgroup]
+2026-11-04T19:09:07.7662683Z [command]/usr/bin/git log -1 --format=%H
+2026-11-04T19:09:07.7703571Z 5ef39f2c22864243d88d30163a14b219a1d3352a
+2026-11-04T19:09:07.7978003Z ##[group]Run actions/setup-node@v4
+2026-11-04T19:09:07.7978285Z with:
+2026-11-04T19:09:07.7978473Z   node-version: 24
+2026-11-04T19:09:07.7978679Z   always-auth: false
+2026-11-04T19:09:07.7978891Z   check-latest: false
+2026-11-04T19:09:07.7981626Z   token: ***
+2026-11-04T19:09:07.7981819Z env:
+2026-11-04T19:09:07.7982164Z   GAMOS_BASELINE_SHA256: 07679a8a41c25f6417e2a3ddf415aee35e75276070941c8f8db70ea690954332
+2026-11-04T19:09:07.7982591Z ##[endgroup]
+2026-11-04T19:09:07.9449938Z Found in cache @ /opt/hostedtoolcache/node/24.22.2/x64
+2026-11-04T19:09:07.9450902Z (node:2423) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-04T19:09:07.9451590Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-04T19:09:07.9454546Z ##[group]Environment details
+2026-11-04T19:09:10.2617470Z node: v24.22.2
+2026-11-04T19:09:10.2617888Z npm: 11.19.1
+2026-11-04T19:09:10.2618255Z yarn: 1.22.22
+2026-11-04T19:09:10.2619779Z ##[endgroup]
+2026-11-04T19:09:10.2871926Z ##[group]Run node scripts/gamos/governance-check.mjs --pin "$GAMOS_BASELINE_SHA256"
+2026-11-04T19:09:10.2872634Z [36;1mnode scripts/gamos/governance-check.mjs --pin "$GAMOS_BASELINE_SHA256"[0m
+2026-11-04T19:09:10.2983929Z shell: /usr/bin/bash -e {0}
+2026-11-04T19:09:10.2984192Z env:
+2026-11-04T19:09:10.2984551Z   GAMOS_BASELINE_SHA256: 07679a8a41c25f6417e2a3ddf415aee35e75276070941c8f8db70ea690954332
+2026-11-04T19:09:10.2985006Z ##[endgroup]
+2026-11-04T19:09:10.5198841Z Gamos governance check (v2 — tamper-resistant controls)
+2026-11-04T19:09:10.5199962Z   root         : /home/runner/work/Gamos-2.0/Gamos-2.0
+2026-11-04T19:09:10.5200957Z   baseline     : a9fe401eede6e6e5e01be9048679c206fe6f02d9 (v3.17.2)
+2026-11-04T19:09:10.5201788Z   ancestor-ok  : true
+2026-11-04T19:09:10.5202851Z   trust anchor : verified
+2026-11-04T19:09:10.5203472Z   controls     : 6 hash-verified governance files
+2026-11-04T19:09:10.5204258Z   ledger       : 1 authorization entries (5 authorized paths)
+2026-11-04T19:09:10.5205239Z   vs baseline  : deleted 0, modified 0, added 20 (additive allowed)
+2026-11-04T19:09:10.5205753Z 
+2026-11-04T19:09:10.5207333Z ✓ compliant — governance controls intact; zero unauthorized changes to protected surfaces.
+2026-11-04T19:09:10.5356773Z Post job cleanup.
+2026-11-04T19:09:10.6602362Z (node:2499) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-04T19:09:10.6603198Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-04T19:09:10.6808617Z Post job cleanup.
+2026-11-04T19:09:10.7712877Z [command]/usr/bin/git version
+2026-11-04T19:09:10.7759472Z git version 2.56.0
+2026-11-04T19:09:10.7805388Z Temporarily overriding HOME='/home/runner/work/_temp/63e8ddf0-f2ad-4167-a41b-074e8c95d2f4' before making global git config changes
+2026-11-04T19:09:10.7807146Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-04T19:09:10.7811724Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Gamos-2.0/Gamos-2.0
+2026-11-04T19:09:10.7854088Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-04T19:09:10.7894451Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-04T19:09:10.8190531Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-04T19:09:10.8218794Z http.https://github.com/.extraheader
+2026-11-04T19:09:10.8231119Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-04T19:09:10.8273587Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-04T19:09:10.8597579Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-04T19:09:10.8668105Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-04T19:09:10.9073868Z Cleaning up orphan processes
+2026-11-04T19:09:10.9469776Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

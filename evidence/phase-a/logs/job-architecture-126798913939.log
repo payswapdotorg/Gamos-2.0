@@ -1,0 +1,449 @@
+﻿2026-11-04T19:09:02.0330581Z Current runner version: '2.338.2'
+2026-11-04T19:09:02.0358688Z ##[group]Runner Image Provisioner
+2026-11-04T19:09:02.0359660Z Hosted Compute Agent
+2026-11-04T19:09:02.0360455Z Version: 20261021.618
+2026-11-04T19:09:02.0361149Z Commit: 21505ad2541d5be6135ed84fc33697146cf75b8e
+2026-11-04T19:09:02.0361977Z Build Date: 2026-10-21T00:45:21Z
+2026-11-04T19:09:02.0362798Z Worker ID: {143429a9-0923-4d81-ac45-3ddb9a8f2795}
+2026-11-04T19:09:02.0363569Z Region: northcentralus
+2026-11-04T19:09:02.0364267Z Cloud: Azure
+2026-11-04T19:09:02.0365033Z ##[endgroup]
+2026-11-04T19:09:02.0366497Z ##[group]Operating System
+2026-11-04T19:09:02.0367344Z Ubuntu
+2026-11-04T19:09:02.0367999Z 24.04.5
+2026-11-04T19:09:02.0368631Z LTS
+2026-11-04T19:09:02.0369215Z ##[endgroup]
+2026-11-04T19:09:02.0369811Z ##[group]Runner Image
+2026-11-04T19:09:02.0370580Z Image: ubuntu-24.04
+2026-11-04T19:09:02.0371221Z Version: 20261025.353.1
+2026-11-04T19:09:02.0372842Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261025.353/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-04T19:09:02.0375357Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261025.353
+2026-11-04T19:09:02.0377195Z ##[endgroup]
+2026-11-04T19:09:02.0378849Z ##[group]GITHUB_TOKEN Permissions
+2026-11-04T19:09:02.0382885Z Contents: read
+2026-11-04T19:09:02.0383846Z Metadata: read
+2026-11-04T19:09:02.0385151Z ##[endgroup]
+2026-11-04T19:09:02.0388035Z Secret source: Actions
+2026-11-04T19:09:02.0389455Z Cache mode: write
+2026-11-04T19:09:02.0390845Z Prepare workflow directory
+2026-11-04T19:09:02.0941341Z Prepare all required actions
+2026-11-04T19:09:02.1012199Z Getting action download info
+2026-11-04T19:09:02.3370677Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-04T19:09:02.4388624Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2026-11-04T19:09:02.6348845Z Download action repository 'pnpm/action-setup@v4' (SHA:b906affcce14559ad1aafd4ab0e942779e9f58b1)
+2026-11-04T19:09:03.0602497Z Complete job name: Upstream architecture gate
+2026-11-04T19:09:03.1459877Z ##[group]Run actions/checkout@v4
+2026-11-04T19:09:03.1460947Z with:
+2026-11-04T19:09:03.1461437Z   repository: payswapdotorg/Gamos-2.0
+2026-11-04T19:09:03.1465742Z   token: ***
+2026-11-04T19:09:03.1466209Z   ssh-strict: true
+2026-11-04T19:09:03.1466668Z   ssh-user: git
+2026-11-04T19:09:03.1467137Z   persist-credentials: true
+2026-11-04T19:09:03.1467655Z   clean: true
+2026-11-04T19:09:03.1468114Z   sparse-checkout-cone-mode: true
+2026-11-04T19:09:03.1468644Z   fetch-depth: 1
+2026-11-04T19:09:03.1469093Z   fetch-tags: false
+2026-11-04T19:09:03.1469548Z   show-progress: true
+2026-11-04T19:09:03.1470016Z   lfs: false
+2026-11-04T19:09:03.1470450Z   submodules: false
+2026-11-04T19:09:03.1470906Z   set-safe-directory: true
+2026-11-04T19:09:03.1471426Z   allow-unsafe-pr-checkout: false
+2026-11-04T19:09:03.1472246Z env:
+2026-11-04T19:09:03.1472957Z   GAMOS_BASELINE_SHA256: 07679a8a41c25f6417e2a3ddf415aee35e75276070941c8f8db70ea690954332
+2026-11-04T19:09:03.1473808Z ##[endgroup]
+2026-11-04T19:09:03.4322336Z Syncing repository: payswapdotorg/Gamos-2.0
+2026-11-04T19:09:03.4325264Z ##[group]Getting Git version info
+2026-11-04T19:09:03.4326256Z Working directory is '/home/runner/work/Gamos-2.0/Gamos-2.0'
+2026-11-04T19:09:03.4327525Z [command]/usr/bin/git version
+2026-11-04T19:09:03.4397913Z git version 2.56.0
+2026-11-04T19:09:03.4419062Z ##[endgroup]
+2026-11-04T19:09:03.4433282Z Temporarily overriding HOME='/home/runner/work/_temp/db6ca07d-a2c2-4783-8cee-f4340af7e56d' before making global git config changes
+2026-11-04T19:09:03.4436068Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-04T19:09:03.4438293Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Gamos-2.0/Gamos-2.0
+2026-11-04T19:09:03.4492145Z Deleting the contents of '/home/runner/work/Gamos-2.0/Gamos-2.0'
+2026-11-04T19:09:03.4494261Z ##[group]Initializing the repository
+2026-11-04T19:09:03.4498208Z [command]/usr/bin/git init /home/runner/work/Gamos-2.0/Gamos-2.0
+2026-11-04T19:09:03.4611528Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-04T19:09:03.4613594Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-04T19:09:03.4615700Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-04T19:09:03.4617390Z hint: call:
+2026-11-04T19:09:03.4618290Z hint:
+2026-11-04T19:09:03.4619258Z hint: 	git config --global init.defaultBranch <name>
+2026-11-04T19:09:03.4620496Z hint:
+2026-11-04T19:09:03.4621787Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-04T19:09:03.4623464Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-04T19:09:03.4624973Z hint:
+2026-11-04T19:09:03.4625755Z hint: 	git branch -m <name>
+2026-11-04T19:09:03.4626600Z hint:
+2026-11-04T19:09:03.4627711Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-04T19:09:03.4629602Z Initialized empty Git repository in /home/runner/work/Gamos-2.0/Gamos-2.0/.git/
+2026-11-04T19:09:03.4637203Z [command]/usr/bin/git remote add origin https://github.com/payswapdotorg/Gamos-2.0
+2026-11-04T19:09:03.4688797Z ##[endgroup]
+2026-11-04T19:09:03.4690260Z ##[group]Disabling automatic garbage collection
+2026-11-04T19:09:03.4696724Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-04T19:09:03.4733717Z ##[endgroup]
+2026-11-04T19:09:03.4735355Z ##[group]Setting up auth
+2026-11-04T19:09:03.4741927Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-04T19:09:03.4781664Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-04T19:09:03.5205949Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-04T19:09:03.5253476Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-04T19:09:03.5511419Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-04T19:09:03.5560104Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-04T19:09:03.5817697Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-04T19:09:03.5869332Z ##[endgroup]
+2026-11-04T19:09:03.5870302Z ##[group]Fetching the repository
+2026-11-04T19:09:03.5880949Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +5ef39f2c22864243d88d30163a14b219a1d3352a:refs/remotes/origin/gamos/development
+2026-11-04T19:09:05.7860888Z From https://github.com/payswapdotorg/Gamos-2.0
+2026-11-04T19:09:05.7861749Z  * [new ref]           5ef39f2c22864243d88d30163a14b219a1d3352a -> origin/gamos/development
+2026-11-04T19:09:05.7865664Z ##[endgroup]
+2026-11-04T19:09:05.7866355Z ##[group]Determining the checkout info
+2026-11-04T19:09:05.7867909Z ##[endgroup]
+2026-11-04T19:09:05.7874597Z [command]/usr/bin/git sparse-checkout disable
+2026-11-04T19:09:05.7941975Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-04T19:09:05.7989298Z ##[group]Checking out the ref
+2026-11-04T19:09:05.7993948Z [command]/usr/bin/git checkout --progress --force -B gamos/development refs/remotes/origin/gamos/development
+2026-11-04T19:09:06.8228242Z Updating files:  69% (12045/17257)
+2026-11-04T19:09:06.8370638Z Updating files:  70% (12080/17257)
+2026-11-04T19:09:06.8482351Z Updating files:  71% (12253/17257)
+2026-11-04T19:09:06.8662431Z Updating files:  72% (12426/17257)
+2026-11-04T19:09:06.8809813Z Updating files:  73% (12598/17257)
+2026-11-04T19:09:06.8965449Z Updating files:  74% (12771/17257)
+2026-11-04T19:09:06.9087948Z Updating files:  75% (12943/17257)
+2026-11-04T19:09:06.9196253Z Updating files:  76% (13116/17257)
+2026-11-04T19:09:06.9330589Z Updating files:  77% (13288/17257)
+2026-11-04T19:09:06.9468554Z Updating files:  78% (13461/17257)
+2026-11-04T19:09:06.9580487Z Updating files:  79% (13634/17257)
+2026-11-04T19:09:06.9683990Z Updating files:  80% (13806/17257)
+2026-11-04T19:09:06.9782970Z Updating files:  81% (13979/17257)
+2026-11-04T19:09:06.9917898Z Updating files:  82% (14151/17257)
+2026-11-04T19:09:07.0021198Z Updating files:  83% (14324/17257)
+2026-11-04T19:09:07.0122538Z Updating files:  84% (14496/17257)
+2026-11-04T19:09:07.0239381Z Updating files:  85% (14669/17257)
+2026-11-04T19:09:07.0364602Z Updating files:  86% (14842/17257)
+2026-11-04T19:09:07.0508679Z Updating files:  87% (15014/17257)
+2026-11-04T19:09:07.0661555Z Updating files:  88% (15187/17257)
+2026-11-04T19:09:07.0770241Z Updating files:  89% (15359/17257)
+2026-11-04T19:09:07.0839621Z Updating files:  90% (15532/17257)
+2026-11-04T19:09:07.0912178Z Updating files:  91% (15704/17257)
+2026-11-04T19:09:07.0983751Z Updating files:  92% (15877/17257)
+2026-11-04T19:09:07.1059656Z Updating files:  93% (16050/17257)
+2026-11-04T19:09:07.1136030Z Updating files:  94% (16222/17257)
+2026-11-04T19:09:07.1208053Z Updating files:  95% (16395/17257)
+2026-11-04T19:09:07.1291459Z Updating files:  96% (16567/17257)
+2026-11-04T19:09:07.1540697Z Updating files:  97% (16740/17257)
+2026-11-04T19:09:07.1685612Z Updating files:  98% (16912/17257)
+2026-11-04T19:09:07.1773694Z Updating files:  99% (17085/17257)
+2026-11-04T19:09:07.1774652Z Updating files: 100% (17257/17257)
+2026-11-04T19:09:07.1775087Z Updating files: 100% (17257/17257), done.
+2026-11-04T19:09:07.1954708Z Switched to a new branch 'gamos/development'
+2026-11-04T19:09:07.1960240Z branch 'gamos/development' set up to track 'origin/gamos/development'.
+2026-11-04T19:09:07.1993111Z ##[endgroup]
+2026-11-04T19:09:07.2053220Z [command]/usr/bin/git log -1 --format=%H
+2026-11-04T19:09:07.2091430Z 5ef39f2c22864243d88d30163a14b219a1d3352a
+2026-11-04T19:09:07.2452008Z ##[group]Run actions/setup-node@v4
+2026-11-04T19:09:07.2452298Z with:
+2026-11-04T19:09:07.2452503Z   node-version: 24
+2026-11-04T19:09:07.2452718Z   always-auth: false
+2026-11-04T19:09:07.2452931Z   check-latest: false
+2026-11-04T19:09:07.2455625Z   token: ***
+2026-11-04T19:09:07.2455835Z env:
+2026-11-04T19:09:07.2456200Z   GAMOS_BASELINE_SHA256: 07679a8a41c25f6417e2a3ddf415aee35e75276070941c8f8db70ea690954332
+2026-11-04T19:09:07.2456627Z ##[endgroup]
+2026-11-04T19:09:07.3980234Z (node:2363) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-04T19:09:07.3981230Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-04T19:09:07.3985572Z Found in cache @ /opt/hostedtoolcache/node/24.22.1/x64
+2026-11-04T19:09:07.3986308Z ##[group]Environment details
+2026-11-04T19:09:10.5611905Z node: v24.22.1
+2026-11-04T19:09:10.5612314Z npm: 11.19.1
+2026-11-04T19:09:10.5612671Z yarn: 1.22.22
+2026-11-04T19:09:10.5613875Z ##[endgroup]
+2026-11-04T19:09:10.5793270Z ##[group]Run pnpm/action-setup@v4
+2026-11-04T19:09:10.5793565Z with:
+2026-11-04T19:09:10.5793769Z   version: 10.33.2
+2026-11-04T19:09:10.5793995Z   dest: ~/setup-pnpm
+2026-11-04T19:09:10.5794230Z   run_install: null
+2026-11-04T19:09:10.5794745Z   cache: false
+2026-11-04T19:09:10.5794992Z   cache_dependency_path: pnpm-lock.yaml
+2026-11-04T19:09:10.5795305Z   package_json_file: package.json
+2026-11-04T19:09:10.5795560Z   standalone: false
+2026-11-04T19:09:10.5795769Z env:
+2026-11-04T19:09:10.5796138Z   GAMOS_BASELINE_SHA256: 07679a8a41c25f6417e2a3ddf415aee35e75276070941c8f8db70ea690954332
+2026-11-04T19:09:10.5796576Z ##[endgroup]
+2026-11-04T19:09:10.7343593Z ##[group]Running self-installer...
+2026-11-04T19:09:11.1647057Z (node:2408) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-04T19:09:11.1649483Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-04T19:09:11.3087162Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-11-04T19:09:11.6571641Z 
+2026-11-04T19:09:11.6572217Z dependencies:
+2026-11-04T19:09:11.6572579Z + pnpm 10.33.2
+2026-11-04T19:09:11.6572729Z 
+2026-11-04T19:09:11.6716395Z Packages: +1
+2026-11-04T19:09:11.6725033Z +
+2026-11-04T19:09:11.7290109Z Progress: resolved 1, reused 0, downloaded 1, added 1, done
+2026-11-04T19:09:11.7564173Z Done in 834ms
+2026-11-04T19:09:11.7784760Z ##[endgroup]
+2026-11-04T19:09:11.7785369Z Installation Completed!
+2026-11-04T19:09:11.7988244Z ##[group]Run pnpm install --frozen-lockfile
+2026-11-04T19:09:11.7988656Z [36;1mpnpm install --frozen-lockfile[0m
+2026-11-04T19:09:11.8091188Z shell: /usr/bin/bash -e {0}
+2026-11-04T19:09:11.8091653Z env:
+2026-11-04T19:09:11.8092049Z   GAMOS_BASELINE_SHA256: 07679a8a41c25f6417e2a3ddf415aee35e75276070941c8f8db70ea690954332
+2026-11-04T19:09:11.8092820Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-04T19:09:11.8093687Z   ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+2026-11-04T19:09:11.8094004Z ##[endgroup]
+2026-11-04T19:09:12.4475487Z apps/zcode-cli                           |  WARN  Unsupported engine: wanted: {"node":"24.14.0"} (current: {"node":"v24.22.1","pnpm":"10.33.2"})
+2026-11-04T19:09:12.5024646Z Scope: all 55 workspace projects
+2026-11-04T19:09:12.6330293Z Lockfile is up to date, resolution step is skipped
+2026-11-04T19:09:12.9550278Z Packages: +2656
+2026-11-04T19:09:12.9550773Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-11-04T19:09:13.2259265Z Progress: resolved 0, reused 0, downloaded 1, added 0
+2026-11-04T19:09:14.2265209Z Progress: resolved 0, reused 0, downloaded 110, added 60
+2026-11-04T19:09:15.2276826Z Progress: resolved 0, reused 0, downloaded 163, added 114
+2026-11-04T19:09:16.2280146Z Progress: resolved 0, reused 0, downloaded 220, added 134
+2026-11-04T19:09:17.2366220Z Progress: resolved 0, reused 0, downloaded 282, added 162
+2026-11-04T19:09:18.2404579Z Progress: resolved 0, reused 0, downloaded 367, added 207
+2026-11-04T19:09:19.2456026Z Progress: resolved 0, reused 0, downloaded 478, added 254
+2026-11-04T19:09:20.2418287Z Progress: resolved 0, reused 0, downloaded 653, added 363
+2026-11-04T19:09:21.2422817Z Progress: resolved 0, reused 0, downloaded 751, added 395
+2026-11-04T19:09:22.2440648Z Progress: resolved 0, reused 0, downloaded 874, added 434
+2026-11-04T19:09:23.2447050Z Progress: resolved 0, reused 0, downloaded 1086, added 666
+2026-11-04T19:09:24.2521208Z Progress: resolved 0, reused 0, downloaded 1254, added 824
+2026-11-04T19:09:25.2614917Z Progress: resolved 0, reused 0, downloaded 1372, added 945
+2026-11-04T19:09:26.2546157Z Progress: resolved 0, reused 0, downloaded 1500, added 1028
+2026-11-04T19:09:27.2557373Z Progress: resolved 0, reused 0, downloaded 1737, added 1279
+2026-11-04T19:09:28.2586186Z Progress: resolved 0, reused 0, downloaded 1849, added 1347
+2026-11-04T19:09:29.2606550Z Progress: resolved 0, reused 0, downloaded 2101, added 1733
+2026-11-04T19:09:30.2578286Z Progress: resolved 0, reused 0, downloaded 2250, added 1850
+2026-11-04T19:09:31.1470143Z Progress: resolved 0, reused 0, downloaded 2262, added 2656, done
+2026-11-04T19:09:31.1935506Z node_modules/koffi install$ node src/cnoke/cnoke.js -P . -D src/koffi --prebuild
+2026-11-04T19:09:31.2387861Z node_modules/tsx/node_modules/esbuild postinstall$ node install.js
+2026-11-04T19:09:31.2416019Z node_modules/msw postinstall$ node -e "import('./config/scripts/postinstall.js').catch(() => void 0)"
+2026-11-04T19:09:31.3634634Z node_modules/msw postinstall: Done
+2026-11-04T19:09:31.3645550Z node_modules/koffi install: Done
+2026-11-04T19:09:31.3646214Z node_modules/tsx/node_modules/esbuild postinstall: Done
+2026-11-04T19:09:31.3714893Z node_modules/protobufjs postinstall$ node scripts/postinstall
+2026-11-04T19:09:31.4563759Z node_modules/protobufjs postinstall: Done
+2026-11-04T19:09:31.5139295Z node_modules/node-pty install$ node scripts/prebuild.js || node-gyp rebuild
+2026-11-04T19:09:31.5165756Z node_modules/cpu-features install$ node buildcheck.js > buildcheck.gypi && node-gyp rebuild
+2026-11-04T19:09:31.6086552Z node_modules/edgedriver install$ test -f ./dist/install.js && node ./dist/install.js || echo "Skipping install, project not build!"
+2026-11-04T19:09:31.6088508Z node_modules/geckodriver postinstall$ test -f ./dist/install.js && node ./dist/install.js || echo "Skipping install, project not built!"
+2026-11-04T19:09:31.6115569Z node_modules/node-pty install: [32m> Checking prebuilds...[0m
+2026-11-04T19:09:31.6126685Z node_modules/node-pty install: [33m> Rebuilding because directory /home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-pty/prebuilds/linux-x64 does not exist[0m
+2026-11-04T19:09:31.6750853Z node_modules/node-pty install: gyp info it worked if it ends with ok
+2026-11-04T19:09:31.6815730Z node_modules/node-pty install: gyp info using node-gyp@11.5.0
+2026-11-04T19:09:31.6835569Z node_modules/node-pty install: gyp info using node@24.22.1 | linux | x64
+2026-11-04T19:09:31.6836686Z node_modules/electron-winstaller install$ node ./script/select-7z-arch.js
+2026-11-04T19:09:31.7662110Z node_modules/electron-winstaller install: Selecting 7-Zip for arch x64
+2026-11-04T19:09:31.7748088Z node_modules/electron-winstaller install: Done
+2026-11-04T19:09:31.7881288Z node_modules/node-pty install: gyp info find Python using Python version 3.12.3 found at "/usr/bin/python3"
+2026-11-04T19:09:31.8323913Z node_modules/edgedriver install: Done
+2026-11-04T19:09:31.8664582Z node_modules/unsafe-pointer install$ node-gyp-build
+2026-11-04T19:09:31.9036669Z node_modules/geckodriver postinstall: Done
+2026-11-04T19:09:31.9205928Z node_modules/esbuild postinstall$ node install.js
+2026-11-04T19:09:31.9644284Z node_modules/node-pty install: gyp http GET https://nodejs.org/download/release/v24.22.1/node-v24.22.1-headers.tar.gz
+2026-11-04T19:09:31.9784938Z node_modules/cpu-features install: gyp info it worked if it ends with ok
+2026-11-04T19:09:31.9786595Z node_modules/cpu-features install: gyp info using node-gyp@11.5.0
+2026-11-04T19:09:31.9791786Z node_modules/cpu-features install: gyp info using node@24.22.1 | linux | x64
+2026-11-04T19:09:32.0117101Z node_modules/unsafe-pointer install: Done
+2026-11-04T19:09:32.0157104Z node_modules/node-pty install: gyp http 200 https://nodejs.org/download/release/v24.22.1/node-v24.22.1-headers.tar.gz
+2026-11-04T19:09:32.0359114Z node_modules/esbuild postinstall: Done
+2026-11-04T19:09:32.0766972Z node_modules/cpu-features install: gyp info find Python using Python version 3.12.3 found at "/usr/bin/python3"
+2026-11-04T19:09:32.1937375Z node_modules/cpu-features install: gyp http GET https://nodejs.org/download/release/v24.22.1/node-v24.22.1-headers.tar.gz
+2026-11-04T19:09:32.2470537Z node_modules/cpu-features install: gyp http 200 https://nodejs.org/download/release/v24.22.1/node-v24.22.1-headers.tar.gz
+2026-11-04T19:09:35.4561893Z node_modules/node-pty install: gyp http GET https://nodejs.org/download/release/v24.22.1/SHASUMS256.txt
+2026-11-04T19:09:35.4809976Z node_modules/node-pty install: gyp http 200 https://nodejs.org/download/release/v24.22.1/SHASUMS256.txt
+2026-11-04T19:09:35.6990663Z node_modules/cpu-features install: gyp http GET https://nodejs.org/download/release/v24.22.1/SHASUMS256.txt
+2026-11-04T19:09:35.7157544Z node_modules/cpu-features install: gyp http 200 https://nodejs.org/download/release/v24.22.1/SHASUMS256.txt
+2026-11-04T19:09:36.2190597Z node_modules/node-pty install: gyp info spawn /usr/bin/python3
+2026-11-04T19:09:36.2191809Z node_modules/node-pty install: gyp info spawn args [
+2026-11-04T19:09:36.2193707Z node_modules/node-pty install: gyp info spawn args '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-gyp/gyp/gyp_main.py',
+2026-11-04T19:09:36.2195321Z node_modules/node-pty install: gyp info spawn args 'binding.gyp',
+2026-11-04T19:09:36.2196250Z node_modules/node-pty install: gyp info spawn args '-f',
+2026-11-04T19:09:36.2197176Z node_modules/node-pty install: gyp info spawn args 'make',
+2026-11-04T19:09:36.2198627Z node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-04T19:09:36.2200024Z node_modules/node-pty install: gyp info spawn args '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-pty/build/config.gypi',
+2026-11-04T19:09:36.2201212Z node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-04T19:09:36.2202472Z node_modules/node-pty install: gyp info spawn args '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-gyp/addon.gypi',
+2026-11-04T19:09:36.2203592Z node_modules/node-pty install: gyp info spawn args '-I',
+2026-11-04T19:09:36.2207578Z node_modules/node-pty install: gyp info spawn args '/home/runner/.cache/node-gyp/24.22.1/include/node/common.gypi',
+2026-11-04T19:09:36.2208811Z node_modules/node-pty install: gyp info spawn args '-Dlibrary=shared_library',
+2026-11-04T19:09:36.2209429Z node_modules/node-pty install: gyp info spawn args '-Dvisibility=default',
+2026-11-04T19:09:36.2210292Z node_modules/node-pty install: gyp info spawn args '-Dnode_root_dir=/home/runner/.cache/node-gyp/24.22.1',
+2026-11-04T19:09:36.2211178Z node_modules/node-pty install: gyp info spawn args '-Dnode_gyp_dir=/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-gyp',
+2026-11-04T19:09:36.2212134Z node_modules/node-pty install: gyp info spawn args '-Dnode_lib_file=/home/runner/.cache/node-gyp/24.22.1/<(target_arch)/node.lib',
+2026-11-04T19:09:36.2213101Z node_modules/node-pty install: gyp info spawn args '-Dmodule_root_dir=/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-pty',
+2026-11-04T19:09:36.2213834Z node_modules/node-pty install: gyp info spawn args '-Dnode_engine=v8',
+2026-11-04T19:09:36.2214718Z node_modules/node-pty install: gyp info spawn args '--depth=.',
+2026-11-04T19:09:36.2215500Z node_modules/node-pty install: gyp info spawn args '--no-parallel',
+2026-11-04T19:09:36.2216041Z node_modules/node-pty install: gyp info spawn args '--generator-output',
+2026-11-04T19:09:36.2216545Z node_modules/node-pty install: gyp info spawn args 'build',
+2026-11-04T19:09:36.2217046Z node_modules/node-pty install: gyp info spawn args '-Goutput_dir=.'
+2026-11-04T19:09:36.2217503Z node_modules/node-pty install: gyp info spawn args ]
+2026-11-04T19:09:36.4514826Z node_modules/node-pty install: gyp info spawn make
+2026-11-04T19:09:36.4525565Z node_modules/node-pty install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+2026-11-04T19:09:36.4532241Z node_modules/node-pty install: make: Entering directory '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-pty/build'
+2026-11-04T19:09:36.4549135Z node_modules/node-pty install:   TOUCH Release/obj.target/../node-addon-api/node_addon_api_except.stamp
+2026-11-04T19:09:36.4612924Z node_modules/node-pty install:   CXX(target) Release/obj.target/pty/src/unix/pty.o
+2026-11-04T19:09:36.6017366Z node_modules/cpu-features install: gyp info spawn /usr/bin/python3
+2026-11-04T19:09:36.6035687Z node_modules/cpu-features install: gyp info spawn args [
+2026-11-04T19:09:36.6037022Z node_modules/cpu-features install: gyp info spawn args '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-gyp/gyp/gyp_main.py',
+2026-11-04T19:09:36.6038354Z node_modules/cpu-features install: gyp info spawn args 'binding.gyp',
+2026-11-04T19:09:36.6039197Z node_modules/cpu-features install: gyp info spawn args '-f',
+2026-11-04T19:09:36.6039999Z node_modules/cpu-features install: gyp info spawn args 'make',
+2026-11-04T19:09:36.6040622Z node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-04T19:09:36.6041462Z node_modules/cpu-features install: gyp info spawn args '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/cpu-features/build/config.gypi',
+2026-11-04T19:09:36.6042672Z node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-04T19:09:36.6043803Z node_modules/cpu-features install: gyp info spawn args '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-gyp/addon.gypi',
+2026-11-04T19:09:36.6045050Z node_modules/cpu-features install: gyp info spawn args '-I',
+2026-11-04T19:09:36.6046297Z node_modules/cpu-features install: gyp info spawn args '/home/runner/.cache/node-gyp/24.22.1/include/node/common.gypi',
+2026-11-04T19:09:36.6047358Z node_modules/cpu-features install: gyp info spawn args '-Dlibrary=shared_library',
+2026-11-04T19:09:36.6048325Z node_modules/cpu-features install: gyp info spawn args '-Dvisibility=default',
+2026-11-04T19:09:36.6049239Z node_modules/cpu-features install: gyp info spawn args '-Dnode_root_dir=/home/runner/.cache/node-gyp/24.22.1',
+2026-11-04T19:09:36.6050274Z node_modules/cpu-features install: gyp info spawn args '-Dnode_gyp_dir=/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-gyp',
+2026-11-04T19:09:36.6051883Z node_modules/cpu-features install: gyp info spawn args '-Dnode_lib_file=/home/runner/.cache/node-gyp/24.22.1/<(target_arch)/node.lib',
+2026-11-04T19:09:36.6052993Z node_modules/cpu-features install: gyp info spawn args '-Dmodule_root_dir=/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/cpu-features',
+2026-11-04T19:09:36.6054209Z node_modules/cpu-features install: gyp info spawn args '-Dnode_engine=v8',
+2026-11-04T19:09:36.6054966Z node_modules/cpu-features install: gyp info spawn args '--depth=.',
+2026-11-04T19:09:36.6055680Z node_modules/cpu-features install: gyp info spawn args '--no-parallel',
+2026-11-04T19:09:36.6056651Z node_modules/cpu-features install: gyp info spawn args '--generator-output',
+2026-11-04T19:09:36.6057559Z node_modules/cpu-features install: gyp info spawn args 'build',
+2026-11-04T19:09:36.6058433Z node_modules/cpu-features install: gyp info spawn args '-Goutput_dir=.'
+2026-11-04T19:09:36.6059241Z node_modules/cpu-features install: gyp info spawn args ]
+2026-11-04T19:09:36.7321837Z node_modules/cpu-features install: gyp info spawn make
+2026-11-04T19:09:36.7323083Z node_modules/cpu-features install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+2026-11-04T19:09:36.7337267Z node_modules/cpu-features install: make: Entering directory '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/cpu-features/build'
+2026-11-04T19:09:36.7347266Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_linux_or_android.o
+2026-11-04T19:09:36.7625835Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_macos_or_iphone.o
+2026-11-04T19:09:36.7883080Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_aarch64_windows.o
+2026-11-04T19:09:36.8136624Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_arm_linux_or_android.o
+2026-11-04T19:09:36.8400760Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_mips_linux_or_android.o
+2026-11-04T19:09:36.8656846Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_ppc_linux.o
+2026-11-04T19:09:36.8928278Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_freebsd.o
+2026-11-04T19:09:36.9196589Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_linux_or_android.o
+2026-11-04T19:09:37.2965743Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_macos.o
+2026-11-04T19:09:37.3228620Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/impl_x86_windows.o
+2026-11-04T19:09:37.3490232Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/filesystem.o
+2026-11-04T19:09:37.4009770Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/stack_line_reader.o
+2026-11-04T19:09:37.4575208Z node_modules/cpu-features install:   CC(target) Release/obj.target/cpu_features/deps/cpu_features/src/string_view.o
+2026-11-04T19:09:37.5530882Z node_modules/cpu-features install: rm -f Release/obj.target/deps/cpu_features/cpu_features.a Release/obj.target/deps/cpu_features/cpu_features.a.ar-file-list; mkdir -p `dirname Release/obj.target/deps/cpu_features/cpu_features.a`
+2026-11-04T19:09:37.5684046Z node_modules/cpu-features install: ar crs Release/obj.target/deps/cpu_features/cpu_features.a @Release/obj.target/deps/cpu_features/cpu_features.a.ar-file-list
+2026-11-04T19:09:38.2784983Z node_modules/cpu-features install:   COPY Release/cpu_features.a
+2026-11-04T19:09:38.2843065Z node_modules/cpu-features install:   CXX(target) Release/obj.target/cpufeatures/src/binding.o
+2026-11-04T19:09:38.7976337Z node_modules/node-pty install:   SOLINK_MODULE(target) Release/obj.target/pty.node
+2026-11-04T19:09:38.8582316Z node_modules/node-pty install:   COPY Release/pty.node
+2026-11-04T19:09:38.8626782Z node_modules/node-pty install: make: Leaving directory '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-pty/build'
+2026-11-04T19:09:38.8642428Z node_modules/node-pty install: gyp info ok 
+2026-11-04T19:09:38.8851804Z node_modules/node-pty install: Done
+2026-11-04T19:09:38.8854022Z node_modules/node-pty postinstall$ node scripts/post-install.js
+2026-11-04T19:09:38.9438823Z node_modules/node-pty postinstall: [32m> Cleaning release folder...[0m
+2026-11-04T19:09:38.9453892Z node_modules/node-pty postinstall: [32m> Moving conpty.dll...[0m
+2026-11-04T19:09:38.9455254Z node_modules/node-pty postinstall:   SKIPPED (not Windows)
+2026-11-04T19:09:38.9488628Z node_modules/node-pty postinstall: Done
+2026-11-04T19:09:39.3105597Z node_modules/cpu-features install: In file included from ../src/binding.cc:1:
+2026-11-04T19:09:39.3117287Z node_modules/cpu-features install: /home/runner/.cache/node-gyp/24.22.1/include/node/node.h:1382:7: warning: cast between incompatible function types from ‘void (*)(Nan::ADDON_REGISTER_FUNCTION_ARGS_TYPE)’ {aka ‘void (*)(v8::Local<v8::Object>)’} to ‘node::addon_register_func’ {aka ‘void (*)(v8::Local<v8::Object>, v8::Local<v8::Value>, void*)’} [-Wcast-function-type]
+2026-11-04T19:09:39.3120786Z node_modules/cpu-features install:  1382 |       (node::addon_register_func) (regfunc),                          \
+2026-11-04T19:09:39.3122014Z node_modules/cpu-features install:       |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2026-11-04T19:09:39.3123845Z node_modules/cpu-features install: /home/runner/.cache/node-gyp/24.22.1/include/node/node.h:1416:3: note: in expansion of macro ‘NODE_MODULE_X’
+2026-11-04T19:09:39.3125821Z node_modules/cpu-features install:  1416 |   NODE_MODULE_X(modname, regfunc, NULL, 0)  // NOLINT (readability/null_usage)
+2026-11-04T19:09:39.3126925Z node_modules/cpu-features install:       |   ^~~~~~~~~~~~~
+2026-11-04T19:09:39.3128246Z node_modules/cpu-features install: ../src/binding.cc:151:1: note: in expansion of macro ‘NODE_MODULE’
+2026-11-04T19:09:39.3129437Z node_modules/cpu-features install:   151 | NODE_MODULE(cpufeatures, init)
+2026-11-04T19:09:39.3130268Z node_modules/cpu-features install:       | ^~~~~~~~~~~
+2026-11-04T19:09:39.6179504Z node_modules/cpu-features install:   SOLINK_MODULE(target) Release/obj.target/cpufeatures.node
+2026-11-04T19:09:39.6791367Z node_modules/cpu-features install:   COPY Release/cpufeatures.node
+2026-11-04T19:09:39.6834052Z node_modules/cpu-features install: make: Leaving directory '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/cpu-features/build'
+2026-11-04T19:09:39.6843293Z node_modules/cpu-features install: gyp info ok 
+2026-11-04T19:09:39.7029855Z node_modules/cpu-features install: Done
+2026-11-04T19:09:39.7208609Z node_modules/ssh2 install$ node install.js
+2026-11-04T19:09:39.8115011Z node_modules/ssh2 install: gyp info it worked if it ends with ok
+2026-11-04T19:09:39.8116183Z node_modules/ssh2 install: gyp info using node-gyp@11.5.0
+2026-11-04T19:09:39.8117165Z node_modules/ssh2 install: gyp info using node@24.22.1 | linux | x64
+2026-11-04T19:09:39.8755659Z node_modules/ssh2 install: gyp info find Python using Python version 3.12.3 found at "/usr/bin/python3"
+2026-11-04T19:09:39.9656386Z node_modules/ssh2 install: gyp info spawn /usr/bin/python3
+2026-11-04T19:09:39.9657341Z node_modules/ssh2 install: gyp info spawn args [
+2026-11-04T19:09:39.9658088Z node_modules/ssh2 install: gyp info spawn args '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-gyp/gyp/gyp_main.py',
+2026-11-04T19:09:39.9658806Z node_modules/ssh2 install: gyp info spawn args 'binding.gyp',
+2026-11-04T19:09:39.9659258Z node_modules/ssh2 install: gyp info spawn args '-f',
+2026-11-04T19:09:39.9659683Z node_modules/ssh2 install: gyp info spawn args 'make',
+2026-11-04T19:09:39.9660202Z node_modules/ssh2 install: gyp info spawn args '-I',
+2026-11-04T19:09:39.9661216Z node_modules/ssh2 install: gyp info spawn args '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/ssh2/lib/protocol/crypto/build/config.gypi',
+2026-11-04T19:09:39.9661925Z node_modules/ssh2 install: gyp info spawn args '-I',
+2026-11-04T19:09:39.9662596Z node_modules/ssh2 install: gyp info spawn args '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-gyp/addon.gypi',
+2026-11-04T19:09:39.9663429Z node_modules/ssh2 install: gyp info spawn args '-I',
+2026-11-04T19:09:39.9664092Z node_modules/ssh2 install: gyp info spawn args '/home/runner/.cache/node-gyp/24.22.1/include/node/common.gypi',
+2026-11-04T19:09:39.9664967Z node_modules/ssh2 install: gyp info spawn args '-Dlibrary=shared_library',
+2026-11-04T19:09:39.9665525Z node_modules/ssh2 install: gyp info spawn args '-Dvisibility=default',
+2026-11-04T19:09:39.9666185Z node_modules/ssh2 install: gyp info spawn args '-Dnode_root_dir=/home/runner/.cache/node-gyp/24.22.1',
+2026-11-04T19:09:39.9667025Z node_modules/ssh2 install: gyp info spawn args '-Dnode_gyp_dir=/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-gyp',
+2026-11-04T19:09:39.9667921Z node_modules/ssh2 install: gyp info spawn args '-Dnode_lib_file=/home/runner/.cache/node-gyp/24.22.1/<(target_arch)/node.lib',
+2026-11-04T19:09:39.9668923Z node_modules/ssh2 install: gyp info spawn args '-Dmodule_root_dir=/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/ssh2/lib/protocol/crypto',
+2026-11-04T19:09:39.9669677Z node_modules/ssh2 install: gyp info spawn args '-Dnode_engine=v8',
+2026-11-04T19:09:39.9670158Z node_modules/ssh2 install: gyp info spawn args '--depth=.',
+2026-11-04T19:09:39.9670633Z node_modules/ssh2 install: gyp info spawn args '--no-parallel',
+2026-11-04T19:09:39.9671136Z node_modules/ssh2 install: gyp info spawn args '--generator-output',
+2026-11-04T19:09:39.9671610Z node_modules/ssh2 install: gyp info spawn args 'build',
+2026-11-04T19:09:39.9672065Z node_modules/ssh2 install: gyp info spawn args '-Goutput_dir=.'
+2026-11-04T19:09:39.9672849Z node_modules/ssh2 install: gyp info spawn args ]
+2026-11-04T19:09:40.0847987Z node_modules/ssh2 install: gyp info spawn make
+2026-11-04T19:09:40.0848736Z node_modules/ssh2 install: gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+2026-11-04T19:09:40.0858505Z node_modules/ssh2 install: make: Entering directory '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/ssh2/lib/protocol/crypto/build'
+2026-11-04T19:09:40.0868317Z node_modules/ssh2 install:   CXX(target) Release/obj.target/sshcrypto/src/binding.o
+2026-11-04T19:09:42.0810962Z node_modules/ssh2 install:   SOLINK_MODULE(target) Release/obj.target/sshcrypto.node
+2026-11-04T19:09:42.1428669Z node_modules/ssh2 install:   COPY Release/sshcrypto.node
+2026-11-04T19:09:42.1475236Z node_modules/ssh2 install: make: Leaving directory '/home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/ssh2/lib/protocol/crypto/build'
+2026-11-04T19:09:42.1489816Z node_modules/ssh2 install: gyp info ok 
+2026-11-04T19:09:42.1594893Z node_modules/ssh2 install: Succeeded in building optional crypto binding
+2026-11-04T19:09:42.1633708Z node_modules/ssh2 install: Done
+2026-11-04T19:09:42.9233056Z 
+2026-11-04T19:09:42.9233787Z devDependencies:
+2026-11-04T19:09:42.9234999Z + @zcode/zcode-cua 0.6.5 <- packages/zcode-cua
+2026-11-04T19:09:42.9235417Z 
+2026-11-04T19:09:43.1791501Z . prepare$ husky && pnpm build:cua
+2026-11-04T19:09:43.6341290Z . prepare: > zcode@3.17.2 build:cua /home/runner/work/Gamos-2.0/Gamos-2.0
+2026-11-04T19:09:43.6342881Z . prepare: > pnpm --filter @zcode/zcode-cua build
+2026-11-04T19:09:44.0369186Z . prepare: apps/zcode-cli                           |  WARN  Unsupported engine: wanted: {"node":"24.14.0"} (current: {"node":"v24.22.1","pnpm":"10.33.2"})
+2026-11-04T19:09:44.0853092Z . prepare: > @zcode/zcode-cua@0.6.5 build /home/runner/work/Gamos-2.0/Gamos-2.0/packages/zcode-cua
+2026-11-04T19:09:44.0860154Z . prepare: > tsc --noEmit -p tsconfig.json
+2026-11-04T19:09:49.1471913Z . prepare: Done
+2026-11-04T19:09:49.1828918Z packages/desktop postinstall$ node scripts/node-pty-rebuild.mjs
+2026-11-04T19:09:58.4133717Z packages/desktop postinstall: [node-pty] run electron-rebuild (non-windows-platform): /home/runner/work/Gamos-2.0/Gamos-2.0/node_modules/node-pty/prebuilds/linux-x64/pty.node
+2026-11-04T19:09:58.5697557Z packages/desktop postinstall: - Searching dependency tree
+2026-11-04T19:10:01.4862177Z packages/desktop postinstall: ✔ Rebuild Complete
+2026-11-04T19:10:01.5051531Z packages/desktop postinstall: Done
+2026-11-04T19:10:01.5289450Z Done in 49.6s using pnpm v10.33.2
+2026-11-04T19:10:01.6408645Z ##[group]Run pnpm run architecture:check
+2026-11-04T19:10:01.6409008Z [36;1mpnpm run architecture:check[0m
+2026-11-04T19:10:01.6431958Z shell: /usr/bin/bash -e {0}
+2026-11-04T19:10:01.6432223Z env:
+2026-11-04T19:10:01.6432607Z   GAMOS_BASELINE_SHA256: 07679a8a41c25f6417e2a3ddf415aee35e75276070941c8f8db70ea690954332
+2026-11-04T19:10:01.6433129Z   PNPM_HOME: /home/runner/setup-pnpm/node_modules/.bin
+2026-11-04T19:10:01.6433450Z ##[endgroup]
+2026-11-04T19:10:01.9496394Z 
+2026-11-04T19:10:01.9497372Z > zcode@3.17.2 architecture:check /home/runner/work/Gamos-2.0/Gamos-2.0
+2026-11-04T19:10:01.9498098Z > node scripts/architecture/architecture-check.mjs check
+2026-11-04T19:10:01.9498378Z 
+2026-11-04T19:10:11.5959677Z architecture: OK
+2026-11-04T19:10:11.5960079Z violations: 0
+2026-11-04T19:10:11.5960379Z baseline: 0
+2026-11-04T19:10:11.5960651Z new: 0
+2026-11-04T19:10:11.6576642Z Post job cleanup.
+2026-11-04T19:10:11.8091171Z Pruning is unnecessary.
+2026-11-04T19:10:11.8275875Z Post job cleanup.
+2026-11-04T19:10:11.9651858Z (node:3266) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-04T19:10:11.9652688Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-04T19:10:11.9924805Z Post job cleanup.
+2026-11-04T19:10:12.0945354Z [command]/usr/bin/git version
+2026-11-04T19:10:12.0993646Z git version 2.56.0
+2026-11-04T19:10:12.1037835Z Temporarily overriding HOME='/home/runner/work/_temp/eb4ba92c-e0bb-47d3-896f-3c2a8e25ca75' before making global git config changes
+2026-11-04T19:10:12.1039322Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-04T19:10:12.1043759Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Gamos-2.0/Gamos-2.0
+2026-11-04T19:10:12.1088508Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-04T19:10:12.1129245Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-04T19:10:12.1441345Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-04T19:10:12.1476237Z http.https://github.com/.extraheader
+2026-11-04T19:10:12.1488273Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-04T19:10:12.1548806Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-04T19:10:12.1852074Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-04T19:10:12.1916290Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-04T19:10:12.2377253Z Cleaning up orphan processes
+2026-11-04T19:10:12.2784861Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4, pnpm/action-setup@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
