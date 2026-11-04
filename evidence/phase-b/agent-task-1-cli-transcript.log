@@ -1,0 +1,7 @@
+ZCode Built-in skipped (not-due)
+Done. The file `gamos-phase-b-verification.txt` was created at `/tmp/gamos-phaseb-workspace/gamos-phase-b-verification.txt` and verified — the content reads exactly:
+
+```
+Gamos Phase B: original ZCode golden path verified
+```
+exit: 0

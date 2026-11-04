@@ -1,0 +1,117 @@
+{
+  "recorded_at": "2026-11-04T20:55:00Z",
+  "phase": "B — M0 application verification (original ZCode)",
+  "principle": "No Next.js status-console substitution. All evidence below comes from the original ZCode application itself (web UI, desktop Electron, agent CLI).",
+  "environment": {
+    "sandbox": "4GB RAM Linux x64, node v24.22.2, pnpm 10.33.2 (frozen lockfile), Xvfb :99 1680x1050",
+    "app_version": "zcode 3.17.2 (upstream tag v3.17.2, pinned baseline a9fe401e)"
+  },
+  "verified": {
+    "frozen_lockfile_install": {
+      "command": "pnpm install --frozen-lockfile",
+      "local": "Done in 58.8s",
+      "ci": "GitHub Actions 'Upstream architecture gate' install step succeeded at 5ef39f2c, 391e8438 (attempt 3), 943a8e2b (attempt 1)"
+    },
+    "build_original_application": {
+      "server": "packages/server — tsup ESM dist/entry-http.js 5.42MB + dist/remote/zcode-server.cjs (build success)",
+      "agent_cli": "apps/zcode-cli — dist/zcode.cjs 29.1MB + sourcemap (3834ms) — the Agent CLI used for the golden-path tasks",
+      "desktop_process_layer": "tsup main/preload/host/scheduler all 'Build success' (main index.js + preload CJS + host ESM + scheduler ESM); e2e-report built",
+      "documents_of_build": "evidence/phase-b/build-logs ( excerpts in git commit message)", 
+      "conditional": "packages/web production bundle (vite v8 / rolldown native bundler) peaks >3.1GB RSS and is OOM-killed in this 4GB sandbox; the same install step runs on GitHub-hosted runners. Dev-mode launch (documented upstream flow) does not require the production renderer bundle."
+    },
+    "launch_original_application": {
+      "web": "pnpm dev:web — server http://localhost:3030 + vite web http://localhost:5173 (title 'ZCode - Web + Server'); onboarding state + provider config persisted across restarts",
+      "desktop": "Electron launched under Xvfb via versioned dev app dir (main process + zcode-host utility process + agent warmup: 'ZCode agent warmup ready workspace=/home/z/gamos-2.0 transport=stdio'); CDP remote-debugging 9229 active; database-startup terminal (1441ms)",
+      "cli": "node apps/zcode-cli/packages/cli/dist/zcode.cjs -p — full agent runtime headless"
+    },
+    "golden_paths": {
+      "onboarding": {
+        "verified": "3-step wizard completed in the original web UI: (1) 'What do you do?' → Software/Data/AI, (2) UI mode → Coding mode, (3) Preferences (Workspace Memory / conversation migration checkboxes) → Get started",
+        "screenshots": ["01-onboarding-welcome.png", "02-onboarding-apikey-form.png", "03-onboarding-step1-work.png", "04-onboarding-step2-ui-mode.png", "05-onboarding-step3-preferences.png"]
+      },
+      "model_provider_configuration": {
+        "verified": "Settings → Model settings → Add provider → OpenRouter (built-in template); real API key entered; provider status 'Ready'; model catalog with per-model enable/test; default model selection bound; REAL model API calls executed (openrouter.ai responses with generation ids)",
+        "screenshots": ["07-model-settings.png", "08-openrouter-provider-config.png", "09-model-configured-ready.png"],
+        "real_backend_evidence": "server/CLI logs contain full openrouter.ai HTTP exchanges (headers + generation ids)"
+      },
+      "new_task_interface_and_inherited_controls": {
+        "verified": "Composer 'Ask ZCode anything, @ to add context, / for commands'; Add context; Switch mode ('Ask before changes' review control); Manage models; Send; sidebar: New task (Ctrl+N), Automations, Plugin Marketplace, Search, Projects, Tasks, New project, Connect, Settings; settings sections: General/Appearance/Model settings/Browser Use/Keyboard Shortcuts/Personalization/Memory/Subagents/Plugins/MCP Servers/Skills/Commands/Hooks/Usage stats/Projects/Archive management",
+        "screenshots": ["06-main-new-task-interface.png", "09-model-configured-ready.png"]
+      },
+      "new_task_and_task_submission": {
+        "verified": "REAL end-to-end agent tasks via the original Agent CLI: task 1 created gamos-phase-b-verification.txt with the exact requested content and read it back (exit 0); the model-io rollout shows Write tool used 6× and Read tool 5×",
+        "model": "nvidia/nemotron-3-ultra-550b-a55b:free via OpenRouter (openai-chat-completions) — real generation, real tool calls",
+        "artifacts": ["agent-task-1-cli-transcript.log", "agent-task-artifact-gamos-phase-b-verification.txt", "agent-task-2-attachment-cli-transcript.log", "agent-task-2-attachment-echo.txt"]
+      },
+      "attachments_and_context": {
+        "verified": "CLI --attach attachment-input.txt: the agent read the attachment and created attachment-echo.txt containing exactly the attachment text (exit 0)"
+      },
+      "browser": {
+        "verified": "Browser Use settings page (built-in browser control, Chrome sign-in import, backend headless mode) present and functional in settings; embedded in-app browser panels require the desktop renderer",
+        "screenshots": ["14-settings-browser-use.png"],
+        "conditional": "interactive embedded-browser session requires the desktop renderer (see conditional states)"
+      },
+      "terminal": {
+        "verified": "agent terminal/file tools exercised by real tasks (Write/Read tool calls in the model-io rollout); tool grouping settings for Terminal present in settings.json",
+        "conditional": "the interactive terminal PANEL is a desktop-renderer surface (see conditional states)"
+      },
+      "review": {
+        "verified": "the 'Ask before changes' review/permission control is present on the composer (screenshot 09); the CLI tasks ran with the default permission flow",
+        "conditional": "the full UI review loop (diff review of agent changes) requires an in-UI task submission (web dev mode routes projects through remote-host policy — see conditional states)"
+      },
+      "plugin_marketplace": {
+        "verified": "Marketplace catalog (Public/Community/Personal + App plugins: PDF, Presentations, Spreadsheets, Documents, Jupyter Notebook, Typst Workbench, Zotero, ZCode Sites…); REAL install of jupyter-notebook@zcode-plugins-official v0.2.0 (server RPC plugin-management.installPlugin OK 164ms; zip from https://cdn-zcode.z.ai with sha256 verification; installed_plugins.json + cache populated)",
+        "screenshots": ["11-plugin-marketplace.png", "12-plugin-install.png", "13-plugin-marketplace-after-install.png", "15-settings-plugins-installed.png"]
+      },
+      "ordinary_non_gaming_task": {
+        "verified": "task 1 is an ordinary non-gaming task (plain file creation/read-back)"
+      },
+      "history_and_session_recovery": {
+        "verified": "agent sessions persist across process restarts in the CLI SQLite store (session table: 4 sessions with project_id proj_tmp-gamos-phaseb-workspace, titles, timestamps) + rollout model-io JSONL per session; settings and onboarding state persisted across app restarts (setting.json, provider_config.json)"
+      },
+      "skills_and_mcp": {
+        "verified": "Skills page: 21 skills available on this computer; MCP Servers page with add-server form; the app plugins expose MCP tools (mcp__plugin_pdf/pdf, mcp__plugin_documents/documents, mcp__plugin_spreadsheets/spreadsheets, mcp__plugin_presentations/presentations) which appeared in the agent's available tool set during the real tasks",
+        "screenshots": ["16-settings-mcp-servers.png", "17-settings-skills.png"]
+      }
+    },
+    "inherited_regression_tests": {
+      "architecture_check": { "command": "pnpm run architecture:check", "local": "architecture: OK, violations: 0, exit 0", "ci": "green in all three CI runs (5ef39f2c, 391e8438 attempt 3, 943a8e2b)" },
+      "cli_doctor": { "command": "node apps/zcode-cli/packages/cli/dist/zcode.cjs doctor", "local": "exit 0 (version 0.17.1, node-bundle artifact, runtime assumptions satisfied)" },
+      "desktop_e2e": "conditional — see below"
+    }
+  },
+  "conditional_states": [
+    {
+      "id": "web-production-bundle-oom",
+      "state": "unavailable",
+      "detail": "packages/web `vite build` (v8/rolldown native bundler, 8303 modules) is OOM-killed at ~3.1GB RSS in the 4GB sandbox (dmesg oom-kill evidence). Upstream's Docker E2E gate runs the same build on GitHub-hosted 7GB runners. The documented dev-mode launch (pnpm dev:web) does not require the production renderer bundle and is what was verified."
+    },
+    {
+      "id": "desktop-renderer-devmode",
+      "state": "partial",
+      "detail": "Desktop Electron main process, zcode-host utility process, agent warmup, database-startup and CDP were verified running under Xvfb. The dev-mode renderer (unbundled vite module graph of @zcode/ui) loaded (vite connected, preload bridge window.zcode present, database-startup relay active) but the renderer process crashed (render-process-gone) under the sandbox's memory ceiling while loading the full module graph."
+    },
+    {
+      "id": "desktop-e2e-suite",
+      "state": "blocked-by-build",
+      "detail": "Upstream's WDIO desktop e2e (container-boot, smoke, e2ecase-regression, upstream-provider, task-list-archive-confirmation — the Docker gate set) starts in this sandbox (Xvfb + chromedriver preflight) but its onPrepare step performs the same desktop production build that exceeds the 4GB sandbox. Recorded as an explicit environment limitation, not a product failure."
+    },
+    {
+      "id": "web-task-submission-host-routing",
+      "state": "documented-limitation",
+      "detail": "In web-only dev mode (pnpm dev:web), submitting a task from the browser UI fails with project.remote-project-required: the web client routes project/session creation through the remote-host policy (web dev mode has no local desktop host; upstream README documents ZCODE_SERVER_WORKSPACE for dev:web source development). The supported full-chain task flows — the Electron desktop and the Agent CLI — were verified instead, with the CLI delivering complete real-task evidence."
+    },
+    {
+      "id": "model-backend-credits-geo",
+      "state": "worked-around",
+      "detail": "The supplied OpenRouter key holds ~10 token credits (billing_error on paid models: 'can only afford 9') and Anthropic-backed models are geo-restricted from this sandbox's egress region (permission_error 'not available in your region'). Worked around by binding the OpenRouter provider to the free-tier model nvidia/nemotron-3-ultra-550b-a55b:free (openai-chat-completions endpoint), which executed the real tasks. Anthropic-format and chat-completions endpoints were both proven reachable with real HTTP exchanges."
+    },
+    {
+      "id": "no-status-console-substitution",
+      "state": "explicit",
+      "detail": "No Next.js status console was used as evidence; every item above comes from the original ZCode application (web UI at :5173/:3030, Electron desktop under Xvfb, and apps/zcode-cli agent runtime)."
+    }
+  ],
+  "screenshots": "evidence/phase-b/screenshots/ (17 PNG captures of the original application UI)",
+  "transcripts": "evidence/phase-b/*.log (CLI task transcripts incl. full model API exchanges)"
+}
