@@ -18,7 +18,7 @@
 
 | Phase | Scope | Status |
 |---|---|---|
-| A — Repair governance | Tamper-resistant controls, complete authorization schema, failure-case tests, real Actions run | **Complete — CI run 41894115266 green (3/3 jobs) at `5ef39f2c`; rulesets active; evidence in `evidence/phase-a/`** |
+| A — Repair governance | Tamper-resistant controls, complete authorization schema, failure-case tests, real Actions run | **Complete — CI run 41895183266 green at `5ef39f2c`; run 41895183232 green (attempt 3) at `391e8438` (the evidence commit); rulesets active; evidence in `evidence/phase-a/`** |
 | B — M0 application verification | Frozen-lockfile install, build + launch original ZCode, golden paths, screenshots, regression tests | Not started (next work package) |
 | C — Freeze Phase-0 architecture contracts | 9 contract areas, using existing ZCode infrastructure only | Not started |
 | D — Prepare workers A/B/C | Briefs, evidence requirements, DoD | Not started |
@@ -58,6 +58,7 @@ Authorization `GAMOS-AUTH-0001` (complete v2 record) binds the exact content of 
    (`docs/gamos/UPSTREAM-BASELINE.md` §7).
 2. **Workflow trust-anchor pin YAML bug (this session, fixed):** the first v2 push (`effc04d5`) produced failed run 41893874648 — the pin-rewrite regex in `governance-rebaseline.mjs` duplicated the closing quote, producing invalid YAML (`"<sha>""`), so the workflow failed at parse time with 0 jobs. Fixed in `5ef39f2c` (regex replaces the full quoted token); the failing run is retained in the evidence bundle as an honest record.
 3. **Ruleset API schema iteration (this session):** initial `POST /rulesets` payloads were rejected ("data matches no possible input") — the current schema mandates the full parameter sets for `pull_request` (all five fields) and `required_status_checks` (`strict_required_status_checks_policy` required), and `enforcement: evaluate` is Enterprise-only. Validated against GitHub's OpenAPI description; final rulesets created active (26558836, 26558837).
+4. **pnpm hoisted-linker race (upstream toolchain, worked around):** run 41895183232 attempts 1-2 failed `pnpm install --frozen-lockfile` with `ERR_PNPM_ENOENT rename node_modules/react-scan/node_modules/_tmp_* -> …/esbuild` (node-linker=hoisted, pnpm 10.33.2). Nondeterministic; attempt 3 succeeded via `rerun-failed-jobs`; install step now retries once with a `::warning` annotation. pnpm stays pinned to the upstream lockfile's 10.33.2. Governance/self-test jobs were unaffected in every attempt.
 
 ## Blocked requirements
 

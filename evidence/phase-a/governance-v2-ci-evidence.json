@@ -6,6 +6,21 @@
     "workflow": "gamos-governance (.github/workflows/gamos-governance.yml)",
     "runs": [
       {
+        "run_id": 41895183232,
+        "url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/41895183232",
+        "head_sha": "391e84383ee5d4eaabedf6d977b3ef31d5d6a2d4",
+        "head_branch": "gamos/development",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 3,
+        "jobs": [
+          {"name": "Governance (baseline & protected surfaces)", "job_id": 126806147897, "conclusion": "success", "log": "logs/job-governance-126806147897.log", "key_output": ["trust anchor : verified", "✓ compliant — governance controls intact; zero unauthorized changes to protected surfaces."]},
+          {"name": "Governance self-test (tamper rejection)", "job_id": 126806060173, "conclusion": "success", "log": "logs/job-self-test-126806060173.log", "key_output": ["# 13 scenarios: 13 ok, 0 failed", "# tamper-rejection suite passed — governance controls refuse unauthorized changes."]},
+          {"name": "Upstream architecture gate", "job_id": 126806056773, "conclusion": "success", "log": "logs/job-architecture-126806056773.log", "steps": ["pnpm install --frozen-lockfile (ELECTRON_SKIP_BINARY_DOWNLOAD=1)", "pnpm run architecture:check (Done in 760ms)"], "note": "succeeded on attempt 3 after a pnpm hoisted-linker race (see incidents)"}
+        ],
+        "note": "Definitive Phase-A evidence run at the commit that carries this evidence bundle."
+      },
+      {
         "run_id": 41894115266,
         "url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/41894115266",
         "head_sha": "5ef39f2c22864243d88d30163a14b219a1d3352a",
@@ -113,6 +128,15 @@
     "approver": "payswapdotorg",
     "note": "Complete v2 record with per-file content_sha256; ledger integrity itself enforced via baseline.controls (self-recording its own hash would be circular — ADR-0004)."
   },
+  "incidents": [
+    {
+      "id": "pnpm-hoisted-linker-enoent",
+      "observed": "Run 41895183232 attempts 1-2 (and never locally/CI at 5ef39f2c): ERR_PNPM_ENOENT rename 'node_modules/react-scan/node_modules/_tmp_<pid>_…' -> 'node_modules/react-scan/node_modules/esbuild' during final linking with node-linker=hoisted (pnpm 10.33.2).",
+      "classification": "upstream toolchain race, nondeterministic (concurrent cleanup sweeping a tmp dir during hoisted linking)",
+      "resolution": "rerun-failed-jobs succeeded (attempt 3). Install step now retries once with a ::warning annotation. Upstream pnpm 10.34.x exists if the race recurs at scale; version stays pinned to the upstream lockfile's 10.33.2 for fidelity.",
+      "honest_note": "The governance and self-test jobs were unaffected in every attempt."
+    }
+  ],
   "local_verification": {
     "pinned_verifier": "trust anchor: verified — 6 control hashes, 0 unauthorized changes",
     "self_test": "13/13 scenarios pass locally (same suite as CI)",

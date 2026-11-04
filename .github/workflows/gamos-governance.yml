@@ -66,7 +66,7 @@ jobs:
         with:
           version: 10.33.2
       - name: Install workspace (frozen lockfile)
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile || (echo "::warning::retrying install after known pnpm@10.33.2 hoisted-linker ENOENT race (react-scan/esbuild rename)" && pnpm install --frozen-lockfile)
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - name: Architecture check
