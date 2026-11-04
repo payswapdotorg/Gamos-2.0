@@ -6,6 +6,53 @@
     "workflow": "gamos-governance (.github/workflows/gamos-governance.yml)",
     "runs": [
       {
+        "run_id": 41909484947,
+        "url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/41909484947",
+        "head_sha": "549fd991 (Phase B: application verification evidence)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "note": "Phase B evidence commit run — all three jobs green on attempt 1."
+      },
+      {
+        "run_id": 41910262508,
+        "url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/41910262508",
+        "head_sha": "468e731f (Phase C+D: contracts frozen)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_attempt": 1,
+        "jobs": [
+          {
+            "name": "Governance (baseline & protected surfaces)",
+            "job_id": 126855654233,
+            "conclusion": "success",
+            "key_output": [
+              "trust anchor : verified",
+              "controls : 15 hash-verified governance files",
+              "✓ compliant — governance controls intact"
+            ],
+            "log": "logs/final-468e731f-governance-baseline-protected-surfaces--126855654233.log"
+          },
+          {
+            "name": "Governance self-test (tamper rejection)",
+            "job_id": 126855654680,
+            "conclusion": "success",
+            "key_output": [
+              "# 14 scenarios: 14 ok, 0 failed",
+              "incl. scenario 14: later authorization supersedes stale hash"
+            ],
+            "log": "logs/final-468e731f-governance-self-test-tamper-rejection--126855654680.log"
+          },
+          {
+            "name": "Upstream architecture gate",
+            "job_id": 126855654576,
+            "conclusion": "success",
+            "log": "logs/final-468e731f-upstream-architecture-gate-126855654576.log"
+          }
+        ],
+        "note": "Definitive Phase C+D evidence: rotated trust anchor (0f55b6e6…), 15 control files (9 frozen contracts), 14-scenario self-test."
+      },
+      {
         "run_id": 41895183232,
         "url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/41895183232",
         "head_sha": "391e84383ee5d4eaabedf6d977b3ef31d5d6a2d4",
@@ -14,9 +61,37 @@
         "conclusion": "success",
         "run_attempt": 3,
         "jobs": [
-          {"name": "Governance (baseline & protected surfaces)", "job_id": 126806147897, "conclusion": "success", "log": "logs/job-governance-126806147897.log", "key_output": ["trust anchor : verified", "✓ compliant — governance controls intact; zero unauthorized changes to protected surfaces."]},
-          {"name": "Governance self-test (tamper rejection)", "job_id": 126806060173, "conclusion": "success", "log": "logs/job-self-test-126806060173.log", "key_output": ["# 13 scenarios: 13 ok, 0 failed", "# tamper-rejection suite passed — governance controls refuse unauthorized changes."]},
-          {"name": "Upstream architecture gate", "job_id": 126806056773, "conclusion": "success", "log": "logs/job-architecture-126806056773.log", "steps": ["pnpm install --frozen-lockfile (ELECTRON_SKIP_BINARY_DOWNLOAD=1)", "pnpm run architecture:check (Done in 760ms)"], "note": "succeeded on attempt 3 after a pnpm hoisted-linker race (see incidents)"}
+          {
+            "name": "Governance (baseline & protected surfaces)",
+            "job_id": 126806147897,
+            "conclusion": "success",
+            "log": "logs/job-governance-126806147897.log",
+            "key_output": [
+              "trust anchor : verified",
+              "✓ compliant — governance controls intact; zero unauthorized changes to protected surfaces."
+            ]
+          },
+          {
+            "name": "Governance self-test (tamper rejection)",
+            "job_id": 126806060173,
+            "conclusion": "success",
+            "log": "logs/job-self-test-126806060173.log",
+            "key_output": [
+              "# 13 scenarios: 13 ok, 0 failed",
+              "# tamper-rejection suite passed — governance controls refuse unauthorized changes."
+            ]
+          },
+          {
+            "name": "Upstream architecture gate",
+            "job_id": 126806056773,
+            "conclusion": "success",
+            "log": "logs/job-architecture-126806056773.log",
+            "steps": [
+              "pnpm install --frozen-lockfile (ELECTRON_SKIP_BINARY_DOWNLOAD=1)",
+              "pnpm run architecture:check (Done in 760ms)"
+            ],
+            "note": "succeeded on attempt 3 after a pnpm hoisted-linker race (see incidents)"
+          }
         ],
         "note": "Definitive Phase-A evidence run at the commit that carries this evidence bundle."
       },
@@ -80,7 +155,10 @@
             "conclusion": "success",
             "started_at": "2026-11-04T19:09:01Z",
             "completed_at": "2026-11-04T19:10:14Z",
-            "steps": ["pnpm install --frozen-lockfile (ELECTRON_SKIP_BINARY_DOWNLOAD=1)", "pnpm run architecture:check"],
+            "steps": [
+              "pnpm install --frozen-lockfile (ELECTRON_SKIP_BINARY_DOWNLOAD=1)",
+              "pnpm run architecture:check"
+            ],
             "log": "logs/job-architecture-126798913939.log"
           }
         ]
@@ -104,7 +182,12 @@
       "url": "https://github.com/payswapdotorg/Gamos-2.0/settings/rulesets/26558836",
       "target": "branch (~DEFAULT_BRANCH)",
       "enforcement": "active",
-      "rules": ["deletion blocked", "force-push blocked (non_fast_forward)", "pull_request: 1 approving review + code-owner review + dismiss stale reviews", "required_status_checks: Governance (baseline & protected surfaces), Governance self-test (tamper rejection), Upstream architecture gate"],
+      "rules": [
+        "deletion blocked",
+        "force-push blocked (non_fast_forward)",
+        "pull_request: 1 approving review + code-owner review + dismiss stale reviews",
+        "required_status_checks: Governance (baseline & protected surfaces), Governance self-test (tamper rejection), Upstream architecture gate"
+      ],
       "bypass_actors": "none — even the TL integrates main via reviewed PRs only; main stays the pristine upstream mirror"
     },
     "gamos_development_governance": {
@@ -113,8 +196,21 @@
       "url": "https://github.com/payswapdotorg/Gamos-2.0/settings/rulesets/26558837",
       "target": "branch (refs/heads/gamos/**)",
       "enforcement": "active",
-      "rules": ["deletion blocked", "force-push blocked (non_fast_forward)", "pull_request: 1 approving review + code-owner review + dismiss stale reviews", "required_status_checks: Governance (baseline & protected surfaces), Governance self-test (tamper rejection), Upstream architecture gate"],
-      "bypass_actors": [{"actor_id": 150378018, "actor_type": "User", "login": "payswapdotorg", "bypass_mode": "always", "rationale": "TL automation identity for authorized governance re-baseline pushes (ADR-0004 §8); all other actors require reviewed PRs"}]
+      "rules": [
+        "deletion blocked",
+        "force-push blocked (non_fast_forward)",
+        "pull_request: 1 approving review + code-owner review + dismiss stale reviews",
+        "required_status_checks: Governance (baseline & protected surfaces), Governance self-test (tamper rejection), Upstream architecture gate"
+      ],
+      "bypass_actors": [
+        {
+          "actor_id": 150378018,
+          "actor_type": "User",
+          "login": "payswapdotorg",
+          "bypass_mode": "always",
+          "rationale": "TL automation identity for authorized governance re-baseline pushes (ADR-0004 §8); all other actors require reviewed PRs"
+        }
+      ]
     }
   },
   "codeowners": {
@@ -124,7 +220,13 @@
   "authorization_record": {
     "id": "GAMOS-AUTH-0001",
     "schema": "gamos/authorization@2",
-    "bound_files": [".gamos-protected-surfaces.json", "scripts/gamos/governance-check.mjs", "scripts/gamos/governance-self-test.mjs", "scripts/gamos/governance-rebaseline.mjs", ".github/CODEOWNERS"],
+    "bound_files": [
+      ".gamos-protected-surfaces.json",
+      "scripts/gamos/governance-check.mjs",
+      "scripts/gamos/governance-self-test.mjs",
+      "scripts/gamos/governance-rebaseline.mjs",
+      ".github/CODEOWNERS"
+    ],
     "approver": "payswapdotorg",
     "note": "Complete v2 record with per-file content_sha256; ledger integrity itself enforced via baseline.controls (self-recording its own hash would be circular — ADR-0004)."
   },
@@ -141,5 +243,10 @@
     "pinned_verifier": "trust anchor: verified — 6 control hashes, 0 unauthorized changes",
     "self_test": "13/13 scenarios pass locally (same suite as CI)",
     "yaml": "workflow YAML parse-validated after fix"
+  },
+  "branch_state": {
+    "main": "a9fe401eede6e6e5e01be9048679c206fe6f02d9 — PRISTINE, byte-identical to zai-org/ZCode refs/heads/main (verified via git ls-remote at close-out)",
+    "working_branch": "gamos/development @ 468e731f — all Gamos work, additive-only vs pinned baseline",
+    "rulesets": "gamos-main-lockdown (26558836, no bypass) + gamos-development-governance (26558837, TL bypass actor) — active"
   }
 }
