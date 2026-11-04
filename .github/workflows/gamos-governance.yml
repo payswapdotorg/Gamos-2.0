@@ -1,0 +1,49 @@
+name: gamos-governance
+
+# Gamos preservation gate (ADR-0003).
+#   Job 1 "governance": dependency-free structural verification against the pinned
+#     upstream baseline (ancestor check, protected-file existence, unauthorized
+#     deletions/modifications of baseline-tracked files).
+#   Job 2 "architecture": upstream's own module/layering gate
+#     (pnpm run architecture:check), so upstream governance semantics keep applying.
+
+on:
+  push:
+    branches: ["main", "gamos/**"]
+  pull_request:
+    branches: ["main", "gamos/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    name: Governance (baseline & protected surfaces)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history: baseline-ancestor verification needs it
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run Gamos governance verifier
+        run: node scripts/gamos/governance-check.mjs
+
+  architecture:
+    name: Upstream architecture gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - name: Install workspace (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      - name: Architecture check
+        run: pnpm run architecture:check

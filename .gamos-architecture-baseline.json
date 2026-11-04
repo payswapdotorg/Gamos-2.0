@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "product": "gamos",
+  "description": "ZCode evolved into a specialized gaming development harness. Frozen fork/baseline record; enforced by scripts/gamos/governance-check.mjs and .github/workflows/gamos-governance.yml.",
+  "fork": {
+    "destination": "payswapdotorg/Gamos-2.0",
+    "origin_url": "https://github.com/payswapdotorg/Gamos-2.0.git",
+    "upstream_url": "https://github.com/zai-org/ZCode.git",
+    "upstream_remote": "upstream",
+    "method": "git clone --mirror -> git push --mirror (full history, all branches, all tags)",
+    "created": "2026-11-04"
+  },
+  "baseline": {
+    "pinned_sha": "a9fe401eede6e6e5e01be9048679c206fe6f02d9",
+    "upstream_tag": "v3.17.2",
+    "tree_sha": "e4e4c38936b992469ddade0defc28ff6ba636622",
+    "upstream_version": "3.17.2",
+    "verified_at": "2026-11-04",
+    "verification": "git ls-remote https://github.com/zai-org/ZCode.git refs/heads/main -> a9fe401eede6e6e5e01be9048679c206fe6f02d9",
+    "initial_working_branch": "gamos/development",
+    "branches": ["main", "feat/ui-plugin"],
+    "tags": ["v3.14.3", "v3.15.1", "v3.17.1", "v3.17.2"]
+  },
+  "preservation": {
+    "protected_surfaces": ".gamos-protected-surfaces.json",
+    "authorized_modifications": ".gamos-authorized-modifications.json",
+    "upstream_gate": {
+      "policy": "architecture-policy.yaml",
+      "baseline": ".architecture-baseline.json",
+      "commands": ["pnpm run architecture:check", "pnpm run verify:pre-push"]
+    },
+    "gamos_gate": {
+      "script": "scripts/gamos/governance-check.mjs",
+      "ci": ".github/workflows/gamos-governance.yml"
+    }
+  },
+  "planned_additive_surfaces": {
+    "domain_package": "packages/gamos-domain",
+    "engine_plugins": [
+      "apps/zcode-cli/packages/unity-engine-plugin",
+      "apps/zcode-cli/packages/blender-engine-plugin",
+      "apps/zcode-cli/packages/babylon-engine-plugin",
+      "apps/zcode-cli/packages/godot-engine-plugin",
+      "apps/zcode-cli/packages/unreal-engine-plugin"
+    ],
+    "platform_package": "packages/gamos-platform",
+    "status": "planned-not-implemented"
+  }
+}

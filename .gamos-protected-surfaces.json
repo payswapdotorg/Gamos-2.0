@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "mode": "baseline-tree",
+  "description": "Every file present in the pinned baseline tree is a protected surface. Deleting or modifying any of them requires an entry in .gamos-authorized-modifications.json (with TL approval). New files are additive and allowed; that is the default Gamos integration path.",
+  "baseline_sha": "a9fe401eede6e6e5e01be9048679c206fe6f02d9",
+  "hard_requirements": {
+    "must_exist": [
+      "LICENSE",
+      "NOTICE.md",
+      "THIRD-PARTY-NOTICES.md",
+      "AGENTS.md",
+      "DESIGN.md",
+      "architecture-policy.yaml",
+      ".architecture-baseline.json",
+      "pnpm-workspace.yaml",
+      "packages/shared/src/channels.ts",
+      "packages/shared/src/shortcutCommands.ts",
+      "packages/ui/src/App.tsx",
+      "packages/desktop/src/main/index.ts",
+      "packages/desktop/src/host/index.ts",
+      "packages/desktop/src/scheduler/index.ts",
+      "packages/services/src/terminal/terminalService.ts",
+      "packages/services/src/credential/credentialService.ts",
+      "packages/services/src/session/taskIndexRepo.ts",
+      "packages/services/src/session/zcodeTaskService.ts",
+      "apps/zcode-cli/packages/core/package.json",
+      "apps/zcode-cli/packages/contracts/package.json"
+    ],
+    "notes": "Existence of these files is necessary, not sufficient: operational preservation of every feature is tracked in docs/gamos/FEATURE-PRESERVATION-MATRIX.md."
+  },
+  "identifier_freeze": [
+    "@zcode/* package identifiers",
+    "window.zcode",
+    "ZCode IPC channels (packages/shared/src/channels.ts)",
+    "existing environment variables",
+    "existing storage keys",
+    "existing RPC contracts",
+    "existing internal protocol names",
+    "existing application services"
+  ]
+}

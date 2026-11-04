@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "description": "Authorized modifications to protected (baseline) surfaces. Every entry requires: file & symbol, reason, affected functionality, new functionality, regression tests, TL approval, verification evidence. Entries without tl_approval are rejected by the governance gate. Workers must not self-serve entries.",
+  "entries": []
+}
