@@ -1,0 +1,11 @@
+=== cmd: pnpm --filter @zcode/e2e-report build:node ===
+apps/zcode-cli                           |  WARN  Unsupported engine: wanted: {"node":"24.14.0"} (current: {"node":"v24.22.2","pnpm":"10.33.2"})
+
+> @zcode/e2e-report@ build:node /home/z/work/gamos-2.0/packages/e2e-report
+> tsc -p tsconfig.json
+
+
+real	0m1.208s
+user	0m1.415s
+sys	0m0.142s
+exit=0

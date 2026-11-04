@@ -1,0 +1,29 @@
+=== cmd: pnpm --filter @zcode/server build ===
+apps/zcode-cli                           |  WARN  Unsupported engine: wanted: {"node":"24.14.0"} (current: {"node":"v24.22.2","pnpm":"10.33.2"})
+
+> @zcode/server@ build /home/z/work/gamos-2.0/packages/server
+> tsup && pnpm run build:remote
+
+CLI Building entry: {"entry-http":"src/entry-http.ts"}
+CLI Using tsconfig: tsconfig.build.json
+CLI tsup v8.5.1
+CLI Using tsup config: /home/z/work/gamos-2.0/packages/server/tsup.config.ts
+CLI Target: node22
+ESM Build start
+ESM dist/chunk-YUCTK7YU.js                2.35 KB
+ESM dist/broker-helper-health-C7SPXEI5.js 161.00 B
+ESM dist/chunk-4VNS5WPM.js                1.83 KB
+ESM dist/es-OL6HBEAM.js                   3.75 MB
+ESM dist/entry-http.js                    5.42 MB
+ESM ⚡️ Build success in 1249ms
+../../apps/zcode-cli                     |  WARN  Unsupported engine: wanted: {"node":"24.14.0"} (current: {"node":"v24.22.2","pnpm":"10.33.2"})
+
+> @zcode/server@ build:remote /home/z/work/gamos-2.0/packages/server
+> tsx build-remote.ts
+
+Built dist/remote/zcode-server.cjs
+
+real	0m4.621s
+user	0m2.262s
+sys	0m0.368s
+exit=0

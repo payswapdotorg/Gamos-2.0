@@ -11,7 +11,12 @@ Deliver the GameOS packaging layer: game project packaging & artifact contracts
 ordinary agent tools; **PlayLiquid alignment** — mapping Gamos game packaging to the
 PlayLiquid delivery conventions from the prior workstream (installer surfaces,
 release channels, evidence-style acceptance) **without** reintroducing the retired
-PlayLiquid sandbox console or any duplicated runtime.
+PlayLiquid sandbox console or any duplicated runtime. Alignment is anchored on the
+same pinned PlayLiquid-2.0 source as contract 01 revision 1 (game-ir kernel commit
+`196b305e` for GameSpec conformance; delivery conventions per the PlayLiquid docs).
+Publishing authorization follows contract 06 revision 1 §3: a user's game-release
+authorization (PaySwap platform scope) is SEPARATE from repository governance —
+never conflate the two in packaging code or evidence records.
 
 ## MUST deliver per PR
 

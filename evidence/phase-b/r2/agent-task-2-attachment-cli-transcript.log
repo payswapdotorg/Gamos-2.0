@@ -1,0 +1,10 @@
+=== cmd: node apps/zcode-cli/packages/cli/dist/zcode.cjs -p (attachment echo) --attach attachment-input.txt ===
+Wed Nov  4 23:43:19 UTC 2026
+ZCode Built-in skipped (not-due)
+Done. Created `attachment-echo.txt` with the exact content from the attachment.
+
+real	0m19.917s
+user	0m10.772s
+sys	0m1.391s
+exit=0
+Wed Nov  4 23:43:39 UTC 2026

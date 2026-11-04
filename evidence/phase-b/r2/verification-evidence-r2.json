@@ -1,0 +1,74 @@
+{
+  "recorded_at": "2026-11-05T00:20:00Z",
+  "phase": "B (round 2) — M0 closure per architect re-review of commit 80c002dd",
+  "principle": "Honest capability split: sandbox floor + CI ceiling (ADR-0005). Nothing is marked passed that did not pass. The full original-application UI journey and the inherited desktop E2E suite run on the properly resourced CI runner (.github/workflows/gamos-phase-b-e2e.yml); the sandbox contributes the install/build/launch/process-layer/real-model-CLI evidence below and documents its hard limits with diagnostics.",
+  "environment": {
+    "sandbox": "2 vCPU, 3GB RAM, 7GB disk, Linux x64, no Docker; node v24.22.2, pnpm 10.33.2 (frozen lockfile), Xvfb :99 1680x1050x24",
+    "ci_runner": "GitHub-hosted ubuntu-latest (public repo: 4 vCPU / 16GB, Docker available) — workflow .github/workflows/gamos-phase-b-e2e.yml",
+    "app_version": "zcode 3.17.2 (upstream tag v3.17.2, pinned baseline a9fe401e)"
+  },
+  "sandbox_verified": {
+    "frozen_lockfile_install": {
+      "command": "pnpm install --frozen-lockfile",
+      "exit_code": 0,
+      "duration": "54.2s (warm store from interrupted attempts; fresh resolution skipped — lockfile up to date)",
+      "log": "r2/build-logs (install progress in journey-run.log header context)"
+    },
+    "build_original_application": {
+      "server": "pnpm --filter @zcode/server build — exit 0 (dist/entry-http.js 5.77MB; dist/remote/zcode-server.cjs 12.5MB)",
+      "agent_cli": "node scripts/build-desktop-agent-cli.mjs — exit 0 in 1m32.5s (ordered chain incl. @zcode/contracts, dynamic-workflow, core, adapters, telemetry, official plugin MCP runtimes) AND pnpm --filter @zcode/cli build — exit 0 (dist/zcode.cjs 30.5MB)",
+      "desktop_process_layer": "pnpm --filter @zcode/desktop exec tsup — exit 0, 5 build successes (main/preload/host/scheduler/plugin-sandbox-alias) with build-ready markers",
+      "e2e_report": "pnpm --filter @zcode/e2e-report build:node — exit 0",
+      "runtime_assets": "pnpm --filter @zcode/desktop pre-dev — exit 0 (native search tools extracted: bfs v4.1.1-2, ugrep v7.8.4-1, ripgrep v14.1.1-1 linux-x64; bundled agent staged)",
+      "build_metadata": "pnpm --filter @zcode/desktop prepare:build-meta — appVersion 3.17.2, commit 80c002dd",
+      "logs": "r2/build-logs/*.log (commands, exit codes, timings)"
+    },
+    "launch_original_application": {
+      "desktop": "Electron launched under Xvfb :99 from a staged, versioned app dir (out/ copy + package.json v3.17.2, mirroring the E2E staging pattern). Verified live: main process, primary window creation ('creating main window (app-ready)'), dom-ready fired, zcode-host utility process ('service connection ready mode=desktop-continuous', 'local services ready, all channels registered'), CDP remote-debugging 9229 active (title 'ZCode', renderer URL reachable, 2121+ module requests observed). Renderer module graph did NOT complete in the sandbox (see limitations).",
+      "cli": "node apps/zcode-cli/packages/cli/dist/zcode.cjs — full agent runtime headless; doctor exit 0 (zcode 0.17.1, node-bundle artifact)"
+    },
+    "real_model_tasks": {
+      "provider": "OpenRouter (openai-chat-completions, baseUrl https://openrouter.ai/api/v1) configured in ~/.zcode/v2/provider_config.json with a real API key (key never committed; masked in all evidence)",
+      "model": "nvidia/nemotron-3-ultra-550b-a55b:free — real generations (model id recorded in model-io rollouts; provider endpoint in the CLI log)",
+      "task_1": {
+        "prompt": "Create a file named gamos-phase-b-cli-task.txt with exactly: GAMOS-PHASE-B-CLI-OK, then read it back",
+        "exit_code": 0,
+        "duration": "17.0s",
+        "artifact_verified": "GAMOS-PHASE-B-CLI-OK (exact content)",
+        "transcript": "r2/agent-task-1-cli-transcript.log"
+      },
+      "task_2_attachment": {
+        "prompt": "--attach attachment-input.txt → create attachment-echo.txt with exactly the attachment text",
+        "exit_code": 0,
+        "duration": "19.9s",
+        "artifact_verified": "PHASE-B ATTACHMENT PROBE CONTENT (exact)",
+        "transcript": "r2/agent-task-2-attachment-cli-transcript.log"
+      },
+      "tool_use_evidence": "model-io rollouts show Write x5-6 / Read x5-6 tool invocations; sessions persisted in the agent store (project proj_tmp-gamos-phaseb-cli-workspace; 3 sessions incl. prior probe)"
+    },
+    "inherited_regression_tests": {
+      "architecture_check": "pnpm run architecture:check — architecture: OK, violations: 0, exit 0 (r2/architecture-check.log)",
+      "governance_self_test": "node scripts/gamos/governance-self-test.mjs — 14/14 scenarios ok, exit 0 (r2/governance-selftest.log)",
+      "governance_check": "node scripts/gamos/governance-check.mjs --pin 2be1e62b88e54e9aadc9f56c7d9d3e5d5f9767ee22aa42b1ea557161fdf26152 — trust anchor verified, 15 control hashes verified, 3 ledger entries (GAMOS-AUTH-0003 added), compliant, exit 0"
+    }
+  },
+  "sandbox_limitations_explicit": [
+    "Production web/desktop renderer bundle: vite production build peaks beyond the 3GB sandbox memory ceiling (documented since round 1) — built on the CI runner instead (pnpm build:bootstrap in the workflow).",
+    "Desktop dev-renderer module graph: Chromium exhausts its per-process request budget while vite dev transforms ~2000+ modules on 2 vCPU — net::ERR_INSUFFICIENT_RESOURCES on 4225 requests, DOM stays empty (bodyLen 0, tidCount 0); page reload retries against the warm vite cache did not recover. Diagnostics captured in journey/journey-evidence.json + journey-run.log (trimmed) + dom-dumps/S0-failure.json + screenshots/S0-failure.png. The complete renderer journey therefore runs on the CI runner.",
+    "No Docker in the sandbox: the inherited desktop E2E container suite cannot run locally — runs in the workflow's inherited-desktop-e2e job via the upstream-sanctioned scripts/test-desktop-e2e-container.sh."
+  ],
+  "ci_verified": {
+    "workflow": ".github/workflows/gamos-phase-b-e2e.yml",
+    "jobs": {
+      "desktop-journey": "Complete application build (build:bootstrap incl. production renderer) + scripts/gamos/phase-b-ui-journey.mjs in PHASEB_MODE=prod with the real OpenRouter key from the PHASEB_OPENROUTER_API_KEY repo secret: S0 app-up, S1 onboarding, S2 provider configuration, S3 New Task submission with the real model, S4 task execution + tool use + result review, S5 terminal panel, S6 review/diff approve+reject, S7 embedded browser, S8 plugin marketplace, S9 session recovery after app restart. Screenshots + journey-evidence.json + logs uploaded as artifacts.",
+      "inherited-desktop-e2e": "bash scripts/test-desktop-e2e-container.sh (default preset: container-boot, smoke, e2ecase-regression, upstream-provider, task-list-archive-confirmation) in replay-isolated network mode; artifacts uploaded."
+    },
+    "run_evidence": "TO BE RECORDED after the first workflow run completes (run URL, commit SHA, job results, sanitized logs) — see docs/gamos/IMPLEMENTATION-STATUS.md."
+  },
+  "contract_revisions": {
+    "authorization": "GAMOS-AUTH-0003 (complete gamos/authorization@2 entry; content-bound hashes filled by governance-rebaseline)",
+    "adr": "docs/gamos/ADR/0005-phase0-contract-revision-and-phase-b-evidence.md",
+    "revised": ["contracts/01 (A: PlayLiquid GameIR alignment)", "contracts/02 (B: fail-closed registry + execution-safety record)", "contracts/03 (consistency)", "contracts/04 (E: engine-specific version parsing + machine-local/shared separation)", "contracts/05 (C: Dynamic Workflow runtime mapping)", "contracts/06 (D: permission-gated engine mutations + governance/publishing separation)", "contracts/09 (D: plugin sandbox vs MCP process isolation)"],
+    "trust_anchor_after_rebaseline": "2be1e62b88e54e9aadc9f56c7d9d3e5d5f9767ee22aa42b1ea557161fdf26152"
+  }
+}

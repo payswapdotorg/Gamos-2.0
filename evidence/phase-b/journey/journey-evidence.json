@@ -1,0 +1,49 @@
+{
+ "script": "scripts/gamos/phase-b-ui-journey.mjs",
+ "mode": "dev",
+ "started_at": "2026-11-04T23:27:46.147Z",
+ "environment": {
+  "node": "v24.22.2",
+  "platform": "linux",
+  "cdp_port": 9229,
+  "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "provider": "openrouter",
+  "real_model_key_present": false,
+  "app_home": "/home/z/work/gamos-2.0/.phaseb-home",
+  "task_workspace": "/home/z/work/gamos-2.0/.phaseb-home/ZCodeProject"
+ },
+ "stages": {
+  "S0": {
+   "status": "fail",
+   "detail": "net::ERR_INSUFFICIENT_RESOURCES (repeated)",
+   "at": "2026-11-04T23:36:30.775Z"
+  }
+ },
+ "commands": [
+  {
+   "cmd": "vite dev --port 5174 (renderer, packages/desktop)",
+   "at": "2026-11-04T23:27:48.782Z"
+  },
+  {
+   "cmd": "electron /home/z/work/gamos-2.0/.phaseb-app --no-sandbox --disable-gpu (ELECTRON_RENDERER_URL=http://localhost:5174, ZCODE_DESKTOP_HOME_DIR=/home/z/work/gamos-2.0/.phaseb-home)",
+   "at": "2026-11-04T23:27:48.786Z"
+  },
+  {
+   "screenshot": "S0-failure",
+   "path": "evidence/phase-b/journey/screenshots/S0-failure.png",
+   "at": "2026-11-04T23:36:30.833Z"
+  }
+ ],
+ "failures": [
+  {
+   "stage": "S0",
+   "error": "net::ERR_INSUFFICIENT_RESOURCES (repeated)"
+  }
+ ],
+ "finished_at": "2026-11-04T23:36:32.349Z",
+ "summary": {
+  "stages_run": 1,
+  "failed": 1,
+  "overall": "1 stage(s) failed"
+ }
+}

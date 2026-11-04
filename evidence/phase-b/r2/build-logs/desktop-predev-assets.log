@@ -1,0 +1,26 @@
+=== cmd: pnpm --filter @zcode/desktop pre-dev (ensure-local-runtime-assets) ===
+Wed Nov  4 22:27:35 UTC 2026
+apps/zcode-cli                           |  WARN  Unsupported engine: wanted: {"node":"24.14.0"} (current: {"node":"v24.22.2","pnpm":"10.33.2"})
+
+> @zcode/desktop@ pre-dev /home/z/work/gamos-2.0/packages/desktop
+> node scripts/ensure-local-runtime-assets.mjs && node -e "require('node:fs').rmSync('./out',{recursive:true,force:true})"
+
+[ensure-local-runtime-assets] preparing embedded search because local runtime asset is missing or incomplete
+../../apps/zcode-cli                     |  WARN  Unsupported engine: wanted: {"node":"24.14.0"} (current: {"node":"v24.22.2","pnpm":"10.33.2"})
+
+> @zcode/desktop@ prepare:native-search /home/z/work/gamos-2.0/packages/desktop
+> node ../../scripts/prepare-native-search-tools.mjs
+
+==> Preparing native search tools from repository archives
+    platform: linux-x64
+    target:   /home/z/work/gamos-2.0/packages/desktop/bundled-tools/linux-x64
+    [extract] /home/z/work/gamos-2.0/apps/zcode-cli/dependencies/native-search/bfs-v4.1.1-2/bfs-v4.1.1-2-x86_64-unknown-linux-gnu.tar.gz
+    [extract] /home/z/work/gamos-2.0/apps/zcode-cli/dependencies/native-search/ugrep-v7.8.4-1/ugrep-v7.8.4-1-x86_64-unknown-linux-gnu.tar.gz
+    [extract] /home/z/work/gamos-2.0/apps/zcode-cli/dependencies/native-search/ripgrep-v14.1.1-1/ripgrep-v14.1.1-1-x86_64-unknown-linux-musl.tar.gz
+==> Done! native search tools (linux-x64) -> /home/z/work/gamos-2.0/packages/desktop/bundled-tools/linux-x64
+
+real	0m1.237s
+user	0m1.074s
+sys	0m0.209s
+exit=0
+Wed Nov  4 22:27:36 UTC 2026

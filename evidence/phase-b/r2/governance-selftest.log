@@ -1,0 +1,23 @@
+=== cmd: node scripts/gamos/governance-self-test.mjs ===
+Wed Nov  4 23:53:09 UTC 2026
+# Gamos governance self-test — tamper rejection suite (fixture root: /tmp/gamos-gov-selftest-lwZAAF)
+ok    1 - pristine repository — control case (must pass)
+ok    2 - unauthorized upstream modification is rejected
+ok    3 - unauthorized upstream deletion is rejected
+ok    4 - missing protected file (hard requirement) is rejected
+ok    5 - modified baseline SHA (trust-anchor pin stale) is rejected
+ok    6 - forged baseline SHA without pin is caught by the upstream-tag cross-check
+ok    7 - modified protected-surface list is rejected
+ok    8 - weakened governance verifier is rejected
+ok    9 - truthy tl_approval alone is NOT sufficient authorization
+ok   10 - authorization record missing evidence + decision_ref is rejected
+ok   11 - authorized change with complete evidence — control case (must pass)
+ok   12 - authorization content drift (approved hash ≠ actual content) is rejected
+ok   13 - history rewrite (pinned baseline not an ancestor of HEAD) is rejected
+ok   14 - a later complete authorization supersedes an earlier stale hash (ledger semantics)
+
+1..14
+# 14 scenarios: 14 ok, 0 failed
+# tamper-rejection suite passed — governance controls refuse unauthorized changes.
+exit=0
+Wed Nov  4 23:53:11 UTC 2026

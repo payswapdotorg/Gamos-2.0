@@ -1,0 +1,126 @@
+name: gamos-phase-b-e2e
+
+# Gamos Phase B — original-application verification on a properly resourced runner
+# (M0 acceptance, docs/gamos/MILESTONES-AND-ACCEPTANCE.md; ADR-0005).
+#
+#   Job "desktop-journey": builds the COMPLETE original application (including the
+#     production desktop renderer) and drives the actual user journey through the
+#     original UI with a REAL model (OpenRouter) — New Task submission, task
+#     execution + tool use, result review, terminal panel, review/diff approve +
+#     reject, embedded browser, plugin marketplace, session recovery after app
+#     restart. Evidence tooling: scripts/gamos/phase-b-ui-journey.mjs (additive;
+#     no protected sources touched). Screenshots + JSON evidence are uploaded.
+#
+#   Job "inherited-desktop-e2e": runs the applicable INHERITED desktop E2E suite
+#     through the upstream-sanctioned container path
+#     (Dockerfile.desktop-e2e + scripts/test-desktop-e2e-container.sh, default
+#     preset: container-boot, smoke, e2ecase-regression, upstream-provider,
+#     task-list-archive-confirmation) in replay-isolated network mode.
+#
+# The sandbox cannot complete these (3GB RAM / 2 vCPU / no Docker): production
+# renderer bundling OOMs there and the dev-renderer module graph exhausts
+# Chromium's per-process request budget. This workflow is the "suitable
+# environment" required by the M0 re-review directive.
+
+on:
+  push:
+    branches: ["gamos/**"]
+    paths:
+      - "scripts/gamos/phase-b-ui-journey.mjs"
+      - ".github/workflows/gamos-phase-b-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PNPM_VERSION: "10.33.2"
+
+jobs:
+  desktop-journey:
+    name: Phase B desktop journey (real model, production renderer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PHASEB_MODE: prod
+      PHASEB_EVIDENCE_DIR: evidence/phase-b/journey-ci
+      PHASEB_HOME: ${{ github.workspace }}/.phaseb-home
+      PHASEB_STAGED_APP_DIR: ${{ github.workspace }}/.phaseb-app
+      PHASEB_MAX_WAIT_MS: "600000"
+      DISPLAY: ":99"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.14.0"
+
+      - name: Activate pnpm
+        run: |
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+          pnpm --version
+
+      - name: Install display + electron runtime dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            xvfb xauth dbus dbus-x11 \
+            libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcairo2 \
+            libcups2 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0 libgtk-3-0 \
+            libnspr4 libnss3 libpango-1.0-0 libpangocairo-1.0-0 libsecret-1-0 \
+            libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxdamage1 libxext6 \
+            libxfixes3 libxkbcommon0 libxrandr2 libxrender1 libxshmfence1 \
+            libxss1 libxtst6 fonts-noto-cjk fonts-noto-color-emoji
+
+      - name: Frozen-lockfile install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop agent CLI chain (runtime agent bundle)
+        run: node scripts/build-desktop-agent-cli.mjs
+
+      - name: Prepare desktop runtime assets (agent bundle + native search tools)
+        run: pnpm --filter @zcode/desktop prepare:runtime-assets
+
+      - name: Build the complete application (all packages + desktop production renderer)
+        run: pnpm build:bootstrap
+
+      - name: Verify production renderer output
+        run: ls -la packages/desktop/out/renderer/ | head -12
+
+      - name: Run the original-application UI journey (real model)
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.PHASEB_OPENROUTER_API_KEY }}
+        run: |
+          ulimit -n 65535 || true
+          node scripts/gamos/phase-b-ui-journey.mjs
+
+      - name: Upload journey evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-b-journey-${{ github.sha }}
+          path: |
+            evidence/phase-b/journey-ci/
+          if-no-files-found: warn
+          retention-days: 30
+
+  inherited-desktop-e2e:
+    name: Inherited desktop E2E (container, default preset)
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the upstream container E2E suite (default preset)
+        run: bash scripts/test-desktop-e2e-container.sh
+
+      - name: Upload container E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-b-inherited-e2e-${{ github.sha }}
+          path: |
+            packages/desktop/.e2e-artifacts/
+          if-no-files-found: warn
+          retention-days: 14

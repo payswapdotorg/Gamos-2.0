@@ -3,7 +3,7 @@
 > Honest, evidence-based status. No green checkmark implies completion when only
 > a contract or UI exists. Updated at every integration point.
 >
-> **Last updated:** 2026-11-04 (M0 Phases A–D delivered: governance v2 hardening, application verification with real evidence, Phase-0 contracts frozen, workers prepared)
+> **Last updated:** 2026-11-05 (M0 re-review closure round: Phase-0 contracts revised per corrections A–E via GAMOS-AUTH-0003 + ADR-0005; Phase B round 2 — sandbox floor evidence banked, full UI journey + inherited desktop E2E routed to the properly resourced CI runner via .github/workflows/gamos-phase-b-e2e.yml)
 
 ---
 
@@ -19,9 +19,10 @@
 | Phase | Scope | Status |
 |---|---|---|
 | A — Repair governance | Tamper-resistant controls, complete authorization schema, failure-case tests, real Actions run | **Complete — green CI runs: 41894115266 @ `5ef39f2c`, 41895183232 @ `391e8438` (attempt 3), 41909484947 @ `549fd991`, 41910262508 @ `468e731f` (rotated anchor + 15 controls + 14/14 self-tests); rulesets active; main verified pristine vs upstream at close-out; evidence in `evidence/phase-a/`** |
-| B — M0 application verification | Frozen-lockfile install, build + launch original ZCode, golden paths, screenshots, regression tests | **Executed with real evidence (no status-console substitution): onboarding, model/provider config (OpenRouter 'Ready', real API exchanges), New Task interface + inherited controls, real agent task submission ×2 via Agent CLI (real model, Write/Read tools, artifacts on disk), attachments, plugin marketplace with a real sha256-verified install, history/session persistence, architecture gate + CLI doctor green. 17 UI screenshots + transcripts in evidence/phase-b/.** |
+| B — M0 application verification | Frozen-lockfile install, build + launch original ZCode, golden paths, screenshots, regression tests | **Round 1 executed with real evidence (17 UI screenshots + transcripts in evidence/phase-b/). Round 2 (re-review closure): sandbox floor re-verified fresh (install 54.2s exit 0; server/CLI/desktop-process-layer builds all exit 0 with logs in evidence/phase-b/r2/build-logs/; Electron desktop launched under Xvfb from a staged versioned app dir with window + host + CDP live; real-model CLI tasks ×2 exit 0 with exact artifacts; architecture:check OK 0 violations; governance self-test 14/14). Full original-UI journey (New Task submission w/ real model, terminal, review/diff approve+reject, embedded browser, marketplace, session recovery) + production renderer build + inherited desktop E2E suite run on the CI runner via gamos-phase-b-e2e.yml (ADR-0005 sandbox-floor/CI-ceiling model) — run evidence recorded below.** |
 | C — Freeze Phase-0 architecture contracts | 9 contract areas, using existing ZCode infrastructure only | **Complete — all 9 contracts authored in docs/gamos/contracts/ and FROZEN as hash-protected control files (baseline.controls now 15 files, trust anchor rotated via GAMOS-AUTH-0002); verifier refined to ledger supersession semantics; self-test extended to 14 scenarios (14/14 green locally)** |
-| D — Prepare workers A/B/C | Briefs, evidence requirements, DoD | **Complete — worker A (Unity/Blender/Babylon engine plugins), B (gaming domain/capability registry/intent+workflow), C (GameOS/package+artifact/PlayLiquid alignment) briefs + TL integration plan in docs/gamos/workers/; every brief mandates real evidence, explicit unavailable states, and no mocks** |
+| D — Prepare workers A/B/C | Briefs, evidence requirements, DoD | **Complete — worker A (Unity/Blender/Babylon engine plugins), B (gaming domain/capability registry/intent+workflow), C (GameOS/package+artifact/PlayLiquid alignment) briefs + TL integration plan in docs/gamos/workers/; every brief mandates real evidence, explicit unavailable states, and no mocks; B/C briefs updated to reference contract revision 1 (GAMOS-AUTH-0003)** |
+| C-rev — Phase-0 contract revision 1 (re-review corrections A–E) | GameIR↔PlayLiquid alignment; registry fail-closed; Dynamic Workflow mapping; plugin sandbox vs MCP processes; engine-specific version parsing | **Complete — 7 contracts revised via GAMOS-AUTH-0003 + governance-rebaseline (trust anchor rotated to 2be1e62b…); ADR-0005 records the decision + the Phase B evidence model; governance NOT weakened (self-test 14/14 after rotation)** |
 
 ## Requirement ledger
 
@@ -62,11 +63,12 @@ Authorization `GAMOS-AUTH-0001` (complete v2 record) binds the exact content of 
 
 ## Phase B conditional states (explicit, honest)
 
-1. **Web production bundle OOM:** `packages/web` `vite build` (rolldown native bundler, 8303 modules) peaks >3.1GB RSS and is OOM-killed in the 4GB sandbox; upstream's Docker E2E gate runs the identical build on GitHub 7GB runners. Dev-mode launch (the documented upstream flow) does not need the production renderer bundle — that is what was verified.
-2. **Desktop dev-renderer crash:** Electron main + zcode-host + agent warmup + database-startup + CDP verified under Xvfb; the unbundled dev renderer loaded (preload bridge present, vite connected) but the renderer process crashed (`render-process-gone`) under the sandbox memory ceiling. The upstream desktop e2e suite is blocked by the same build memory ceiling.
-3. **Web-only dev-mode task submission:** `project.remote-project-required` — web dev mode routes projects through remote-host policy (no desktop host); upstream README documents `ZCODE_SERVER_WORKSPACE` for web source development. Full-chain task flows (desktop host / Agent CLI) were verified instead, with the CLI delivering complete real-task evidence.
-4. **Model backend credits/geo:** the supplied OpenRouter key holds ~10 token credits and Anthropic-backed models are geo-restricted from this sandbox egress region; worked around by binding the free-tier `nvidia/nemotron-3-ultra-550b-a55b:free` (openai-chat-completions) — real generations, real tool calls.
-5. **No status-console substitution:** explicitly none — all evidence is from the original ZCode application.
+1. **Web production bundle OOM:** `packages/web` `vite build` (rolldown native bundler, 8303 modules) peaks >3.1GB RSS and is OOM-killed in the 4GB-class sandbox; upstream's Docker E2E gate runs the identical build on GitHub runners. **Round 2 routing:** the production build now runs on the CI runner (`pnpm build:bootstrap` in gamos-phase-b-e2e.yml → desktop-journey job).
+2. **Desktop dev-renderer module-graph exhaustion (round 2 diagnosis):** Electron main + zcode-host + primary window + CDP verified live under Xvfb; the dev renderer loads (title "ZCode", dom-ready) but its ~2000+-module graph exhausts Chromium's per-process request budget while vite dev transforms on 2 vCPU — `net::ERR_INSUFFICIENT_RESOURCES` on 4225 requests, DOM stays empty (bodyLen 0). Page-reload retries against the warm vite cache did not recover. Diagnostics: evidence/phase-b/journey/ (journey-evidence.json, trimmed journey-run.log, dom-dumps/S0-failure.json, screenshots/S0-failure.png). **Round 2 routing:** the complete renderer journey (S0–S9, production renderer + real model) runs on the CI runner via `scripts/gamos/phase-b-ui-journey.mjs` in `PHASEB_MODE=prod`.
+3. **Web-only dev-mode task submission:** `project.remote-project-required` — web dev mode routes projects through remote-host policy (no desktop host); upstream README documents `ZCODE_SERVER_WORKSPACE` for web source development. Full-chain task flows (desktop host / Agent CLI) were verified instead, with the CLI delivering complete real-task evidence (round 2 re-verified fresh: 2 tasks, exit 0, exact artifacts, Write/Read tool rollouts, sessions persisted).
+4. **No Docker in the sandbox:** the inherited desktop E2E container suite cannot run locally. **Round 2 routing:** runs on the CI runner (workflow job `inherited-desktop-e2e` via the upstream-sanctioned `scripts/test-desktop-e2e-container.sh`, default preset, replay-isolated).
+5. **Model backend credits/geo:** the supplied OpenRouter key holds ~10 token credits and Anthropic-backed models are geo-restricted from this sandbox egress region; worked around by binding the free-tier `nvidia/nemotron-3-ultra-550b-a55b:free` (openai-chat-completions) — real generations, real tool calls. On CI the same free-tier model is used via the encrypted `PHASEB_OPENROUTER_API_KEY` repo secret (never in the repo; logs sanitized).
+6. **No status-console substitution:** explicitly none — all evidence is from the original ZCode application.
 
 ## Blocked requirements
 
@@ -82,6 +84,9 @@ Authorization `GAMOS-AUTH-0001` (complete v2 record) binds the exact content of 
   control files, workflow trust anchor, authorization schema v2 with content
   binding, sanctioned rebaseline path, tamper-rejection self-tests, CODEOWNERS
   + rulesets, honest threat model).
+- **ADR-0005: Phase-0 contract revision 1 + Phase B evidence model** (corrections
+  A–E applied via GAMOS-AUTH-0003 + rebaseline; sandbox-floor/CI-ceiling split for
+  application verification; M0 acceptance keyed on the CI-run original-app journey).
 
 ## Regression results
 
@@ -102,6 +107,12 @@ Phase B work package).
 
 ## Next work package
 
-1. **Phase C:** freeze Phase-0 architecture contracts (9 areas) as hash-protected
-   control files under the governance v2 sanctioned path.
-2. **Phase D:** worker A/B/C briefs; M1/M2 authorization after M0 acceptance.
+1. **Phase B closure on CI:** first full run of `.github/workflows/gamos-phase-b-e2e.yml`
+   (desktop-journey S0–S9 with the real model + inherited-desktop-e2e container suite);
+   record run URL, commit SHA, job results and sanitized logs here and in
+   `evidence/phase-b/` (per MILESTONES-AND-ACCEPTANCE.md).
+2. **M0 acceptance review** against `docs/gamos/MILESTONES-AND-ACCEPTANCE.md` once the
+   journey evidence is committed.
+3. **M1/M2 remain gated** until M0 acceptance; worker A/B/C briefs stay prepared
+   (updated to contract revision 1) and must not begin broad engine implementation
+   before acceptance.

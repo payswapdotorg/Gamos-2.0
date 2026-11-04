@@ -1,0 +1,10 @@
+=== cmd: node apps/zcode-cli/packages/cli/dist/zcode.cjs -p "Create a file named gamos-phase-b-journey.txt ... read it back" ===
+Wed Nov  4 23:42:58 UTC 2026
+ZCode Built-in skipped (not-due)
+GAMOS-PHASE-B-CLI-OK
+
+real	0m17.019s
+user	0m10.725s
+sys	0m1.379s
+exit=0
+Wed Nov  4 23:43:15 UTC 2026

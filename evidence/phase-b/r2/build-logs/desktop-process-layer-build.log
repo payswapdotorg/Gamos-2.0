@@ -1,0 +1,143 @@
+=== cmd: pnpm --filter @zcode/desktop exec tsup (one-shot process layer: main/preload/host/scheduler) ===
+Wed Nov  4 22:27:49 UTC 2026
+apps/zcode-cli                           |  WARN  Unsupported engine: wanted: {"node":"24.14.0"} (current: {"node":"v24.22.2","pnpm":"10.33.2"})
+[tsup] ZCODE_ENV=test ZCODE_PRODUCT_FLAVOR=preview
+[MAIN] CLI Building entry: {"main/index":"src/main/index.ts","main/browserWebmRecorder":"src/main/browserView/electronBrowserWebmRecorder.ts","main/zcodeDataSizeWorker":"src/main/zcodeDataSizeWorker.ts","main/storageScanWorker":"src/main/storageScanWorker.ts"}
+[MAIN] CLI Using tsconfig: tsconfig.json
+[PRELOAD] CLI Building entry: {"preload/embeddedBrowserJavaScriptDialog":"src/preload/embeddedBrowserJavaScriptDialog.ts","preload/codingPlanWebview":"src/preload/codingPlanWebview.ts","preload/rewardsWebview":"src/preload/rewardsWebview.ts","preload/browserVideoRecorder":"src/preload/browserVideoRecorder.ts","preload/index":"src/preload/index.ts","preload/resourceManager":"src/preload/resourceManager.ts","preload/cuaPermissionPanel":"src/preload/cuaPermissionPanel.ts","preload/pluginSandbox":"src/preload/pluginSandbox/index.ts"}
+[PRELOAD] CLI Using tsconfig: tsconfig.json
+[PLUGIN-SANDBOX-ALIAS] CLI Building entry: {"plugin-sandbox-alias":"src/renderer/src/plugin-sandbox/alias.ts","gen-ui":"src/renderer/src/plugin-sandbox/genUi.ts"}
+[PLUGIN-SANDBOX-ALIAS] CLI Using tsconfig: tsconfig.json
+[HOST] CLI Building entry: {"host/index":"src/host/index.ts","host/tasksStorageWorker":"src/host/database-startup/tasksStorageWorker.ts"}
+[HOST] CLI Using tsconfig: tsconfig.json
+[SCHEDULER] CLI Building entry: {"scheduler/index":"src/scheduler/index.ts"}
+[SCHEDULER] CLI Using tsconfig: tsconfig.json
+[MAIN] CLI tsup v8.5.1
+[MAIN] CLI Using tsup config: /home/z/work/gamos-2.0/packages/desktop/tsup.config.ts
+[PRELOAD] CLI tsup v8.5.1
+[PRELOAD] CLI Using tsup config: /home/z/work/gamos-2.0/packages/desktop/tsup.config.ts
+[PLUGIN-SANDBOX-ALIAS] CLI tsup v8.5.1
+[PLUGIN-SANDBOX-ALIAS] CLI Using tsup config: /home/z/work/gamos-2.0/packages/desktop/tsup.config.ts
+[HOST] CLI tsup v8.5.1
+[HOST] CLI Using tsup config: /home/z/work/gamos-2.0/packages/desktop/tsup.config.ts
+[SCHEDULER] CLI tsup v8.5.1
+[SCHEDULER] CLI Using tsup config: /home/z/work/gamos-2.0/packages/desktop/tsup.config.ts
+[MAIN] CLI Target: node22
+[MAIN] ESM Build start
+[PRELOAD] CLI Target: node22
+[PRELOAD] CJS Build start
+[PLUGIN-SANDBOX-ALIAS] CLI Target: es2022
+[PLUGIN-SANDBOX-ALIAS] IIFE Build start
+[HOST] CLI Target: node22
+[HOST] ESM Build start
+[SCHEDULER] CLI Target: node22
+[SCHEDULER] ESM Build start
+[PLUGIN-SANDBOX-ALIAS] IIFE out/plugin-sandbox/plugin-sandbox-alias.js     1.05 MB
+[PLUGIN-SANDBOX-ALIAS] IIFE out/plugin-sandbox/gen-ui.js                   1.06 MB
+[PLUGIN-SANDBOX-ALIAS] IIFE out/plugin-sandbox/plugin-sandbox-alias.js.map 2.65 MB
+[PLUGIN-SANDBOX-ALIAS] IIFE out/plugin-sandbox/gen-ui.js.map               2.64 MB
+[PLUGIN-SANDBOX-ALIAS] IIFE ⚡️ Build success in 456ms
+[PRELOAD] CJS out/preload/browserVideoRecorder.cjs                367.00 B
+[PRELOAD] CJS out/preload/embeddedBrowserJavaScriptDialog.cjs     1.33 MB
+[PRELOAD] CJS out/preload/codingPlanWebview.cjs                   1.32 MB
+[PRELOAD] CJS out/preload/rewardsWebview.cjs                      1.31 MB
+[PRELOAD] CJS out/preload/index.cjs                               1.36 MB
+[PRELOAD] CJS out/preload/resourceManager.cjs                     1.32 MB
+[PRELOAD] CJS out/preload/cuaPermissionPanel.cjs                  1.32 MB
+[PRELOAD] CJS out/preload/pluginSandbox.cjs                       1.30 MB
+[PRELOAD] CJS out/preload/browserVideoRecorder.cjs.map            683.00 B
+[PRELOAD] CJS out/preload/codingPlanWebview.cjs.map               2.64 MB
+[PRELOAD] CJS out/preload/rewardsWebview.cjs.map                  2.58 MB
+[PRELOAD] CJS out/preload/cuaPermissionPanel.cjs.map              2.63 MB
+[PRELOAD] CJS out/preload/pluginSandbox.cjs.map                   2.63 MB
+[PRELOAD] CJS out/preload/index.cjs.map                           2.70 MB
+[PRELOAD] CJS out/preload/embeddedBrowserJavaScriptDialog.cjs.map 2.64 MB
+[PRELOAD] CJS out/preload/resourceManager.cjs.map                 2.63 MB
+[PRELOAD] CJS ⚡️ Build success in 3392ms
+[SCHEDULER] ESM out/scheduler/chunk-FM4YV3FX.js     306.00 B
+[SCHEDULER] ESM out/scheduler/chunk-W3RI44I4.js     3.02 KB
+[SCHEDULER] ESM out/scheduler/index.js              1.99 MB
+[SCHEDULER] ESM out/scheduler/chunk-FM4YV3FX.js.map 199.00 B
+[SCHEDULER] ESM out/scheduler/chunk-W3RI44I4.js.map 4.45 KB
+[SCHEDULER] ESM out/scheduler/index.js.map          8.86 MB
+[SCHEDULER] ESM ⚡️ Build success in 3735ms
+[MAIN] ESM out/main/chunk-BHGZGQWW.js          194.77 KB
+[MAIN] ESM out/main/chunk-5D6RCKLU.js          33.84 KB
+[MAIN] ESM out/main/browserWebmRecorder.js     276.00 B
+[MAIN] ESM out/main/chunk-53545MUY.js          15.84 KB
+[MAIN] ESM out/main/zcodeDataSizeWorker.js     815.00 B
+[MAIN] ESM out/main/chunk-MBGR2PM2.js          4.02 KB
+[MAIN] ESM out/main/storageScanWorker.js       1.49 KB
+[MAIN] ESM out/main/chunk-UWPKXUWV.js          491.75 KB
+[MAIN] ESM out/main/chunk-XZTZGRXD.js          176.81 KB
+[MAIN] ESM out/main/chunk-HOHEWBGD.js          444.00 B
+[MAIN] ESM out/main/chunk-SVNTYKIW.js          1.87 KB
+[MAIN] ESM out/main/chunk-4ZSQMB2A.js          24.71 KB
+[MAIN] ESM out/main/chunk-RD6ROWQR.js          301.00 B
+[MAIN] ESM out/main/chunk-C3EQ66M2.js          25.49 KB
+[MAIN] ESM out/main/chunk-JCPVPPDD.js          1.21 KB
+[MAIN] ESM out/main/chunk-FUUVO634.js          215.00 B
+[MAIN] ESM out/main/chunk-DKUVR6WD.js          14.42 KB
+[MAIN] ESM out/main/chunk-FB7COIB5.js          2.52 KB
+[MAIN] ESM out/main/chunk-5OZFBYVG.js          34.27 KB
+[MAIN] ESM out/main/chunk-GDXMLGPL.js          2.36 KB
+[MAIN] ESM out/main/index.js                   1.50 MB
+[MAIN] ESM out/main/chunk-66VLMZFW.js          1.49 MB
+[MAIN] ESM out/main/chunk-BHGZGQWW.js.map      365.47 KB
+[MAIN] ESM out/main/chunk-5D6RCKLU.js.map      104.10 KB
+[MAIN] ESM out/main/browserWebmRecorder.js.map 71.00 B
+[MAIN] ESM out/main/chunk-53545MUY.js.map      24.55 KB
+[MAIN] ESM out/main/zcodeDataSizeWorker.js.map 1.22 KB
+[MAIN] ESM out/main/chunk-MBGR2PM2.js.map      7.49 KB
+[MAIN] ESM out/main/storageScanWorker.js.map   2.46 KB
+[MAIN] ESM out/main/chunk-HOHEWBGD.js.map      207.00 B
+[MAIN] ESM out/main/chunk-SVNTYKIW.js.map      4.53 KB
+[MAIN] ESM out/main/chunk-4ZSQMB2A.js.map      47.10 KB
+[MAIN] ESM out/main/chunk-RD6ROWQR.js.map      71.00 B
+[MAIN] ESM out/main/chunk-C3EQ66M2.js.map      48.71 KB
+[MAIN] ESM out/main/chunk-JCPVPPDD.js.map      1.67 KB
+[MAIN] ESM out/main/chunk-FUUVO634.js.map      71.00 B
+[MAIN] ESM out/main/chunk-FB7COIB5.js.map      4.50 KB
+[MAIN] ESM out/main/chunk-DKUVR6WD.js.map      28.00 KB
+[MAIN] ESM out/main/chunk-5OZFBYVG.js.map      121.36 KB
+[MAIN] ESM out/main/chunk-GDXMLGPL.js.map      283.00 B
+[MAIN] ESM out/main/chunk-XZTZGRXD.js.map      753.68 KB
+[MAIN] ESM out/main/index.js.map               2.91 MB
+[MAIN] ESM out/main/chunk-66VLMZFW.js.map      3.14 MB
+[MAIN] ESM out/main/chunk-UWPKXUWV.js.map      4.92 MB
+[MAIN] ESM ⚡️ Build success in 4419ms
+[HOST] ESM out/host/tasksStorageWorker.js     1.27 KB
+[HOST] ESM out/host/chunk-UX3ZCHHX.js         415.30 KB
+[HOST] ESM out/host/chunk-5BXVJEHK.js         24.96 KB
+[HOST] ESM out/host/chunk-RHT5EWKD.js         24.55 KB
+[HOST] ESM out/host/chunk-GRV3LBFW.js         959.00 B
+[HOST] ESM out/host/chunk-KB22N4ZU.js         14.14 KB
+[HOST] ESM out/host/chunk-L2WF7QZG.js         1.14 KB
+[HOST] ESM out/host/chunk-7EDRFBPH.js         1.37 KB
+[HOST] ESM out/host/chunk-QRVWQHDJ.js         1.83 KB
+[HOST] ESM out/host/chunk-ZCH7JJUG.js         37.10 KB
+[HOST] ESM out/host/chunk-4BMX3PSV.js         344.00 B
+[HOST] ESM out/host/chunk-UHQAMCA5.js         2.57 KB
+[HOST] ESM out/host/chunk-LGTFMSLO.js         1.54 MB
+[HOST] ESM out/host/tasksStorageWorker.js.map 1.85 KB
+[HOST] ESM out/host/chunk-5BXVJEHK.js.map     48.43 KB
+[HOST] ESM out/host/chunk-RHT5EWKD.js.map     47.09 KB
+[HOST] ESM out/host/chunk-GRV3LBFW.js.map     1.58 KB
+[HOST] ESM out/host/chunk-KB22N4ZU.js.map     27.90 KB
+[HOST] ESM out/host/chunk-L2WF7QZG.js.map     2.33 KB
+[HOST] ESM out/host/chunk-7EDRFBPH.js.map     2.23 KB
+[HOST] ESM out/host/chunk-QRVWQHDJ.js.map     174.00 B
+[HOST] ESM out/host/chunk-ZCH7JJUG.js.map     123.72 KB
+[HOST] ESM out/host/chunk-4BMX3PSV.js.map     201.00 B
+[HOST] ESM out/host/chunk-UHQAMCA5.js.map     4.92 KB
+[HOST] ESM out/host/chunk-UX3ZCHHX.js.map     793.56 KB
+[HOST] ESM out/host/index.js                  3.86 MB
+[HOST] ESM out/host/chunk-LGTFMSLO.js.map     3.19 MB
+[HOST] ESM out/host/index.js.map              8.09 MB
+[HOST] ESM ⚡️ Build success in 5039ms
+
+real	0m6.181s
+user	0m2.321s
+sys	0m0.622s
+exit=0
+Wed Nov  4 22:27:55 UTC 2026

@@ -1,0 +1,16 @@
+=== cmd: pnpm run architecture:check ===
+Wed Nov  4 23:44:12 UTC 2026
+
+> zcode@3.17.2 architecture:check /home/z/work/gamos-2.0
+> node scripts/architecture/architecture-check.mjs check
+
+architecture: OK
+violations: 0
+baseline: 0
+new: 0
+
+real	0m9.013s
+user	0m10.177s
+sys	0m0.551s
+exit=0
+Wed Nov  4 23:44:21 UTC 2026

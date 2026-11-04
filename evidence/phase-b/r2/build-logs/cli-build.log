@@ -1,0 +1,16 @@
+=== cmd: pnpm --filter @zcode/cli build ===
+apps/zcode-cli                           |  WARN  Unsupported engine: wanted: {"node":"24.14.0"} (current: {"node":"v24.22.2","pnpm":"10.33.2"})
+
+> @zcode/cli@0.1.0 build /home/z/work/gamos-2.0/apps/zcode-cli/packages/cli
+> node scripts/build.mjs
+
+
+  dist/zcode.cjs      29.1mb ⚠️
+  dist/zcode.cjs.map  53.0mb
+
+⚡ Done in 3592ms
+
+real	0m4.386s
+user	0m0.878s
+sys	0m0.108s
+exit=0
