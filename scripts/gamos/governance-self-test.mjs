@@ -357,6 +357,30 @@ scenario(
   { wantExit: 1, wantCodes: ["HISTORY_REWRITE"] }
 );
 
+scenario(
+  14,
+  "a later complete authorization supersedes an earlier stale hash (ledger semantics)",
+  (fx) => {
+    // first authorized change (valid, content-bound)
+    appendFile(fx.root, "src/core.ts", "// v1 authorized change\n");
+    let ledger = readJson(fx.root, ".gamos-authorized-modifications.json");
+    ledger.entries.push(validEntry());
+    writeJson(fx.root, ".gamos-authorized-modifications.json", ledger);
+    let rb = runRebaselineFillAuto(fx.root);
+    if (rb.code !== 0 || !rb.pin) throw new Error(`rebaseline v1 failed: exit ${rb.code}`);
+    fx.pin = rb.pin;
+    // second authorized change on the SAME file (supersedes the stale hash)
+    appendFile(fx.root, "src/core.ts", "// v2 supersedes v1\n");
+    ledger = readJson(fx.root, ".gamos-authorized-modifications.json");
+    ledger.entries.push(validEntry({ id: "GAMOS-AUTH-0002" }));
+    writeJson(fx.root, ".gamos-authorized-modifications.json", ledger);
+    rb = runRebaselineFillAuto(fx.root);
+    if (rb.code !== 0 || !rb.pin) throw new Error(`rebaseline v2 failed: exit ${rb.code}`);
+    fx.pin = rb.pin; // newest authorization is the binding one; the plan must pass
+  },
+  { wantExit: 0 }
+);
+
 // ------------------------------------------------------------------ report
 const failed = results.filter((r) => !r.ok);
 console.log(`\n1..${results.length}`);

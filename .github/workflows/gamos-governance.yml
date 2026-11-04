@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
 
 env:
-  GAMOS_BASELINE_SHA256: "07679a8a41c25f6417e2a3ddf415aee35e75276070941c8f8db70ea690954332"
+  GAMOS_BASELINE_SHA256: "0f55b6e687dbf1bf28581dbb40b75bca54c522e4a324b323ccc469f240675b56"
 
 permissions:
   contents: read
@@ -51,7 +51,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Run tamper-rejection self-tests (13 scenarios)
+      - name: Run tamper-rejection self-tests (14 scenarios)
         run: node scripts/gamos/governance-self-test.mjs
 
   architecture:

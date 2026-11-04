@@ -306,8 +306,12 @@ if (authManifest) {
           continue;
         }
         const key = `${c.action}:${c.path}`;
-        if (authorization.has(key) || pending.some((p) => p.key === key)) {
-          bad(`duplicate authorization for ${key}`);
+        // Within one entry a repeated key is a schema error; ACROSS entries the
+        // LATER authorization legitimately supersedes an earlier one (ledger
+        // semantics: each entry is a point-in-time approval; the newest record
+        // for a path is the binding one — supersession is visible in the audit trail).
+        if (pending.some((p) => p.key === key)) {
+          bad(`duplicate authorization for ${key} within the same entry`);
           continue;
         }
         pending.push({ key, entryId: entry.id, content_sha256: c.content_sha256 });

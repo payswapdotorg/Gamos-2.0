@@ -60,6 +60,100 @@
         "date": "2026-11-04T19:05:00Z",
         "decision_ref": "gamos/development Phase-A governance-v2 commit; architect review directive 'Repair governance' items 1-4; evidence in docs/gamos/IMPLEMENTATION-STATUS.md#phase-a"
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0002",
+      "phase": "M0",
+      "date": "2026-11-04T21:05:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "Architect review Phase C: freeze Phase-0 architecture contracts (9 areas) as hash-protected governance control files, plus Phase D worker briefs and TL integration plan. Verifier refined to ledger supersession semantics (later complete authorizations supersede earlier stale content hashes); self-test extended to 14 scenarios.",
+      "risk": "low",
+      "affected_functionality": "Governance protected-surface policy only (adds new control files); no ZCode application surface touched.",
+      "new_functionality": "docs/gamos/contracts/01..09 frozen under baseline.controls; docs/gamos/workers/* briefs; authorization binding for the freeze.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin <GAMOS_BASELINE_SHA256>",
+        "node scripts/gamos/governance-self-test.mjs",
+        "pnpm run architecture:check"
+      ],
+      "evidence": {
+        "summary": "Contracts authored per architect Phase C list; frozen via governance-rebaseline; CI run recorded in IMPLEMENTATION-STATUS.",
+        "links": [
+          "docs/gamos/contracts/",
+          "docs/gamos/IMPLEMENTATION-STATUS.md",
+          "evidence/phase-a/governance-v2-ci-evidence.json"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": ".gamos-protected-surfaces.json",
+          "content_sha256": "31859f68d623f2418e31d8fd6d0e72f33367c409b50ff66f7e85c904319924c0"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/01-gaming-domain-and-gameir.md",
+          "content_sha256": "9f4770ca3b0ba07a035e0ed5a55ecc13777b31b030c64d82b776da6e4593fd00"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/02-capability-registry.md",
+          "content_sha256": "69a35c104bd388a3561522b5468056d909732a98c8071d61080ac38841180cd5"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/03-engine-plugin-capability-metadata.md",
+          "content_sha256": "4906f881611c3a5d929077ba75f025b71d9cbd9f47a94193f76b31c611297765"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/04-project-context-and-engine-discovery.md",
+          "content_sha256": "d5a430e08de3e31e8772b4c99e2b61d761e0d941a2f1fdb05f8a7f4fbf3cd215"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/05-intent-and-workflow-orchestration.md",
+          "content_sha256": "cf93b8f80424ba9c73c8bc43b3da0b4167841c68592ade14f20f49be865c5e54"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/06-permission-and-approval-mapping.md",
+          "content_sha256": "eb652d0f6de20be2a432ba0feaaee5fa10a166d8dc6aec787107ebaa443f381a"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/07-local-vs-remote-capability-availability.md",
+          "content_sha256": "1ce4ca13ef55bca9883278a7967d42b8bdeee34f7e16795a5a65b5c16bca7487"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/08-artifact-and-evidence-contracts.md",
+          "content_sha256": "e13fa0f35750a3763b4cb5dbc5015618dbf6ea0f032d043b5f1673e4c48828f5"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/09-plugin-trust-and-provenance.md",
+          "content_sha256": "9643cb2a2eb0d18f84a47c5fba09614339955669e53210d3f599e88641d5f403"
+        },
+        {
+          "action": "modify",
+          "path": "scripts/gamos/governance-check.mjs",
+          "content_sha256": "f139b141ca506b433a0080ef1360e4b3f1d48103759f958e03fff79cb9e0fa88"
+        },
+        {
+          "action": "modify",
+          "path": "scripts/gamos/governance-self-test.mjs",
+          "content_sha256": "99922161c3d48313659b8f8225648db5675c02a5a29a8c8d1f4568ba3dc3ff15"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-04T21:05:00Z",
+        "decision_ref": "architect review directive Phase C (freeze before workers) + Phase D (prepare workers); see docs/gamos/workers/tl-integration-plan.md"
+      }
     }
   ]
 }

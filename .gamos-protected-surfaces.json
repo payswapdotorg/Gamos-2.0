@@ -9,7 +9,16 @@
     "scripts/gamos/governance-check.mjs",
     "scripts/gamos/governance-self-test.mjs",
     "scripts/gamos/governance-rebaseline.mjs",
-    ".github/CODEOWNERS"
+    ".github/CODEOWNERS",
+    "docs/gamos/contracts/01-gaming-domain-and-gameir.md",
+    "docs/gamos/contracts/02-capability-registry.md",
+    "docs/gamos/contracts/03-engine-plugin-capability-metadata.md",
+    "docs/gamos/contracts/04-project-context-and-engine-discovery.md",
+    "docs/gamos/contracts/05-intent-and-workflow-orchestration.md",
+    "docs/gamos/contracts/06-permission-and-approval-mapping.md",
+    "docs/gamos/contracts/07-local-vs-remote-capability-availability.md",
+    "docs/gamos/contracts/08-artifact-and-evidence-contracts.md",
+    "docs/gamos/contracts/09-plugin-trust-and-provenance.md"
   ],
   "control_integrity": "sha256 of each control_files path is recorded in .gamos-architecture-baseline.json (controls) and verified on every push/PR/daily-schedule by .github/workflows/gamos-governance.yml, which itself pins sha256 of the baseline file (trust anchor, ADR-0004). Changing a control file requires scripts/gamos/governance-rebaseline.mjs, a complete authorization entry, and a TL-reviewed PR (CODEOWNERS + branch rulesets).",
   "hard_requirements": {
@@ -44,7 +53,20 @@
       ".github/CODEOWNERS",
       "docs/gamos/IMPLEMENTATION-STATUS.md",
       "docs/gamos/FEATURE-PRESERVATION-MATRIX.md",
-      "docs/gamos/ADR/0004-governance-v2-tamper-resistance.md"
+      "docs/gamos/ADR/0004-governance-v2-tamper-resistance.md",
+      "docs/gamos/contracts/01-gaming-domain-and-gameir.md",
+      "docs/gamos/contracts/02-capability-registry.md",
+      "docs/gamos/contracts/03-engine-plugin-capability-metadata.md",
+      "docs/gamos/contracts/04-project-context-and-engine-discovery.md",
+      "docs/gamos/contracts/05-intent-and-workflow-orchestration.md",
+      "docs/gamos/contracts/06-permission-and-approval-mapping.md",
+      "docs/gamos/contracts/07-local-vs-remote-capability-availability.md",
+      "docs/gamos/contracts/08-artifact-and-evidence-contracts.md",
+      "docs/gamos/contracts/09-plugin-trust-and-provenance.md",
+      "docs/gamos/workers/worker-a-brief.md",
+      "docs/gamos/workers/worker-b-brief.md",
+      "docs/gamos/workers/worker-c-brief.md",
+      "docs/gamos/workers/tl-integration-plan.md"
     ],
     "notes": "Existence of these files is necessary, not sufficient: operational preservation of every feature is tracked in docs/gamos/FEATURE-PRESERVATION-MATRIX.md. Control files are additionally hash-bound (control_files above)."
   },

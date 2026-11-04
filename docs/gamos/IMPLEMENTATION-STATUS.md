@@ -3,7 +3,7 @@
 > Honest, evidence-based status. No green checkmark implies completion when only
 > a contract or UI exists. Updated at every integration point.
 >
-> **Last updated:** 2026-11-04 (M0 Phase A — governance v2 hardening, per architect review)
+> **Last updated:** 2026-11-04 (M0 Phases A–D delivered: governance v2 hardening, application verification with real evidence, Phase-0 contracts frozen, workers prepared)
 
 ---
 
@@ -20,8 +20,8 @@
 |---|---|---|
 | A — Repair governance | Tamper-resistant controls, complete authorization schema, failure-case tests, real Actions run | **Complete — CI run 41895183266 green at `5ef39f2c`; run 41895183232 green (attempt 3) at `391e8438` (the evidence commit); rulesets active; evidence in `evidence/phase-a/`** |
 | B — M0 application verification | Frozen-lockfile install, build + launch original ZCode, golden paths, screenshots, regression tests | **Executed with real evidence (no status-console substitution): onboarding, model/provider config (OpenRouter 'Ready', real API exchanges), New Task interface + inherited controls, real agent task submission ×2 via Agent CLI (real model, Write/Read tools, artifacts on disk), attachments, plugin marketplace with a real sha256-verified install, history/session persistence, architecture gate + CLI doctor green. 17 UI screenshots + transcripts in evidence/phase-b/.** |
-| C — Freeze Phase-0 architecture contracts | 9 contract areas, using existing ZCode infrastructure only | Not started |
-| D — Prepare workers A/B/C | Briefs, evidence requirements, DoD | Not started |
+| C — Freeze Phase-0 architecture contracts | 9 contract areas, using existing ZCode infrastructure only | **Complete — all 9 contracts authored in docs/gamos/contracts/ and FROZEN as hash-protected control files (baseline.controls now 15 files, trust anchor rotated via GAMOS-AUTH-0002); verifier refined to ledger supersession semantics; self-test extended to 14 scenarios (14/14 green locally)** |
+| D — Prepare workers A/B/C | Briefs, evidence requirements, DoD | **Complete — worker A (Unity/Blender/Babylon engine plugins), B (gaming domain/capability registry/intent+workflow), C (GameOS/package+artifact/PlayLiquid alignment) briefs + TL integration plan in docs/gamos/workers/; every brief mandates real evidence, explicit unavailable states, and no mocks** |
 
 ## Requirement ledger
 
