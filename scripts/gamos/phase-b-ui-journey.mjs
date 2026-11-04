@@ -45,6 +45,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, app
 import { request as httpRequest } from "node:http";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { homedir } from "node:os";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DESKTOP_DIR = join(REPO_ROOT, "packages", "desktop");
@@ -55,7 +56,13 @@ const EVIDENCE_DIR = resolve(REPO_ROOT, process.env.PHASEB_EVIDENCE_DIR ?? "evid
 const SCREEN_DIR = join(EVIDENCE_DIR, "screenshots");
 const DUMP_DIR = join(EVIDENCE_DIR, "dom-dumps");
 const PHASEB_HOME = resolve(REPO_ROOT, process.env.PHASEB_HOME ?? ".phaseb-home");
-const TASK_WORKSPACE = resolve(process.env.PHASEB_TASK_WORKSPACE ?? join(PHASEB_HOME, "ZCodeProject"));
+// The app's default session workspace follows the OS home (verified on the sandbox:
+// initialWorkspacePath=<homedir>/.zcode/workspace/default; ZCODE_DESKTOP_HOME_DIR does
+// not redirect it). Keeping task artifacts inside the session workspace avoids
+// spurious out-of-workspace permission prompts during the S3 journey.
+const TASK_WORKSPACE = resolve(
+  process.env.PHASEB_TASK_WORKSPACE ?? join(homedir(), ".zcode", "workspace", "default"),
+);
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY ?? "";
 const MODEL_ID = process.env.PHASEB_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b:free";
 const MAX_WAIT = Number(process.env.PHASEB_MAX_WAIT_MS ?? 240000);
@@ -674,14 +681,17 @@ async function waitForTaskCompletion(screenshotPrefix, { timeout = MAX_WAIT } = 
 }
 
 async function stageS3() {
-  const taskFile = "gamos-phase-b-journey.txt";
-  const taskText = `Create a file named ${taskFile} in the current workspace with exactly this content (single line): GAMOS-PHASE-B-DESKTOP-JOURNEY-OK. Then read the file back and print its content.`;
+  const taskFile = join(TASK_WORKSPACE, "gamos-phase-b-journey.txt");
+  // Absolute path in the prompt: the app's default workspace derives from the OS home
+  // (ZCODE_DESKTOP_HOME_DIR does not redirect it), so "current workspace" would be
+  // ambiguous across environments. An absolute path keeps the artifact check exact.
+  const taskText = `Create a file at exactly this absolute path: ${taskFile} — with exactly this single line of content: GAMOS-PHASE-B-DESKTOP-JOURNEY-OK. Then read the file back and print its exact content.`;
   await submitComposerTask(taskText, "S3");
   await screenshot("S3-task-submitted");
   const result = await waitForTaskCompletion("S3", { timeout: MAX_WAIT });
   await screenshot("S3-task-result");
-  const artifactOk = existsSync(join(TASK_WORKSPACE, taskFile));
-  const artifactContent = artifactOk ? readFileSync(join(TASK_WORKSPACE, taskFile), "utf8").trim() : null;
+  const artifactOk = existsSync(taskFile);
+  const artifactContent = artifactOk ? readFileSync(taskFile, "utf8").trim() : null;
   recordStage("S3", result.completed && artifactOk ? "pass" : "fail", {
     task: "file create + read-back via New Task composer (real model)",
     completed: result.completed,
@@ -751,7 +761,7 @@ async function stageS6() {
   await new Promise((r) => setTimeout(r, 500));
   await screenshot("S6-review-mode-on");
 
-  const editTask = `Edit the file gamos-phase-b-journey.txt in the current workspace: append a second line with exactly: REVIEW-APPROVED-LINE. Then show the final file content.`;
+  const editTask = `Edit the file at exactly this absolute path: ${join(TASK_WORKSPACE, "gamos-phase-b-journey.txt")} — append a second line with exactly: REVIEW-APPROVED-LINE. Then show the final file content.`;
   await submitComposerTask(editTask, "S6");
   // Wait for a permission/review prompt (diff UI) to appear
   const promptSeen = await waitFor(async () => {
