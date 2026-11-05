@@ -920,6 +920,60 @@ async function stageS2() {
   });
   journey.providerSavedOnDisk = saved;
   await screenshot("S2-provider-saved");
+  // Add the FREE-tier model to the provider through the settings page's own
+  // "Add model" flow (the upstream E2E path —
+  // packages/desktop/test/e2e/helpers/upstream-provider.ts addUpstreamProviderModel):
+  // the openrouter template's default catalog is paid-tier, and the journey's
+  // OpenRouter key holds ~10 credits — a paid default model (minimax m3.1-flash)
+  // gets every real request rejected with 402 "requires more credits" (run
+  // 42042926675 agent-log evidence), so no task can run. The free-tier model
+  // (verified present in the live OpenRouter catalog: 12 :free models incl.
+  // nvidia/nemotron-3-ultra-550b-a55b:free) is added explicitly like a real user
+  // would. The add-model button opens either the model metadata dialog
+  // (role=dialog with a Model ID input + Save, disabled while the catalog
+  // max-output query runs) or an inline model input row.
+  let addedModelVia = null;
+  await clickTid("model-provider-add-model-button", { timeout: 20000 });
+  await new Promise((r) => setTimeout(r, 900));
+  const dialogModelInput = await rectOf(`(() => {
+    const dialog = document.querySelector('[role="dialog"]');
+    if (!dialog) return null;
+    const inputs = Array.from(dialog.querySelectorAll('input'));
+    const byLabel = inputs.find(i => /^(模型\\s*id|model\\s*id)$/i.test(((i.closest('label')?.textContent) ?? (i.parentElement?.querySelector('label')?.textContent) ?? i.getAttribute('placeholder') ?? '')).trim()));
+    return byLabel ?? inputs.find(i => i.getAttribute('inputmode') !== 'numeric' && !i.readOnly && i.type !== 'checkbox' && i.type !== 'radio') ?? null;
+  })()`).catch(() => null);
+  if (dialogModelInput && dialogModelInput.w > 0) {
+    await cdpClickRect(dialogModelInput);
+    await typeIntoFocused(MODEL_ID);
+    await new Promise((r) => setTimeout(r, 600));
+    const saveBtn = await waitFor(async () => {
+      const r = await rectOf(`(() => {
+        const dialog = document.querySelector('[role="dialog"]');
+        if (!dialog) return null;
+        const btn = Array.from(dialog.querySelectorAll('button')).find(b => /^(保存|save).*/i.test((b.innerText ?? '').replace(/\\s+/g, ' ').trim()));
+        return btn && !btn.disabled && !dialog.querySelector('[role="status"]') ? btn : null;
+      })()`).catch(() => null);
+      return r && r.w > 0 ? r : false;
+    }, { what: "model metadata dialog Save button (enabled after the catalog query)", timeout: 45000 });
+    await cdpClickRect(saveBtn);
+    await waitFor(async () => {
+      const closed = await evalJs(`(() => { const d = document.querySelector('[role="dialog"]'); return !d || !d.querySelector('input'); })()`).catch(() => false);
+      return closed;
+    }, { what: "model metadata dialog closed after Save", timeout: 30000 });
+    addedModelVia = "model metadata dialog (Model ID + Save)";
+  } else {
+    const inline = await waitFor(async () => {
+      const r = await rectOf(`document.querySelector('[data-testid^="model-provider-model-input-"]')`).catch(() => null);
+      return r && r.w > 0 ? r : false;
+    }, { what: "inline model input row", timeout: 10000 }).catch(() => null);
+    if (!inline) throw new Error("neither the model metadata dialog nor an inline model input appeared after model-provider-add-model-button");
+    await cdpClickRect(inline);
+    await typeIntoFocused(MODEL_ID);
+    await pressKey("Enter");
+    await new Promise((r) => setTimeout(r, 1500));
+    addedModelVia = "inline model input row (+ Enter)";
+  }
+  await screenshot("S2-model-added");
   // Back to the workspace.
   await clickTid("settings-back-button", { timeout: 20000 });
   await waitForTid("v4-composer-input", { timeout: 30000 });
@@ -931,6 +985,7 @@ async function stageS2() {
     base_url_verified: saved.baseURL,
     base_url_source: saved.baseURLSource,
     api_key_persisted: true,
+    free_tier_model_added: { model: MODEL_ID, via: addedModelVia, reason: "template catalog is paid-tier; the key's ~10 credits cannot afford paid models (402 evidence) — the free-tier model is required for real tasks" },
     note: "API key entered via CDP Input.insertText into the real model-provider-api-key-input; persistence verified on disk (key never logged)",
   });
 }
@@ -1129,12 +1184,19 @@ async function visibleTerminalText() {
 }
 
 async function stageS5() {
-  // Open the REAL terminal panel via its header toggle.
-  const xtermVisible = await evalJs(`(() => { return Array.from(document.querySelectorAll('[data-testid="terminal"] .xterm-rows')).some(r => r.offsetParent !== null); })()`);
-  if (!xtermVisible) {
-    await clickTid("terminal-toggle", { timeout: 30000 });
+  // Open the REAL terminal panel via its header toggle. Retry the toggle: the
+  // first click occasionally lands before the toggle's handler is wired (S5
+  // passed in run d322b1df and failed in 0d7534ed with the panel never opening).
+  const xtermVisible = () => evalJs(`(() => { return Array.from(document.querySelectorAll('[data-testid="terminal"] .xterm-rows')).some(r => r.offsetParent !== null); })()`).catch(() => false);
+  let toggled = 0;
+  while (!(await xtermVisible()) && toggled < 3) {
+    await clickTid("terminal-toggle", { timeout: 30000 }).catch(() => {});
+    toggled++;
+    await waitFor(async () => Boolean(await xtermVisible()), { what: `terminal panel (.xterm-rows visible; toggle attempt ${toggled})`, timeout: 20000 }).catch(() => {});
   }
-  await waitFor(async () => Boolean(await evalJs(`(() => { return Array.from(document.querySelectorAll('[data-testid="terminal"] .xterm-rows')).some(r => r.offsetParent !== null); })()`)), { what: "terminal panel (.xterm-rows visible)", timeout: 45000 });
+  if (!(await xtermVisible())) {
+    throw new Error("terminal panel did not open after 3 toggle attempts");
+  }
   await screenshot("S5-terminal-open");
   // Wait for the shell prompt (real PTY spawn).
   await waitFor(async () => /[$#]\s*$/m.test((await visibleTerminalText()) ?? ""), { what: "shell prompt in terminal", timeout: 60000 });
@@ -1269,12 +1331,12 @@ async function stageS6() {
 async function stageS7() {
   // Open the REAL embedded browser side pane, mirroring the upstream E2E flow
   // (packages/desktop/test/e2e/helpers/browser-side-pane.ts openFirstBrowserTab):
-  // 1. click the side pane's [data-side-pane-open-tab-item="browser"] entry;
-  // 2. if the pane is collapsed, expand it with the app's REAL workspace shortcut
-  //    (⌥⌘B) sent as CDP Input.dispatchKeyEvent key events — real keyboard input,
-  //    not a synthetic DOM KeyboardEvent;
-  // 3. fallback: the side pane's [data-side-pane-add-trigger] ("+") opens the
-  //    open-tab menu whose browser item is then clicked.
+  // the pane's open-tab launcher row [data-side-pane-open-tab-item="browser"],
+  // reached by opening the side pane. Opening the pane uses the title bar's
+  // side-pane-toggle button (WorkspaceSidePaneToggleButton) — present whether
+  // the pane is open or closed — with the ⌥⌘B workspace shortcut (real CDP
+  // Input.dispatchKeyEvent key events, Alt=1|Meta=4) and the pane's
+  // add-trigger ("+") menu as fallbacks.
   const clickOpenTabBrowser = async () => {
     const r = await rectOf(`document.querySelector('[data-side-pane-open-tab-item="browser"]')`).catch(() => null);
     if (!r || !(r.w > 0)) return false;
@@ -1282,26 +1344,36 @@ async function stageS7() {
     return true;
   };
   const opened = await (async () => {
-    if (await clickOpenTabBrowser()) return "side-pane open-tab item (browser)";
-    // Expand the collapsed side pane with the real ⌥⌘B shortcut (Chromium CDP
-    // modifiers: Alt=1, Meta=4).
-    await page.send("Input.dispatchKeyEvent", { type: "keyDown", key: "b", code: "KeyB", windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66, modifiers: 5 });
-    await page.send("Input.dispatchKeyEvent", { type: "keyUp", key: "b", code: "KeyB", windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66, modifiers: 5 });
-    await new Promise((r) => setTimeout(r, 800));
-    for (let i = 0; i < 6; i++) {
-      if (await clickOpenTabBrowser()) return "side-pane open-tab item (browser; pane expanded via the ⌥⌘B CDP shortcut)";
+    if (await clickOpenTabBrowser()) return "side-pane open-tab launcher row (browser)";
+    // Open the side pane via its title-bar toggle (real CDP click) — once. If the
+    // pane opens on the launcher (empty) state the browser row is right there; if
+    // it opens on existing tabs the add-trigger fallback below applies. Clicking
+    // the toggle repeatedly would oscillate open/closed.
+    const toggle = await rectOf(`document.querySelector('[data-testid="side-pane-toggle"]')`).catch(() => null);
+    if (toggle && toggle.w > 0) {
+      await cdpClickRect(toggle);
+      await new Promise((r) => setTimeout(r, 900));
+      if (await clickOpenTabBrowser()) return "side-pane-toggle → open-tab launcher row (browser)";
+    }
+    for (let i = 0; i < 8; i++) {
+      // Fallback: the app's real ⌥⌘B workspace shortcut as CDP key events.
+      await page.send("Input.dispatchKeyEvent", { type: "keyDown", key: "b", code: "KeyB", windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66, modifiers: 5 });
+      await page.send("Input.dispatchKeyEvent", { type: "keyUp", key: "b", code: "KeyB", windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66, modifiers: 5 });
+      await new Promise((r) => setTimeout(r, 900));
+      if (await clickOpenTabBrowser()) return `⌥⌘B CDP shortcut → open-tab launcher row (browser) (attempt ${i + 1})`;
+      // Fallback: the pane's add-trigger ("+") opens the open-tab menu.
       const add = await rectOf(`document.querySelector('[data-side-pane-add-trigger]')`).catch(() => null);
       if (add && add.w > 0) {
         await cdpClickRect(add);
         await new Promise((r) => setTimeout(r, 600));
-        const item = await rectOf(`(() => { const items = Array.from(document.querySelectorAll('[data-side-pane-open-tab-item="browser"], [role="menuitem"]')); return items.find(i => /browser|浏览器/i.test(i.innerText || '') && i.getBoundingClientRect().width > 0) ?? null; })()`).catch(() => null);
+        const item = await rectOf(`(() => { const items = Array.from(document.querySelectorAll('[data-side-pane-open-tab-item="browser"], [role="menuitem"]')); return items.find(el => /browser|浏览器/i.test(el.innerText || '') && el.getBoundingClientRect().width > 0) ?? null; })()`).catch(() => null);
         if (item && item.w > 0) { await cdpClickRect(item); return "side-pane add-trigger → open-tab menu → browser item"; }
       }
-      await new Promise((r) => setTimeout(r, 1500));
+      await new Promise((r) => setTimeout(r, 1200));
     }
     return null;
   })();
-  if (!opened) throw new Error("no browser entry found to open the embedded browser pane (open-tab item, ⌥⌘B shortcut, add-trigger fallback all exhausted)");
+  if (!opened) throw new Error("no browser entry found to open the embedded browser pane (launcher row, side-pane-toggle, ⌥⌘B shortcut, add-trigger fallbacks all exhausted)");
   await waitForTid("browser-address-input", { timeout: 30000 });
   await waitForTid("browser-webview", { timeout: 30000, visible: false });
   await screenshot("S7-browser-open");
