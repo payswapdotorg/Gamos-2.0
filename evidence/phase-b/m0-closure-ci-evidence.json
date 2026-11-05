@@ -1,0 +1,223 @@
+{
+  "record": "Gamos Phase B \u2014 M0 closure CI evidence (architect directive 'Phase B Test Integrity and M0 Closure' \u00a74)",
+  "recorded_at": "2026-11-05T17:24:39Z",
+  "authoritative_run": {
+    "workflow": "gamos-phase-b-e2e (.github/workflows/gamos-phase-b-e2e.yml)",
+    "run_url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/42071819027",
+    "run_id": 42071819027,
+    "run_attempt": 1,
+    "commit": "bef775cd4cba2532b6e08b4c03b01f9bf7725655",
+    "branch": "gamos/development",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "Phase B desktop journey (real model, production renderer)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Inherited desktop E2E (container, 4 verified specs)",
+        "conclusion": "success"
+      },
+      {
+        "name": "Inherited upstream-provider spec (in-repo recorded replay fixture)",
+        "conclusion": "success"
+      }
+    ],
+    "artifact_url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/42071819027/artifacts/13437317481",
+    "artifact_name": "phase-b-journey-bef775cd4cba2532b6e08b4c03b01f9bf7725655"
+  },
+  "journey_verdict": {
+    "verdict": "pass",
+    "exit_code": 0,
+    "mandatory_stages": [
+      "S0",
+      "S1",
+      "S2",
+      "S3",
+      "S4",
+      "S5",
+      "S6",
+      "S7",
+      "S8",
+      "S9"
+    ],
+    "non_pass_stages": [],
+    "missing_stages": [],
+    "integrity_model": "exit 0 ONLY when every mandatory stage S0-S9 records pass; partial/skipped/fail/missing all produce non-zero exit (machine-readable summary in journey-evidence.json)"
+  },
+  "stage_results": {
+    "S0": "pass",
+    "S1": "pass",
+    "S2": "pass",
+    "S3": "pass",
+    "S4": "pass",
+    "S5": "pass",
+    "S6": "pass",
+    "S7": "pass",
+    "S8": "pass",
+    "S9": "pass"
+  },
+  "stage_evidence_digest": {
+    "S0": {
+      "app_title": "ZCode",
+      "renderer": "production bundle (out/renderer)",
+      "mode": "prod"
+    },
+    "S1": {
+      "onboarding": "3-step wizard walked via real CDP clicks; first-run login entry (Use API key -> Skip) walked; no silent Skip/Back inside the wizard"
+    },
+    "S2": {
+      "provider_id": "openrouter",
+      "persisted_to": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/v2/provider_config.json",
+      "base_url_verified": "https://openrouter.ai/api",
+      "api_key_persisted": true,
+      "free_tier_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "free_model_added_via": "model metadata dialog (Model ID + Save)",
+      "free_model_on_disk_verified": {
+        "raw_string_present": true,
+        "provider_model_rules": false,
+        "manual_provider_model_rules": false,
+        "location": "other (raw model id string present in provider_config.json)"
+      }
+    },
+    "S3": {
+      "model_used": "nvidia/nemotron-3-ultra-550b-a55b:free (real OpenRouter generation)",
+      "session_id": "sess_67ba6acc-e115-41fd-bc16-6fd46f954bae",
+      "artifact": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/workspace/default/gamos-phase-b-journey.txt",
+      "artifact_content": "GAMOS-PHASE-B-DESKTOP-JOURNEY-OK",
+      "exact_content_match": true,
+      "tool_use_seen": true,
+      "completed": true
+    },
+    "S4": {
+      "timeline_rows": 2,
+      "tool_evidence_in_timeline": true,
+      "session_id": "sess_67ba6acc-e115-41fd-bc16-6fd46f954bae",
+      "task_listed_in_sidebar": true
+    },
+    "S5": {
+      "panel": "terminal-toggle -> real xterm surface",
+      "command_output_exact_match": true,
+      "input_path": "CDP click on xterm \u2192 Input.insertText + Input.dispatchKeyEvent(Enter)"
+    },
+    "S6": {
+      "mode": "Ask before changes",
+      "approve": {
+        "exact_modification_applied": true,
+        "file_after": "GAMOS-PHASE-B-DESKTOP-JOURNEY-OK\nREVIEW-APPROVED-LINE"
+      },
+      "reject": {
+        "modification_not_applied": true,
+        "file_after": "GAMOS-PHASE-B-DESKTOP-JOURNEY-OK\nREVIEW-APPROVED-LINE"
+      },
+      "real_permission_surface": true
+    },
+    "S7": {
+      "opened_via": "side-pane-toggle (attempt 1) \u2192 open-tab launcher row (browser)",
+      "verification_path": "in-guest read via the webview element (getURL + executeJavaScript inside the guest WebContents)",
+      "guest_url": "https://example.com/",
+      "guest_page_title": "Example Domain",
+      "actual_loaded_url_verified": true,
+      "page_content_verified": true,
+      "cdp_bonus_scan": "not surfaced by the browser-level /json/list endpoint (Electron webview guest; non-gating bonus scan)"
+    },
+    "S8": {
+      "plugin_identity": "github@zcode-plugins-official",
+      "manifest_sha256": "cf6b899331709398421b670e61f6cb2cb2aaefc31fae95330da66a9cfecdc8fe",
+      "downloaded_archive_sha256": "cf6b899331709398421b670e61f6cb2cb2aaefc31fae95330da66a9cfecdc8fe",
+      "checksum_match": true,
+      "ui_installed_state": {
+        "install_button_present": false,
+        "try_now_present": true,
+        "uninstall_entry_present": false
+      }
+    },
+    "S9": {
+      "reopened_session_id": "sess_67ba6acc-e115-41fd-bc16-6fd46f954bae",
+      "conversation_history_survived": true,
+      "result_survived": true,
+      "restart": "app killed and relaunched with the same isolated home"
+    }
+  },
+  "screenshots": {
+    "count": 39,
+    "location_in_artifact": "screenshots/"
+  },
+  "key_exposure_scan": {
+    "ci_step": "Scan evidence artifacts for accidental key exposure -> success (no artifact contains the OpenRouter key)",
+    "local_recheck": "downloaded artifact scanned for the real key string: 0 hits",
+    "note": "the API key input is masked (type=password) in the settings UI; the key never appears in logs or evidence"
+  },
+  "input_simulation": "all interactions via CDP Input domain (Input.dispatchMouseEvent / Input.insertText / Input.dispatchKeyEvent); no synthetic DOM events as user-interaction proof",
+  "closure_attempts_this_round": [
+    {
+      "run_id": 42049966765,
+      "commit": "ec8f9b0f",
+      "conclusion": "failure",
+      "non_pass": [
+        "S3",
+        "S4",
+        "S6",
+        "S7",
+        "S9"
+      ],
+      "root_cause": "add-model inline fallback typed into an EXISTING model row (prefix selector) instead of adding the free-tier model; no on-disk persistence verification"
+    },
+    {
+      "run_id": 42056174710,
+      "commit": "d9198fce",
+      "conclusion": "failure",
+      "non_pass": [
+        "S2",
+        "S3",
+        "S4",
+        "S6",
+        "S7",
+        "S9"
+      ],
+      "root_cause": "dialog-input finder carried a paren imbalance -> page-eval SYNTAX error silently mapped to 'dialog not found' (the dialog sat OPEN; VLM screenshot proof); Enter lacked text:'\\r' so the address form never submitted"
+    },
+    {
+      "run_id": 42061508909,
+      "commit": "4255ff26",
+      "conclusion": "failure",
+      "non_pass": [
+        "S7"
+      ],
+      "root_cause": "pane-opening: real-task workspace starts the task-scoped side pane COLLAPSED; single 900ms probe missed the lazy launcher mount"
+    },
+    {
+      "run_id": 42068291128,
+      "commit": "66684e00",
+      "conclusion": "failure",
+      "non_pass": [
+        "S6",
+        "S7"
+      ],
+      "root_cause": "S6: Confirm submits the DEFAULT selection (Allow) when the option-row click misses (stale rect / uncommitted state) -> Full access or Allow got submitted for the reject; S7: webview guest not surfaced by the browser-level CDP /json/list endpoint (page WAS loaded - screenshot proof)"
+    },
+    {
+      "run_id": 42071819027,
+      "commit": "bef775cd",
+      "conclusion": "SUCCESS",
+      "non_pass": [],
+      "note": "first fully-passing run after the four verification-layer repairs; every prior root cause is documented in the journey script comments with its run id"
+    }
+  ],
+  "explicit_exclusions_and_limitations": [
+    "upstream-provider.test.ts is NOT run against a live provider: the E2E env-preset provider composes an anthropic gateway path OpenRouter does not serve (404 evidence, run 41987983424); it runs via the upstream-documented fixed-replay fixture (packages/desktop/test/e2e/fixtures/upstream/provider-basic.json) in the upstream-provider-replay job",
+    "the inherited-desktop-e2e job runs the 4 verified specs only \u2014 NO claim is made that the complete upstream desktop E2E suite passes on this fork",
+    "sandbox floor: the dev sandbox cannot run the production renderer build / full E2E containers (documented conditional states in IMPLEMENTATION-STATUS.md \u00a7Phase B); the CI runner is the verification ceiling per ADR-0005",
+    "S7 CDP /json/list does not surface Electron webview guests on this Electron; the in-guest read via the webview element (getURL + executeJavaScript) is the authoritative verification; the CDP scan is retained as non-gating bonus evidence"
+  ],
+  "governance_runs_this_commit": {
+    "run_url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/42071819091",
+    "run_id": 42071819091,
+    "conclusion": "success",
+    "jobs": [
+      "Upstream architecture gate",
+      "Governance self-test (tamper rejection)",
+      "Governance (baseline & protected surfaces)"
+    ]
+  }
+}

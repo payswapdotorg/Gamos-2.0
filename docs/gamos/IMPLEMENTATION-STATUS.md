@@ -3,7 +3,7 @@
 > Honest, evidence-based status. No green checkmark implies completion when only
 > a contract or UI exists. Updated at every integration point.
 >
-> **Last updated:** 2026-11-05 (M0 re-review closure round: Phase-0 contracts revised per corrections A–E via GAMOS-AUTH-0003 + ADR-0005; Phase B round 2 — sandbox floor evidence banked, full UI journey + inherited desktop E2E routed to the properly resourced CI runner via .github/workflows/gamos-phase-b-e2e.yml)
+> **Last updated:** 2026-11-05 (M0 closure round COMPLETE: Phase-0 contract revision 2 per architect M0-closure corrections A+B applied via GAMOS-AUTH-0004; Phase B journey repaired and FULLY GREEN on CI — run 42071819027 @ `bef775cd`, all mandatory stages S0–S9 pass, verdict=pass exit 0, real model + production renderer; inherited desktop E2E (4 verified specs) + upstream-provider replay both green in the same run; close-out evidence in `evidence/phase-b/m0-closure-ci-evidence.json`)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | Milestone | Verified completion |
 |---|---|
-| M0 — Fork, baseline & governance | Fork **complete & verified**; governance v2 (Phase A) **complete with CI evidence**; inherited-application verification (Phase B) **executed with real evidence — see requirement ledger** (3 explicit conditional states recorded) |
+| M0 — Fork, baseline & governance | Fork **complete & verified**; governance v2 (Phase A) **complete with CI evidence**; inherited-application verification (Phase B) **COMPLETE — full original-UI journey GREEN on CI (run 42071819027: S0–S9 all pass, verdict=pass exit 0) + inherited desktop E2E (4 specs) + upstream-provider replay; contract revision 2 (corrections A+B) applied via GAMOS-AUTH-0004; close-out evidence committed — M0 acceptance gate (9 conditions) satisfied, awaiting architect acceptance** |
 | M1–M7 | 0% (not started; frozen until M0 acceptance) |
 
 ## Architect-review phase tracker
@@ -19,10 +19,11 @@
 | Phase | Scope | Status |
 |---|---|---|
 | A — Repair governance | Tamper-resistant controls, complete authorization schema, failure-case tests, real Actions run | **Complete — green CI runs: 41894115266 @ `5ef39f2c`, 41895183232 @ `391e8438` (attempt 3), 41909484947 @ `549fd991`, 41910262508 @ `468e731f` (rotated anchor + 15 controls + 14/14 self-tests); rulesets active; main verified pristine vs upstream at close-out; evidence in `evidence/phase-a/`** |
-| B — M0 application verification | Frozen-lockfile install, build + launch original ZCode, golden paths, screenshots, regression tests | **Round 1 executed with real evidence (17 UI screenshots + transcripts in evidence/phase-b/). Round 2 (re-review closure): sandbox floor re-verified fresh (install 54.2s exit 0; server/CLI/desktop-process-layer builds all exit 0 with logs in evidence/phase-b/r2/build-logs/; Electron desktop launched under Xvfb from a staged versioned app dir with window + host + CDP live; real-model CLI tasks ×2 exit 0 with exact artifacts; architecture:check OK 0 violations; governance self-test 14/14). Full original-UI journey (New Task submission w/ real model, terminal, review/diff approve+reject, embedded browser, marketplace, session recovery) + production renderer build + inherited desktop E2E suite run on the CI runner via gamos-phase-b-e2e.yml (ADR-0005 sandbox-floor/CI-ceiling model) — run evidence recorded below.** |
+| B — M0 application verification | Frozen-lockfile install, build + launch original ZCode, golden paths, screenshots, regression tests | **Complete — GREEN CI EVIDENCE (run 42071819027 @ `bef775cd`, attempt 1, all 3 jobs success):** desktop journey S0–S9 ALL PASS (strict verdict: exit 0 only when every mandatory stage records pass — machine-readable `journey-evidence.json` summary; 39 screenshots + DOM dumps + sanitized run log uploaded as artifact). Journey repairs this round (each with run-id evidence): S2 add-model now verifies the free-tier model PERSISTS in provider_config.json (was: prefix-selector hit an existing row / silent page-eval syntax error masked the open dialog); S6 reject verifies the option SELECTION (aria-selected) before Confirm (was: default-selection race could submit Allow/Full-access); S7 navigates before the webview wait, Enter carries text:"\r" (form-submit default action) and reads the guest IN-PAGE via the webview element (getURL + executeJavaScript; CDP /json/list bonus scan). Sandbox floor evidence retained in `evidence/phase-b/` + `evidence/phase-b/r2/` | `42071819027`, closure attempts `42049966765`, `42056174710`, `42061508909`, `42068291128` (root causes documented) |
 | C — Freeze Phase-0 architecture contracts | 9 contract areas, using existing ZCode infrastructure only | **Complete — all 9 contracts authored in docs/gamos/contracts/ and FROZEN as hash-protected control files (baseline.controls now 15 files, trust anchor rotated via GAMOS-AUTH-0002); verifier refined to ledger supersession semantics; self-test extended to 14 scenarios (14/14 green locally)** |
 | D — Prepare workers A/B/C | Briefs, evidence requirements, DoD | **Complete — worker A (Unity/Blender/Babylon engine plugins), B (gaming domain/capability registry/intent+workflow), C (GameOS/package+artifact/PlayLiquid alignment) briefs + TL integration plan in docs/gamos/workers/; every brief mandates real evidence, explicit unavailable states, and no mocks; B/C briefs updated to reference contract revision 1 (GAMOS-AUTH-0003)** |
 | C-rev — Phase-0 contract revision 1 (re-review corrections A–E) | GameIR↔PlayLiquid alignment; registry fail-closed; Dynamic Workflow mapping; plugin sandbox vs MCP processes; engine-specific version parsing | **Complete — 7 contracts revised via GAMOS-AUTH-0003 + governance-rebaseline (trust anchor rotated to 2be1e62b…); ADR-0005 records the decision + the Phase B evidence model; governance NOT weakened (self-test 14/14 after rotation)** |
+| B-closure — Architect M0-closure corrections + Phase B test integrity (GAMOS-AUTH-0004) | GameSpec exact-compatibility (correction A); plugin execution security: capability-approval vs OS-process access, MCP process authority inventory, least-privilege regime, disclosure reflects actual privileges (correction B); journey test result integrity (§2.A) + real per-stage verification (§2.B–I) | **Complete — contracts 01/05/06/09 revision 2 + ADR-0006; journey rev 2 repaired (strict verdicts, CDP-only input, exact verifications, on-disk persistence checks, selection-verified permission responses, in-guest browser read) and GREEN on CI run 42071819027** |
 
 ## Requirement ledger
 
@@ -105,14 +106,61 @@ Phase B work package).
   rulesets + review, not by in-repo hashing (ADR-0004 threat model).
 - Desktop build/E2E inside the dev sandbox has not been exercised yet (Phase B).
 
+## Phase B closure — CI evidence (M0-closure directive §4, honest record)
+
+**Authoritative run:** https://github.com/payswapdotorg/Gamos-2.0/actions/runs/42071819027
+(commit `bef775cd`, attempt 1, conclusion **success**, all 3 jobs green). Machine-readable
+close-out record with the full per-stage digest, the closure-attempt history and the
+explicit exclusions: `evidence/phase-b/m0-closure-ci-evidence.json`. Journey artifact
+(39 screenshots + DOM dumps + sanitized run log + journey-evidence.json):
+run artifacts → `phase-b-journey-bef775cd…`.
+
+- **Desktop journey (real model, production renderer): S0–S9 ALL PASS, verdict=pass,
+  exit 0** — strict integrity model (any partial/skipped/fail/missing stage fails the run);
+  OpenRouter key never present in any artifact (CI scan step + local re-scan both clean).
+- **Inherited desktop E2E (container, 4 verified specs): success.**
+- **Upstream-provider spec via the in-repo recorded replay fixture: success.**
+
+Closure-attempt root causes (each repaired with run-id evidence): `42049966765`
+add-model prefix-selector hit an existing row; `42056174710` silent page-eval syntax
+error masked the open dialog + Enter lacked the form-submit default action;
+`42061508909` real-task workspace starts the side pane collapsed; `42068291128`
+permission Confirm submitted the default selection + webview guests not surfaced by
+CDP /json/list (page was loaded — in-guest read is now authoritative).
+
 ## Next work package
 
-1. **Phase B closure on CI:** first full run of `.github/workflows/gamos-phase-b-e2e.yml`
-   (desktop-journey S0–S9 with the real model + inherited-desktop-e2e container suite);
-   record run URL, commit SHA, job results and sanitized logs here and in
-   `evidence/phase-b/` (per MILESTONES-AND-ACCEPTANCE.md).
-2. **M0 acceptance review** against `docs/gamos/MILESTONES-AND-ACCEPTANCE.md` once the
-   journey evidence is committed.
-3. **M1/M2 remain gated** until M0 acceptance; worker A/B/C briefs stay prepared
-   (updated to contract revision 1) and must not begin broad engine implementation
-   before acceptance.
+1. **M0 acceptance review** against `docs/gamos/MILESTONES-AND-ACCEPTANCE.md` — the
+   journey evidence is now committed (`evidence/phase-b/m0-closure-ci-evidence.json`),
+   the 9-condition gate is mapped below, and the architect acceptance request can be
+   submitted.
+2. **M1/M2 remain gated** until M0 acceptance; worker A/B/C briefs stay prepared
+   and must not begin broad engine implementation before acceptance.
+
+## M0 acceptance gate (9 conditions) — status
+
+1. **Governance passes** — ✓ green on every commit this round (latest: run
+   42071819091 @ `bef775cd`: architecture gate + 14/14 self-test + baseline/surfaces).
+2. **Desktop application builds and launches as the original ZCode** — ✓ S0 pass
+   (production renderer, `pnpm build:bootstrap`, window over CDP).
+3. **UI journey — all mandatory stages pass** — ✓ S0–S9 all pass, verdict=pass, exit 0
+   (strict integrity, machine-readable summary, `non_pass=[]`, `missing=[]`).
+4. **Review approve AND reject verified** — ✓ S6 pass: approved modification applied
+   exactly; rejected modification NOT applied (file contains only
+   `GAMOS-PHASE-B-DESKTOP-JOURNEY-OK` + `REVIEW-APPROVED-LINE`); real permission
+   surface (role=listbox "Permission required" with allow/reject option kinds).
+5. **Terminal + Browser interaction verified** — ✓ S5 pass (real xterm, exact command
+   output); S7 pass (real pane open via toggle → launcher row; address typed + Enter;
+   in-guest read: URL `https://example.com/`, title "Example Domain", body text).
+6. **Marketplace install verified** — ✓ S8 pass (plugin identity
+   `github@zcode-plugins-official`; install button; installed state in UI; manifest
+   sha256 == downloaded archive sha256).
+7. **Session recovery verified** — ✓ S9 pass (app killed + relaunched with same
+   isolated home; session reopened from the task list; history + artifact survived).
+8. **Inherited E2E results + exclusions recorded honestly** — ✓ 4 verified specs pass
+   in the container job; upstream-provider spec passes via the upstream-documented
+   recorded replay fixture; live-provider run NOT executed (404 evidence documented);
+   no claim that the complete upstream suite passes on this fork.
+9. **All evidence submitted and linked to actual workflow runs** — ✓ this record +
+   `evidence/phase-b/m0-closure-ci-evidence.json` link the run URL, commit, jobs,
+   stage digests, screenshots and the closure-attempt history.
