@@ -18,5 +18,6 @@ native engine adapters · plugin capability
 discovery · MCP & UI Plugin integration · approval/execution boundaries ·
 Gamos project & package persistence · asset storage ·
 game previews & sandboxing · PSP route orchestration · remote engine support.
-(GameIR reuse & semantic authority and Dynamic Workflow reuse are now decided at
-the contract layer — see contract 01/05 revision 1 via ADR-0005.)
+(GameIR reuse & semantic authority and Dynamic Workflow reuse are decided at the
+contract layer — see contracts 01/05 revision 2 via ADR-0006. The current phase
+sequence and acceptance gates are maintained only in docs/gamos/ROADMAP.json.)
