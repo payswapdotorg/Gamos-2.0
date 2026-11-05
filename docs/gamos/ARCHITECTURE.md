@@ -4,7 +4,8 @@
 > baseline (`a9fe401e…`, v3.17.2), as verified by direct source inspection, and the
 > **additive** Gamos surfaces that are planned on top of it. Everything under
 > "Planned Gamos additions" is explicitly marked as *not yet implemented* — this
-> document never reports aspirational work as implemented. Phase scope and status are owned only by docs/gamos/ROADMAP.json.
+> document never reports aspirational work as implemented. Phase scope and status
+> are owned only by docs/gamos/ROADMAP.json.
 
 ---
 
@@ -123,11 +124,11 @@ manifest / MCP / Skills / marketplace contracts.
 | Pure gaming domain layer | `packages/gamos-domain/` | Planned — see ROADMAP.json |
 | Capability registry + contracts | inside `packages/gamos-domain/` | Planned — see ROADMAP.json |
 | Engine plugins (Unity first, then Blender, Babylon, Godot, Unreal) | `apps/zcode-cli/packages/*-engine-plugin` | Planned — see ROADMAP.json |
-| Intent & workflow orchestration | via existing Dynamic Workflow system | Planned — see ROADMAP.json/M3 |
+| Intent & workflow orchestration | via existing Dynamic Workflow system | Planned — see ROADMAP.json |
 | Game asset pipeline | engine adapters + domain contracts | Planned — see ROADMAP.json |
 | GameOS / platform / publishing | `packages/gamos-platform/` (subject to approved architecture) | Planned — see ROADMAP.json |
 | PaySwap PSP integration | dedicated integration surfaces, reusing PaySwap authority | Planned — see ROADMAP.json |
-| Composer gaming-context additions | additive extension points in existing composer | Planned — see ROADMAP.json+ |
+| Composer gaming-context additions | additive extension points in existing composer | Planned — see ROADMAP.json |
 | Governance CI | `.github/workflows/gamos-governance.yml` + `scripts/gamos/governance-check.mjs` | **Implemented in this repo; milestone evidence is governed by ROADMAP.json** |
 
 ## 8. Preservation boundary (binding)
