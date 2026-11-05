@@ -712,8 +712,19 @@ async function timelineState() {
     const stop = Array.from(document.querySelectorAll('[data-testid="v4-stop"]')).some(e => e.offsetParent !== null);
     const timeline = (document.querySelector('[data-testid="v4-timeline"]')?.innerText ?? '').slice(0, 2500);
     const errorBanner = document.querySelector('[data-testid="chat-error-banner"]');
-    return { rows: rows.length, canStop: stop, timeline, paneSessionId: pane?.dataset?.sessionId ?? null, errorBanner: Boolean(errorBanner) };
+    const bannerSignature = errorBanner
+      ? { code: errorBanner.getAttribute('data-error-code') ?? '', text: (errorBanner.innerText ?? '').slice(0, 200) }
+      : null;
+    return { rows: rows.length, canStop: stop, timeline, paneSessionId: pane?.dataset?.sessionId ?? null, errorBanner: Boolean(errorBanner), bannerSignature };
   })()`);
+}
+
+/** True when the mounted banner is the SAME one that was already present before
+ *  a resubmission (same data-error-code + text) — i.e. a stale remnant of the
+ *  turn that already failed, not evidence about the resubmitted turn. */
+function isStaleBanner(state, staleBanner) {
+  if (!staleBanner || !state?.bannerSignature) return false;
+  return state.bannerSignature.code === staleBanner.code && state.bannerSignature.text === staleBanner.text;
 }
 
 /**
@@ -724,12 +735,22 @@ async function timelineState() {
  * approving, "rejectOnce" for the reject verification (subsequent retries of
  * the rejected modification must also be rejected, otherwise the journey
  * itself would apply the rejected change on a retry).
+ *
+ * staleBanner: the chat-error-banner signature captured BEFORE a resubmission.
+ * The app keeps the failed turn's banner mounted while the resubmitted turn is
+ * still starting up (run 42109892985: the retry verdict fired 96ms after
+ * sendConversationCommandV4 OK — before the new turn's stop button could
+ * render, the OLD banner was read as a second failure and the retry was never
+ * actually waited on). A banner matching the pre-resubmission signature is
+ * therefore ignored: the wait continues until the turn completes, times out, or
+ * a DIFFERENT banner (a genuine new failure) appears.
  */
-async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, respondKind = "allowOnce", approvals = [] } = {}) {
+async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, respondKind = "allowOnce", approvals = [], staleBanner = null } = {}) {
   const start = Date.now();
   let sawToolUse = false;
   let last = null;
   let idleSince = null;
+  let staleBannerLogged = false;
   while (Date.now() - start < timeout) {
     last = await timelineState().catch(() => null);
     if (!last) { await new Promise((r) => setTimeout(r, 1500)); continue; }
@@ -744,7 +765,12 @@ async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, r
       }
     }
     const running = last.canStop;
-    if (!running && last.errorBanner && last.rows > 0 && last.paneSessionId && last.paneSessionId !== "draft") {
+    const bannerIsStale = isStaleBanner(last, staleBanner);
+    if (bannerIsStale && !staleBannerLogged) {
+      staleBannerLogged = true;
+      log(`stale error banner from the previously failed turn still mounted (code=${JSON.stringify(staleBanner.code)}) — ignoring it while the resubmitted turn runs`);
+    }
+    if (!running && last.errorBanner && !bannerIsStale && last.rows > 0 && last.paneSessionId && last.paneSessionId !== "draft") {
       // The turn FAILED (chat-error-banner present, no stop button): report it
       // so callers can resubmit exactly like a real user instead of idling to
       // the full timeout (run 42104260632: free-tier model request failed,
@@ -1294,8 +1320,11 @@ async function stageS3() {
   if (result.turnFailed) {
     log("S3: model turn failed (chat-error-banner) — resubmitting the task once (real-user retry)");
     await screenshot("S3-turn-failed");
+    // Snapshot the banner BEFORE resubmitting: the failed turn's banner stays
+    // mounted while the new turn starts, and must not be read as a new failure.
+    const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
     await submitComposerTask(taskText, "S3-retry");
-    result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals });
+    result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals, staleBanner });
     result = { ...result, retriedAfterTurnFailure: true };
   }
   const sessionId = result.paneSessionId ?? await paneSessionId();
@@ -1440,8 +1469,9 @@ async function stageS6() {
   let approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals });
   if (approveResult.turnFailed) {
     log("S6 approve: model turn failed (chat-error-banner) — resubmitting once (real-user retry)");
+    const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
     await submitComposerTask(approveTask, "S6-approve-retry");
-    approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals });
+    approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals, staleBanner });
     approveResult = { ...approveResult, retriedAfterTurnFailure: true };
   }
   // Exact modification verification.
@@ -1467,9 +1497,10 @@ async function stageS6() {
   let rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals });
   if (rejectResult.turnFailed) {
     log("S6 reject: model turn failed (chat-error-banner) — resubmitting once (real-user retry)");
+    const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
     await submitComposerTask(rejectTask, "S6-reject-retry");
     // The retried turn must again be REJECTED when it asks permission.
-    rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals });
+    rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals, staleBanner });
     rejectResult = { ...rejectResult, retriedAfterTurnFailure: true };
   }
   // The rejected modification must NOT be applied; grace-recheck for late writes.
