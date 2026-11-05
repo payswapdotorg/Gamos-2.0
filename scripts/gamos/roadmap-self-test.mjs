@@ -60,6 +60,7 @@ test("all required gates and dependencies expose the next phase as ready",() => 
   m.status="complete";
   m.completion_evidence={
     evidence_file:"evidence/roadmap/M0.json",tested_commit:"b".repeat(40),
+    workflow_run_head_sha:"b".repeat(40),workflow_run_conclusion:"success",
     workflow_run_id:12345,workflow_run_url:"https://github.com/payswapdotorg/Gamos-2.0/actions/runs/12345",
     completed_at:"2026-11-05T00:00:00Z",gate_ids:m.acceptance_gates.map(g=>g.id).sort()
   };
