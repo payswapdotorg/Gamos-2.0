@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { dirname, join, resolve } from "node:path";
@@ -111,11 +112,13 @@ test("completed milestone requires matching on-disk evidence and real gate artif
     const completedAt="2026-11-05T00:00:00Z";
     const gateResults=m.acceptance_gates.map(gate=>{
       const evidencePath="evidence/roadmap/" + gate.id + ".log";
-      put(evidencePath,"real test output fixture");
+      const evidenceContent="real test output fixture for " + gate.id;
+      put(evidencePath,evidenceContent);
       return {
         gate_id:gate.id,status:"passed",command:"node test-command",
         result_summary:"passed on test fixture repository",
-        evidence_paths:[evidencePath],artifact_sha256:[]
+        evidence_paths:[evidencePath],
+        artifact_sha256:[createHash("sha256").update(evidenceContent).digest("hex")]
       };
     });
     const record={
