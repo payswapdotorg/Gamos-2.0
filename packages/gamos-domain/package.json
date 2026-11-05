@@ -1,0 +1,17 @@
+{
+  "name": "@zcode/gamos-domain",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./playliquid-gameir": "./src/vendor/playliquid-gameos/src/game-ir/index.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.2"
+  }
+}

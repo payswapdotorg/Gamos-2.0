@@ -66,6 +66,7 @@ export default defineConfig({
         },
       },
       "packages/zcode-cua/vitest.config.ts",
+      "packages/gamos-domain/vitest.config.ts",
     ],
   },
 });
