@@ -1,21 +1,33 @@
 name: gamos-phase-b-e2e
 
 # Gamos Phase B — original-application verification on a properly resourced runner
-# (M0 acceptance, docs/gamos/MILESTONES-AND-ACCEPTANCE.md; ADR-0005).
+# (M0 acceptance, docs/gamos/MILESTONES-AND-ACCEPTANCE.md; ADR-0005/ADR-0006).
 #
 #   Job "desktop-journey": builds the COMPLETE original application (including the
 #     production desktop renderer) and drives the actual user journey through the
-#     original UI with a REAL model (OpenRouter) — New Task submission, task
-#     execution + tool use, result review, terminal panel, review/diff approve +
-#     reject, embedded browser, plugin marketplace, session recovery after app
-#     restart. Evidence tooling: scripts/gamos/phase-b-ui-journey.mjs (additive;
-#     no protected sources touched). Screenshots + JSON evidence are uploaded.
+#     original UI with a REAL model (OpenRouter) — strict verdict integrity
+#     (scripts/gamos/phase-b-ui-journey.mjs rev 2: exit 0 only when every mandatory
+#     stage S0–S9 records pass; partial/skipped/fail/missing all fail the job).
+#     All interactions use CDP Input domain events; Terminal command output,
+#     Review approve AND reject, embedded-browser guest URL/content, marketplace
+#     plugin identity + install + sha256, and session recovery are verified
+#     against exact expected results. Screenshots + JSON evidence are uploaded.
 #
 #   Job "inherited-desktop-e2e": runs the applicable INHERITED desktop E2E suite
 #     through the upstream-sanctioned container path
-#     (Dockerfile.desktop-e2e + scripts/test-desktop-e2e-container.sh, default
-#     preset: container-boot, smoke, e2ecase-regression, upstream-provider,
-#     task-list-archive-confirmation) in replay-isolated network mode.
+#     (Dockerfile.desktop-e2e + scripts/test-desktop-e2e-container.sh) in
+#     replay-isolated network mode with the four verified specs. The
+#     upstream-provider spec is EXCLUDED from this preset (see the
+#     upstream-provider-live job below) — no claim is made that the complete
+#     upstream suite passes based on this subset.
+#
+#   Job "upstream-provider-live": runs the previously EXCLUDED
+#     upstream-provider.test.ts as a separate LIVE-provider test in the
+#     upstream-supported capture mode (E2E_NETWORK_MODE=capture +
+#     E2E_PROVIDER_PRESET=env + the real OpenRouter key). This is the
+#     architect-directed investigation of whether the spec can run legitimately;
+#     its status stays excluded until a run actually passes here. The captured,
+#     header-redacted traffic artifact is uploaded for the evidence record.
 #
 # The sandbox cannot complete these (3GB RAM / 2 vCPU / no Docker): production
 # renderer bundling OOMs there and the dev-renderer module graph exhausts
@@ -40,13 +52,14 @@ jobs:
   desktop-journey:
     name: Phase B desktop journey (real model, production renderer)
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 90
     env:
       PHASEB_MODE: prod
       PHASEB_EVIDENCE_DIR: evidence/phase-b/journey-ci
       PHASEB_HOME: ${{ github.workspace }}/.phaseb-home
       PHASEB_STAGED_APP_DIR: ${{ github.workspace }}/.phaseb-app
       PHASEB_MAX_WAIT_MS: "600000"
+      PHASEB_MODEL: nvidia/nemotron-3-ultra-550b-a55b:free
       DISPLAY: ":99"
     steps:
       - uses: actions/checkout@v4
@@ -89,12 +102,51 @@ jobs:
       - name: Verify production renderer output
         run: ls -la packages/desktop/out/renderer/ | head -12
 
-      - name: Run the original-application UI journey (real model)
+      - name: Run the original-application UI journey (real model, strict verdict)
         env:
           OPENROUTER_API_KEY: ${{ secrets.PHASEB_OPENROUTER_API_KEY }}
         run: |
           ulimit -n 65535 || true
+          # Fresh isolated home per run: the journey requires the first-run
+          # onboarding wizard (S1) and verifies provider/workspace state on disk.
+          rm -rf "${PHASEB_HOME}"
           node scripts/gamos/phase-b-ui-journey.mjs
+
+      - name: Verify journey evidence verdict (machine-readable summary)
+        if: always()
+        run: |
+          if [ ! -f evidence/phase-b/journey-ci/journey-evidence.json ]; then
+            echo "::error::journey-evidence.json missing — journey did not produce evidence"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open("evidence/phase-b/journey-ci/journey-evidence.json"))
+          s = d.get("summary", {})
+          print("verdict:", s.get("verdict"))
+          print("non_pass_stages:", json.dumps(s.get("non_pass_stages", []), indent=1))
+          print("missing_stages:", json.dumps(s.get("missing_stages", []), indent=1))
+          for sid, st in sorted(d.get("stages", {}).items()):
+              print(f"  {sid}: {st.get('status')}")
+          sys.exit(0 if s.get("verdict") == "pass" else 1)
+          PY
+
+      - name: Scan evidence artifacts for accidental key exposure
+        if: always()
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.PHASEB_OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "${OPENROUTER_API_KEY}" ]; then echo "no key configured — skip"; exit 0; fi
+          set +e
+          grep -r -l -F "${OPENROUTER_API_KEY}" evidence/phase-b/journey-ci/ > /tmp/key-hits.txt 2>/dev/null
+          rc=$?
+          set -e
+          if [ -s /tmp/key-hits.txt ]; then
+            echo "::error::OpenRouter key found in evidence artifacts:"
+            cat /tmp/key-hits.txt
+            exit 1
+          fi
+          echo "key-exposure scan clean: no evidence artifact contains the OpenRouter key"
 
       - name: Upload journey evidence
         if: always()
@@ -111,14 +163,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 150
     env:
-      # Default preset = container-boot, smoke, e2ecase-regression, upstream-provider,
-      # task-list-archive-confirmation. The upstream-provider spec requires a
-      # pre-recorded provider replay fixture (E2E_PROVIDER_REPLAY_FIXTURE_PATH —
-      # "Manual review defaults to capture; set E2E_PROVIDER_REPLAY_FIXTURE_PATH for
-      # pending replay") which is not present in this repository; it cannot be
-      # fabricated without faking evidence. It is EXCLUDED here with that reason
-      # recorded; provider configuration with a REAL key is verified live in the
-      # desktop-journey job (stage S2, OpenRouter + real model task S3/S4).
+      # Four verified specs (the upstream-provider spec is EXCLUDED from this
+      # preset: it requires either a pre-recorded provider replay fixture
+      # (E2E_PROVIDER_REPLAY_FIXTURE_PATH — not present in this repository and
+      # not fabricated) or a live provider; it is executed LIVE in the
+      # upstream-provider-live job below. Until that job passes, its status
+      # remains explicitly excluded. No claim is made that the complete
+      # upstream suite passes based on this subset.)
       E2E_SPEC: "./test/e2e/container-boot.test.ts,./test/e2e/smoke.test.ts,./test/e2e/e2ecase-regression.test.ts,./test/e2e/task-list-archive-confirmation.test.ts"
     steps:
       - uses: actions/checkout@v4
@@ -131,6 +182,61 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: phase-b-inherited-e2e-${{ github.sha }}
+          path: |
+            packages/desktop/.e2e-artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+
+  upstream-provider-live:
+    name: Inherited upstream-provider spec (live provider, capture mode)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # The previously excluded upstream-provider spec, run as a separate
+      # live-provider test through the upstream-supported capture mode
+      # (E2E_NETWORK_MODE=capture requires a real E2E_PROVIDER_API_KEY and
+      # E2E_PROVIDER_BASE_URL). Capture artifacts are header-redacted by the
+      # upstream network-capture redaction layer. Thought-level assertions are
+      # disabled (E2E_PROVIDER_THOUGHT_LEVEL="") because the OpenRouter
+      # nemotron free model does not expose thought-level routing.
+      E2E_SPEC: "./test/e2e/upstream-provider.test.ts"
+      E2E_NETWORK_MODE: capture
+      E2E_PROVIDER_PRESET: env
+      E2E_PROVIDER_ID: e2e-openrouter-live
+      E2E_PROVIDER_NAME: OpenRouter Live
+      E2E_PROVIDER_BASE_URL: https://openrouter.ai/api
+      E2E_PROVIDER_MODEL: nvidia/nemotron-3-ultra-550b-a55b:free
+      E2E_PROVIDER_THOUGHT_LEVEL: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run the upstream-provider spec against the live provider
+        env:
+          E2E_PROVIDER_API_KEY: ${{ secrets.PHASEB_OPENROUTER_API_KEY }}
+        run: bash scripts/test-desktop-e2e-container.sh
+
+      - name: Scan capture artifacts for accidental key exposure
+        if: always()
+        env:
+          E2E_PROVIDER_API_KEY: ${{ secrets.PHASEB_OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "${E2E_PROVIDER_API_KEY}" ]; then echo "no key configured — skip"; exit 0; fi
+          set +e
+          find packages/desktop/.e2e-artifacts -type f > /tmp/e2e-files.txt 2>/dev/null
+          grep -r -l -F "${E2E_PROVIDER_API_KEY}" packages/desktop/.e2e-artifacts/ > /tmp/key-hits.txt 2>/dev/null
+          set -e
+          if [ -s /tmp/key-hits.txt ]; then
+            echo "::error::OpenRouter key found in E2E artifacts:"
+            cat /tmp/key-hits.txt
+            exit 1
+          fi
+          echo "key-exposure scan clean"
+
+      - name: Upload upstream-provider capture artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-b-upstream-provider-live-${{ github.sha }}
           path: |
             packages/desktop/.e2e-artifacts/
           if-no-files-found: warn

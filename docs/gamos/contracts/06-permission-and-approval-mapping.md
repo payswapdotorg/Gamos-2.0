@@ -1,11 +1,15 @@
 # Gamos Phase-0 Contract 06 — Permission & Approval Mapping
 
-- Status: **FROZEN (Phase 0, revision 1)** — hash-protected governance control file
+- Status: **FROZEN (Phase 0, revision 2)** — hash-protected governance control file
 - Owner: Gamos TL
 - Revision 1 (GAMOS-AUTH-0003): all native engine mutations routed through
   permission-gated ZCode execution, and repository-governance authorization separated
   from the user's game-release/publishing authorization (architect re-review
   correction D).
+- Revision 2 (GAMOS-AUTH-0004): **approval layers distinguished** — capability-invocation
+  approval (this contract's permission gate) is explicitly NOT a grant or description
+  of plugin/MCP OS-process authority; cross-references contract 09 §2.5 (architect
+  M0-closure correction B).
 
 ## 1. Principle
 
@@ -42,6 +46,15 @@ MUST rules:
    Dynamic Workflow runs as well (workflow sites resolve to the same gated tools).
 4. Approval UI = the existing permission prompts (plus the workflow confirmation
    window, contract 05 §4); approval audit = existing permission records.
+5. **Approval layers are distinct (revision 2).** An approval issued through this
+   gate authorizes a **capability invocation** — an agent tool call — and nothing
+   else. It MUST NOT be read, presented, or recorded as (a) a grant of OS-process
+   authority to any plugin/MCP server involved behind the tool (that authority is
+   governed and disclosed separately — contract 09 §2.5/§3), or (b) a repository-
+   governance authorization (§3). Permission prompts that surface plugin-backed
+   tools MUST reflect the actual process privileges of the backing plugin where
+   contract 09 §3.5 requires disclosure. Gamos adds no second approval semantics —
+   this rule only clarifies what the existing approval does and does not cover.
 
 ## 3. Repository governance authorization vs game-release/publishing authorization
    (revision 1 — MUST keep separate)

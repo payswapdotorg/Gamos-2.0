@@ -224,6 +224,61 @@
         "date": "2026-11-05T00:05:00Z",
         "decision_ref": "Architect re-review 'Gamos-2.0 — Architect Re-review and M0 Closure Directive' section 2 (Revise the Phase-0 contracts, corrections A-E, via the approved governance authorization/re-baselining process); recorded as ADR-0005"
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0004",
+      "phase": "M0",
+      "date": "2026-11-05T03:30:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "Architect re-review 'Gamos-2.0 - Phase B Test Integrity and M0 Closure' accepted the Phase-0 contract revisions A-E subject to two corrections and directed they be applied through the GAMOS-AUTH-0003-compatible governance process. This entry authorizes revision 2 of the affected contracts: (A) GameSpec exact compatibility with the upstream PlayLiquid GameIRDocument (field set exactly irVersion/identity/lifecycle?/world?/entry/nodes; no acceptance field, no parallel or extended GameIR document schema) with Gamos-specific acceptance criteria moved into the GamePlan or a separate acceptance record (contracts 01, 05); (B) plugin execution security: capability-invocation approval distinguished from actual OS-process access, the filesystem/network/environment authority available to MCP processes documented explicitly, a least-privilege execution strategy defined for community engine plugins, and user disclosure and approval required to reflect the actual process privileges (contracts 09, 06). Decision recorded in docs/gamos/ADR/0006.",
+      "risk": "low",
+      "affected_functionality": "Governance control documents only (docs/gamos/contracts/01,05,06,09) plus an additive ADR and the ADR index. No ZCode application surface, no runtime code, no protected upstream file is touched. Baseline.controls hashes and the workflow trust anchor rotate via scripts/gamos/governance-rebaseline.mjs.",
+      "new_functionality": "Contract revision 2 content per M0-closure corrections A/B; ADR-0006; ADR-index update (additive docs). The Phase B journey script revision 2 (scripts/gamos/phase-b-ui-journey.mjs) and the CI workflow update (.github/workflows/gamos-phase-b-e2e.yml) are additive, non-protected evidence tooling referenced by ADR-0006.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin <GAMOS_BASELINE_SHA256>",
+        "node scripts/gamos/governance-self-test.mjs",
+        "pnpm run architecture:check"
+      ],
+      "evidence": {
+        "summary": "Revisions authored per the architect M0-closure directive (corrections A/B); ADR-0006 records the decision together with the Phase B journey-test integrity model (strict verdicts, CDP-only input simulation, exact artifact/output/modification verification); rebaseline rotates the trust anchor; CI evidence is recorded after the gamos-phase-b-e2e workflow runs.",
+        "links": [
+          "docs/gamos/ADR/0006-m0-closure-contract-revision-2-and-phase-b-integrity.md",
+          "docs/gamos/contracts/",
+          "scripts/gamos/phase-b-ui-journey.mjs",
+          ".github/workflows/gamos-phase-b-e2e.yml"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/01-gaming-domain-and-gameir.md",
+          "content_sha256": "da2a0b8bfad52a10fc9554952739069f73f967dbca2374419c4a8cd8ecc890b6"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/05-intent-and-workflow-orchestration.md",
+          "content_sha256": "3b79857b9984710611e714b55cd0987c42a9bcbab5edf380ad8173979fc3c802"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/06-permission-and-approval-mapping.md",
+          "content_sha256": "a582b6c5da64fcb5e78627d5c1bb3d21328767a8a147f5b7a251f3ff13ef0a7a"
+        },
+        {
+          "action": "modify",
+          "path": "docs/gamos/contracts/09-plugin-trust-and-provenance.md",
+          "content_sha256": "cd4a57c00a685cda85ecdca14d3c9b6b1a98316b799adf96d7fa5a1d87c94757"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-05T03:30:00Z",
+        "decision_ref": "Architect re-review 'Gamos-2.0 - Phase B Test Integrity and M0 Closure' section 1 (Correct the remaining contract issues: GameIR exact compatibility; plugin execution security; use the existing GAMOS-AUTH-0003-compatible governance process for changes to protected contracts); recorded as ADR-0006"
+      }
     }
   ]
 }

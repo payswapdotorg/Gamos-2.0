@@ -11,6 +11,7 @@ decision requires a documented Architecture Change Request (new ADR marked
 | [0003](0003-additive-governance-ci.md) | Additive governance CI (baseline ancestry + protected surfaces) | Accepted |
 | [0004](0004-governance-v2-tamper-resistance.md) | Governance v2 — tamper-resistant controls (hash-bound controls, trust anchor, rulesets) | Accepted |
 | [0005](0005-phase0-contract-revision-and-phase-b-evidence.md) | Phase-0 contract revision 1 (corrections A–E) & the Phase B sandbox-floor/CI-ceiling evidence model | Accepted |
+| [0006](0006-m0-closure-contract-revision-2-and-phase-b-integrity.md) | Phase-0 contract revision 2 (M0-closure corrections A/B) & Phase B journey test integrity | Accepted |
 
 Planned ADRs (to be authored with the corresponding work packages):
 native engine adapters · plugin capability

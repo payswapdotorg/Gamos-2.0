@@ -70,19 +70,19 @@
   },
   "controls": {
     ".gamos-protected-surfaces.json": "31859f68d623f2418e31d8fd6d0e72f33367c409b50ff66f7e85c904319924c0",
-    ".gamos-authorized-modifications.json": "430f49fbe8f40fa1b9d5b25b0a81aa8bbc2d20907a52e3c61bd62734ccc47a1d",
+    ".gamos-authorized-modifications.json": "46baf2968d6289d3d5e2ba76a626e14560b7073835d36f9c70ff7470ea21345f",
     "scripts/gamos/governance-check.mjs": "f139b141ca506b433a0080ef1360e4b3f1d48103759f958e03fff79cb9e0fa88",
     "scripts/gamos/governance-self-test.mjs": "99922161c3d48313659b8f8225648db5675c02a5a29a8c8d1f4568ba3dc3ff15",
     "scripts/gamos/governance-rebaseline.mjs": "296b78dce9dd5d5d59559e360f2d163b0fbd8b58d1beb6744f91f61c0cb18d39",
     ".github/CODEOWNERS": "f463977b1b129987ea7e42ffb0c51c71b5101f510a6457a51f5004cb691b6843",
-    "docs/gamos/contracts/01-gaming-domain-and-gameir.md": "0e543ae2368c990d68df0b062221b64794809ec9e389360e9b46b88143ced9a3",
+    "docs/gamos/contracts/01-gaming-domain-and-gameir.md": "da2a0b8bfad52a10fc9554952739069f73f967dbca2374419c4a8cd8ecc890b6",
     "docs/gamos/contracts/02-capability-registry.md": "2f8d6f430f7d6aa9d3749915017bb3c54ee4f2e8404a732f25ea1d8c2a00c1ae",
     "docs/gamos/contracts/03-engine-plugin-capability-metadata.md": "397e3a1df8d087052b181ba56010e686f09393620f35eea0d1b108adb2ef12a0",
     "docs/gamos/contracts/04-project-context-and-engine-discovery.md": "d4c93fb9caf05862cf6a8fd75874e2f9eee7f82503a1cda73d36febda86286ab",
-    "docs/gamos/contracts/05-intent-and-workflow-orchestration.md": "9b50d1277141e42c8de8a94108e29df98599a90369365fd1e655133c839ada1d",
-    "docs/gamos/contracts/06-permission-and-approval-mapping.md": "de37bd67c87f7c8e1f30227c2d8f367a1dc6eaa0973ce57f40f7d2de978826ed",
+    "docs/gamos/contracts/05-intent-and-workflow-orchestration.md": "3b79857b9984710611e714b55cd0987c42a9bcbab5edf380ad8173979fc3c802",
+    "docs/gamos/contracts/06-permission-and-approval-mapping.md": "a582b6c5da64fcb5e78627d5c1bb3d21328767a8a147f5b7a251f3ff13ef0a7a",
     "docs/gamos/contracts/07-local-vs-remote-capability-availability.md": "1ce4ca13ef55bca9883278a7967d42b8bdeee34f7e16795a5a65b5c16bca7487",
     "docs/gamos/contracts/08-artifact-and-evidence-contracts.md": "e13fa0f35750a3763b4cb5dbc5015618dbf6ea0f032d043b5f1673e4c48828f5",
-    "docs/gamos/contracts/09-plugin-trust-and-provenance.md": "017cb5b6cff3ecff11540dbc49f5dd16be61894b09b2605f01812c8fec4a30da"
+    "docs/gamos/contracts/09-plugin-trust-and-provenance.md": "cd4a57c00a685cda85ecdca14d3c9b6b1a98316b799adf96d7fa5a1d87c94757"
   }
 }

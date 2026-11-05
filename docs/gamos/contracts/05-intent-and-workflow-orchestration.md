@@ -1,11 +1,15 @@
 # Gamos Phase-0 Contract 05 — Intent & Workflow Orchestration
 
-- Status: **FROZEN (Phase 0, revision 1)** — hash-protected governance control file
+- Status: **FROZEN (Phase 0, revision 2)** — hash-protected governance control file
 - Owner: Gamos TL
 - Revision 1 (GAMOS-AUTH-0003): explicit integration with the existing ZCode
   **Dynamic Workflow definition/compiler/runtime**; GamePlan orchestration is mapped
   onto that infrastructure — database tables alone are NOT a substitute for the
   workflow runtime (architect re-review correction C).
+- Revision 2 (GAMOS-AUTH-0004): **acceptance criteria ride on the GamePlan / a
+  separate acceptance record** referenced by it — never on the GameSpec (GameIR)
+  document, which is exactly the upstream PlayLiquid `GameIRDocument` (contract 01
+  revision 2; architect M0-closure correction A).
 
 ## 1. Principle
 
@@ -63,6 +67,11 @@ Explicit prohibitions (MUST NOT):
    is a contract violation.
 2. No Gamos-owned step scheduler, no second journal, no second progress stream,
    no parallel cancel/resume mechanism.
+3. **No acceptance structure on the GameSpec (revision 2).** Acceptance criteria
+   (verifiable outcomes for a planned game task) live on the GamePlan — as workflow
+   acceptance checks / a separate acceptance record the plan references — and are
+   evaluated against GameArtifacts. The GameSpec (GameIR document) carries no
+   acceptance data (contract 01 revision 2 §2/§3).
 
 ## 3. Intent resolution flow
 
@@ -70,8 +79,10 @@ Explicit prohibitions (MUST NOT):
 User message (New Task composer or CLI prompt)
   → intent classification (data-only; may be model-assisted in-conversation)
   → GameConcept (contract 01)
-  → GameSpec normalization (PlayLiquid GameIR document — contract 01 §2)
-  → GamePlan = Dynamic Workflow script artifact (+ acceptance checks)
+  → GameSpec normalization (PlayLiquid GameIR document — contract 01 §2, exactly the
+    upstream schema, no Gamos fields)
+  → GamePlan = Dynamic Workflow script artifact (+ acceptance checks / separate
+    acceptance record — revision 2)
   → started via the existing launch surfaces (CreateWorkflow / saved-workflow Run)
   → executed by the engine with journaling, resume, cancellation, notifications
 ```

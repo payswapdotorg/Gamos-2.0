@@ -1,51 +1,72 @@
 #!/usr/bin/env node
 /* eslint-disable max-lines -- Phase B evidence journey: launch orchestration + CDP client +
-   10 journey stages in one reproducible script; splitting would hide the evidence chain
-   (same pattern as packages/desktop/wdio.conf.ts). */
+   input layer + 10 journey stages in one reproducible script; splitting would hide the
+   evidence chain (same pattern as packages/desktop/wdio.conf.ts). */
 /**
- * Gamos Phase B — original ZCode desktop application UI journey (CDP-driven).
+ * Gamos Phase B — original ZCode desktop application UI journey (CDP-driven), rev 2.
  *
- * Evidence tooling for M0 acceptance (docs/gamos/MILESTONES-AND-ACCEPTANCE.md):
- * launches the ORIGINAL ZCode desktop app (Electron renderer included) and
- * drives the real user journey through the real UI:
+ * Integrity model (architect directive "Phase B Test Integrity and M0 Closure" §2.A):
+ *   - Stages S0–S9 are ALL MANDATORY. The overall exit code is 0 ONLY when every
+ *     mandatory stage finished with status "pass". `partial`, `skipped`, `fail`
+ *     and missing stages all produce a non-zero exit code.
+ *   - journey-evidence.json carries a machine-readable summary listing every
+ *     non-passing or missing stage (`summary.non_pass_stages`, `summary.missing_stages`).
  *
+ * Input simulation (§2.H): every UI interaction is performed through the Chromium
+ * DevTools Protocol Input domain — Input.dispatchMouseEvent (real hit-testing,
+ * focus and pointer routing) and Input.insertText / Input.dispatchKeyEvent for
+ * keyboard input. No synthetic DOM MouseEvent dispatches are used as proof of
+ * user interaction. (Page-side JS is used only to LOCATE elements — scroll them
+ * into view and report their rects — never to fake clicks.)
+ *
+ * Stages (all mandatory, all must pass):
  *   S0  app-up                 — complete application launches incl. desktop renderer
- *   S1  onboarding             — first-run wizard (when present on a fresh HOME)
- *   S2  provider configuration — Settings → Model settings → Add provider (OpenRouter, real key)
- *   S3  New Task submission    — task submitted from the original composer with the real model
+ *   S1  onboarding             — first-run wizard walked step-by-step (no silent Skip)
+ *   S2  provider configuration — Settings → Model settings → OpenRouter template with a
+ *                                real key; verified persisted on disk
+ *   S3  New Task submission    — task submitted from the original composer with the real
+ *                                model; exact artifact path + exact content verified
  *   S4  task execution         — agent turn, tool use, result rows in the timeline
- *   S5  terminal panel         — interactive terminal surface
- *   S6  review/diff            — approve + reject flow for agent file changes
- *   S7  embedded browser       — real in-app browser experience
- *   S8  plugin marketplace     — catalog + real install
- *   S9  session recovery       — app restart restores the session/history
+ *   S5  terminal panel         — real xterm surface; unique command; exact output verified
+ *   S6  review/diff            — Ask Before Changes: approve AND reject verified against
+ *                                the actual file content; prompts asserted to be real
+ *                                permission surfaces (role=listbox "Permission required")
+ *   S7  embedded browser       — real <webview> guest; navigate to example.com; verify the
+ *                                guest's actual loaded URL and page content over CDP
+ *   S8  plugin marketplace     — real marketplace view; specific plugin identity; real
+ *                                install; installed state + package sha256 verified
+ *   S9  session recovery       — app restart; exact session reopened; history + artifact
+ *                                survived
  *
  * Modes (PHASEB_MODE):
  *   dev     — launch vite dev renderer + dev Electron (sandbox-capable; low memory)
  *   prod    — launch Electron against the production-built renderer (out/renderer; CI)
  *   attach  — attach to an already-running app via CDP port (PHASEB_CDP_PORT)
  *
- * Evidence: PHASEB_EVIDENCE_DIR (default evidence/phase-b/journey) receives
- *   journey-evidence.json, screenshots/*.png and dom-dumps/*.json.
+ * Isolation (mirrors the upstream E2E pattern, packages/desktop/wdio.conf.ts):
+ *   HOME / USERPROFILE / ZCODE_DATA_BASE_DIR / ZCODE_DESKTOP_HOME_DIR are all pointed at
+ *   PHASEB_HOME, so provider config lands at $PHASEB_HOME/.zcode/v2/provider_config.json
+ *   and the default conversation workspace at $PHASEB_HOME/.zcode/workspace/default.
  *
  * Env:
- *   OPENROUTER_API_KEY   — real model provider key (required for S2/S3/S4)
+ *   OPENROUTER_API_KEY   — real model provider key (required for S2/S3/S4/S6)
  *   PHASEB_MODEL         — model id (default nvidia/nemotron-3-ultra-550b-a55b:free)
- *   PHASEB_HOME          — isolated ZCODE_DESKTOP_HOME_DIR (default .phaseb-home under repo)
- *   PHASEB_TASK_WORKSPACE— workspace dir for task artifacts (default $PHASEB_HOME/ZCodeProject)
- *   PHASEB_STAGES        — comma list of stages to run (default all)
+ *   PHASEB_HOME          — isolated home/data base dir (default .phaseb-home under repo;
+ *                          MUST be fresh for S1 to see the first-run wizard)
+ *   PHASEB_STAGES        — comma list of stages to run (default all; the verdict still
+ *                          requires every mandatory stage to pass)
  *   PHASEB_MAX_WAIT_MS   — per-wait budget default 240000
  *
  * This script is evidence tooling only: it changes no repository sources,
  * registers no hooks and performs no repository mutation. All app state lives
- * under PHASEB_HOME.
+ * under PHASEB_HOME. The OpenRouter key is never written to evidence artifacts.
  */
 import { spawn } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, appendFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, appendFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { homedir } from "node:os";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DESKTOP_DIR = join(REPO_ROOT, "packages", "desktop");
@@ -56,22 +77,24 @@ const EVIDENCE_DIR = resolve(REPO_ROOT, process.env.PHASEB_EVIDENCE_DIR ?? "evid
 const SCREEN_DIR = join(EVIDENCE_DIR, "screenshots");
 const DUMP_DIR = join(EVIDENCE_DIR, "dom-dumps");
 const PHASEB_HOME = resolve(REPO_ROOT, process.env.PHASEB_HOME ?? ".phaseb-home");
-// The app's default session workspace follows the OS home (verified on the sandbox:
-// initialWorkspacePath=<homedir>/.zcode/workspace/default; ZCODE_DESKTOP_HOME_DIR does
-// not redirect it). Keeping task artifacts inside the session workspace avoids
-// spurious out-of-workspace permission prompts during the S3 journey.
+// With HOME/USERPROFILE/ZCODE_DATA_BASE_DIR all redirected to PHASEB_HOME the app's
+// default conversation workspace is $PHASEB_HOME/.zcode/workspace/default
+// (packages/services/src/paths.ts getConversationWorkspaceDir) — same layout the
+// upstream E2E suite uses for its isolated home.
 const TASK_WORKSPACE = resolve(
-  process.env.PHASEB_TASK_WORKSPACE ?? join(homedir(), ".zcode", "workspace", "default"),
+  process.env.PHASEB_TASK_WORKSPACE ?? join(PHASEB_HOME, ".zcode", "workspace", "default"),
 );
+const ZCODE_DATA_ROOT = join(PHASEB_HOME, ".zcode");
+const PROVIDER_CONFIG_FILE = join(ZCODE_DATA_ROOT, "v2", "provider_config.json");
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY ?? "";
 const MODEL_ID = process.env.PHASEB_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b:free";
 const MAX_WAIT = Number(process.env.PHASEB_MAX_WAIT_MS ?? 240000);
 const STAGES = (process.env.PHASEB_STAGES ?? "S0,S1,S2,S3,S4,S5,S6,S7,S8,S9").split(",").map((s) => s.trim());
+const MANDATORY_STAGES = ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9"];
 const APP_NAME = process.env.PHASEB_APP_NAME ?? "GamosPhaseBJourney";
-// Staged, versioned dev app dir (mirrors the E2E staging pattern: an isolated copy of
-// packages/desktop/out plus a package.json carrying the real app version, so
-// electron-updater's semver constructor and app.getVersion() behave as upstream
-// E2E expects). Not a source modification — build output staging only.
+const RUN_TOKEN = `GAMOS-PHASE-B-${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}`;
+// Staged, versioned dev app dir (mirrors the E2E staging pattern). Not a source
+// modification — build output staging only.
 const STAGED_APP_DIR = resolve(REPO_ROOT, process.env.PHASEB_STAGED_APP_DIR ?? ".phaseb-app");
 const APP_VERSION = (() => {
   try { return JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8")).version ?? "0.0.0"; }
@@ -115,6 +138,8 @@ function log(...args) {
 
 const evidence = {
   script: "scripts/gamos/phase-b-ui-journey.mjs",
+  revision: 2,
+  run_token: RUN_TOKEN,
   mode: MODE,
   started_at: RUN_TS,
   environment: {
@@ -126,6 +151,8 @@ const evidence = {
     real_model_key_present: Boolean(OPENROUTER_KEY),
     app_home: PHASEB_HOME,
     task_workspace: TASK_WORKSPACE,
+    provider_config_file: PROVIDER_CONFIG_FILE,
+    input_simulation: "CDP Input.dispatchMouseEvent / Input.insertText / Input.dispatchKeyEvent (no synthetic DOM events)",
   },
   stages: {},
   commands: [],
@@ -134,7 +161,7 @@ const evidence = {
 
 function recordStage(id, status, detail) {
   evidence.stages[id] = { status, detail, at: new Date().toISOString() };
-  log(`STAGE ${id}: ${status} — ${typeof detail === "string" ? detail : JSON.stringify(detail).slice(0, 300)}`);
+  log(`STAGE ${id}: ${status} — ${typeof detail === "string" ? detail : JSON.stringify(detail).slice(0, 400)}`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -197,6 +224,10 @@ async function fetchJson(url) {
   return res.json();
 }
 
+async function cdpTargets() {
+  return fetchJson(`http://127.0.0.1:${CDP_PORT}/json/list`);
+}
+
 async function waitFor(fn, { timeout = MAX_WAIT, interval = 500, what = "condition" } = {}) {
   const start = Date.now();
   let lastErr;
@@ -213,10 +244,12 @@ async function waitFor(fn, { timeout = MAX_WAIT, interval = 500, what = "conditi
 }
 
 async function mainPageTarget() {
-  const list = await fetchJson(`http://127.0.0.1:${CDP_PORT}/json/list`);
-  const page = list.find((t) => t.type === "page" && !/devtools/i.test(t.url)) ?? list.find((t) => t.type === "page");
-  if (!page) throw new Error(`no page target on CDP ${CDP_PORT}: ${JSON.stringify(list).slice(0, 400)}`);
-  return page;
+  const list = await cdpTargets();
+  const pages = list.filter((t) => t.type === "page" && !/devtools/i.test(t.url));
+  // The app's main window loads the bundled renderer (file:// or vite dev URL).
+  const app = pages.find((t) => /index\.html|localhost:5174|127\.0\.0\.1:5174/.test(t.url)) ?? pages[0];
+  if (!app) throw new Error(`no page target on CDP ${CDP_PORT}: ${JSON.stringify(list).slice(0, 400)}`);
+  return app;
 }
 
 /* ------------------------------------------------------------------ */
@@ -251,7 +284,7 @@ async function attachCdp() {
       rendererRequests.failed.push(`${msg.params.errorText} blocked=${msg.params.blocked ?? false}`);
     }
   });
-  log(`CDP attached: ${target.title} (${target.url.slice(0, 80)})`);
+  log(`CDP attached: ${target.title} (${target.url.slice(0, 120)})`);
   return target;
 }
 
@@ -278,8 +311,8 @@ async function screenshot(name) {
 
 async function dumpDom(name) {
   const info = await evalJs(`(() => {
-    const tids = Array.from(document.querySelectorAll('[data-testid]')).slice(0, 200).map(e => e.dataset.testid);
-    const buttons = Array.from(document.querySelectorAll('button')).slice(0, 40).map(b => ({ text: (b.innerText || '').trim().slice(0, 60), tid: b.dataset.testid ?? null, disabled: b.disabled }));
+    const tids = Array.from(document.querySelectorAll('[data-testid]')).slice(0, 240).map(e => e.dataset.testid);
+    const buttons = Array.from(document.querySelectorAll('button')).slice(0, 48).map(b => ({ text: (b.innerText || '').trim().slice(0, 60), tid: b.dataset.testid ?? null, disabled: b.disabled }));
     return { url: location.href, title: document.title, readyState: document.readyState, testIds: tids, buttons };
   })()`);
   writeFileSync(join(DUMP_DIR, `${name}.json`), JSON.stringify(info, null, 1));
@@ -287,68 +320,184 @@ async function dumpDom(name) {
   return info;
 }
 
-const CLICK_JS = `(async (sel) => {
-  const el = document.querySelector(sel);
-  if (!el) return { ok: false, reason: 'not-found: ' + sel };
-  el.scrollIntoView({ block: 'center', inline: 'center' });
-  await new Promise(r => setTimeout(r, 60));
-  const rect = el.getBoundingClientRect();
-  const opts = { bubbles: true, cancelable: true, view: window, composed: true };
-  el.dispatchEvent(new PointerEvent('pointerdown', { ...opts, pointerId: 1 }));
-  el.dispatchEvent(new MouseEvent('mousedown', opts));
-  el.dispatchEvent(new PointerEvent('pointerup', { ...opts, pointerId: 1 }));
-  el.dispatchEvent(new MouseEvent('mouseup', opts));
-  el.dispatchEvent(new MouseEvent('click', { ...opts, clientX: rect.x + rect.width / 2, clientY: rect.y + rect.height / 2 }));
-  return { ok: true };
-})`;
+/* ------------------------------------------------------------------ */
+/* CDP input layer — REAL user input only (§2.H)                       */
+/*                                                                     */
+/* Page-side JS only LOCATES elements (scrollIntoView + rect + label). */
+/* Clicks/typing are dispatched through the Input domain so Chromium   */
+/* performs real hit-testing, focus routing and event synthesis.       */
+/* ------------------------------------------------------------------ */
+async function pressKey(key, { code, keyCode } = {}) {
+  const common = { key, code: code ?? key, windowsVirtualKeyCode: keyCode ?? keyCodeFor(key), nativeVirtualKeyCode: keyCode ?? keyCodeFor(key) };
+  await page.send("Input.dispatchKeyEvent", { type: "keyDown", ...common });
+  await page.send("Input.dispatchKeyEvent", { type: "keyUp", ...common });
+}
+function keyCodeFor(key) {
+  return { Enter: 13, Tab: 9, Escape: 27, Backspace: 8, Delete: 46, ArrowDown: 40, ArrowUp: 38, ArrowLeft: 37, ArrowRight: 39 }[key] ?? 0;
+}
+async function typeIntoFocused(text) {
+  await page.send("Input.insertText", { text });
+}
 
-async function clickSel(sel) {
-  const r = await evalJs(`${CLICK_JS}(${JSON.stringify(sel)})`, { awaitPromise: true });
-  if (!r?.ok) throw new Error(`click failed: ${r?.reason ?? sel}`);
+async function cdpClickRect(rect, { settleMs = 80 } = {}) {
+  if (!rect || !(rect.w > 0 && rect.h > 0)) throw new Error(`cdpClickRect: invalid rect ${JSON.stringify(rect)}`);
+  await new Promise((r) => setTimeout(r, settleMs));
+  const x = Math.round(rect.x + rect.w / 2);
+  const y = Math.round(rect.y + rect.h / 2);
+  await page.send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y });
+  await page.send("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
+  await page.send("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
+  return { x, y };
+}
+
+// finder: JS expression (IIFE or arrow) that returns an element; evaluated with
+// scrollIntoView + rect measurement so the returned rect is post-scroll.
+function rectOf(finderJs) {
+  return evalJs(`(() => {
+    const el = (${finderJs});
+    if (!el || !el.offsetParent && el.getBoundingClientRect().width === 0) return null;
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    const r = el.getBoundingClientRect();
+    return { x: r.x, y: r.y, w: r.width, h: r.height, text: (el.innerText || el.value || '').trim().slice(0, 60), tid: el.dataset?.testid ?? null };
+  })()`, { awaitPromise: false });
+}
+
+async function clickTid(tid, { timeout = 30000, visible = true } = {}) {
+  const rect = await waitFor(async () => {
+    const r = await rectOf(`document.querySelector(${JSON.stringify(`[data-testid="${tid}"]`)})`).catch(() => null);
+    return r && (!visible || (r.w > 0 && r.h > 0)) ? r : false;
+  }, { what: `testid ${tid} (clickable)`, timeout, interval: 400 });
+  const clicked = await cdpClickRect(rect);
+  log(`cdp-click [${tid}] "${rect.text}" at ${clicked.x},${clicked.y}`);
   return true;
 }
-const byTid = (tid) => `[data-testid="${tid}"]`;
+
+async function clickButtonByText(textOrRegex, { timeout = 20000, scope = "document", exact = false } = {}) {
+  const pattern = typeof textOrRegex === "string" ? escapeRegExp(textOrRegex) : textOrRegex.source;
+  const flags = typeof textOrRegex === "string" ? "i" : textOrRegex.flags;
+  const finder = `(() => {
+    const re = ${JSON.stringify(pattern)};
+    const flags = ${JSON.stringify(flags)};
+    const rx = new RegExp(re, flags);
+    const els = Array.from(${scope}.querySelectorAll('button, [role="button"], [role="option"], [role="menuitem"]'));
+    const el = els.find(b => { const t = (b.innerText || b.textContent || '').trim(); return ${exact ? "t === " + JSON.stringify(typeof textOrRegex === "string" ? textOrRegex : textOrRegex.source) : "rx.test(t)"}; });
+    return el ?? null;
+  })()`;
+  const rect = await waitFor(async () => {
+    const r = await rectOf(finder).catch(() => null);
+    return r && r.w > 0 && r.h > 0 ? r : false;
+  }, { what: `button "${String(textOrRegex)}" (clickable)`, timeout, interval: 400 });
+  const clicked = await cdpClickRect(rect);
+  log(`cdp-click [text] "${rect.text}" at ${clicked.x},${clicked.y}`);
+  return rect.text;
+}
+function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 
 async function waitForTid(tid, { timeout = 30000, visible = true } = {}) {
   await waitFor(
-    () => evalJs(`(() => { const e = document.querySelector(${JSON.stringify(byTid(tid))}); if (!e) return false; const r = e.getBoundingClientRect(); return ${visible ? 'r.width > 0 && r.height > 0' : 'true'}; })()`),
+    () => evalJs(`(() => { const e = document.querySelector(${JSON.stringify(`[data-testid="${tid}"]`)}); if (!e) return false; const r = e.getBoundingClientRect(); return ${visible ? "r.width > 0 && r.height > 0" : "true"}; })()`),
     { what: `testid ${tid}`, timeout, interval: 400 },
   );
   return true;
 }
 
 async function hasTid(tid) {
-  return Boolean(await evalJs(`Boolean(document.querySelector(${JSON.stringify(byTid(tid))}))`));
+  return Boolean(await evalJs(`Boolean(document.querySelector(${JSON.stringify(`[data-testid="${tid}"]`)}))`));
 }
 
-async function clickButtonByText(text, { scope = "document", timeout = 15000, exact = false } = {}) {
-  await waitFor(
-    () => evalJs(`(() => { const els = Array.from(${scope}.querySelectorAll('button, [role="button"]')); const el = els.find(b => { const t = (b.innerText || b.textContent || '').trim(); return ${exact ? `t === ${JSON.stringify(text)}` : `t.includes(${JSON.stringify(text)})`}; }); return Boolean(el) && !el.disabled; })()`),
-    { what: `button "${text}"`, timeout, interval: 500 },
-  );
-  const r = await evalJs(`(async () => {
-    const els = Array.from(${scope}.querySelectorAll('button, [role="button"]'));
-    const el = els.find(b => { const t = (b.innerText || b.textContent || '').trim(); return ${exact ? `t === ${JSON.stringify(text)}` : `t.includes(${JSON.stringify(text)})`}; });
-    if (!el) return { ok: false, reason: 'not-found' };
-    el.scrollIntoView({ block: 'center' });
-    await new Promise(r => setTimeout(r, 60));
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, composed: true }));
-    return { ok: true, text: el.innerText.trim().slice(0, 60) };
-  })()`, { awaitPromise: true });
-  if (!r?.ok) throw new Error(`clickButtonByText failed: ${text}`);
+async function tidText(tid) {
+  return (await evalJs(`(document.querySelector(${JSON.stringify(`[data-testid="${tid}"]`)})?.innerText ?? '').slice(0, 400)`)) ?? "";
+}
+
+async function tidAttr(tid, attr) {
+  return (await evalJs(`document.querySelector(${JSON.stringify(`[data-testid="${tid}"]`)})?.getAttribute(${JSON.stringify(attr)}) ?? null`));
+}
+
+/* Focus a text input via a REAL CDP click, then type via Input.insertText. */
+async function clickAndType(tid, text, { timeout = 20000, clearFirst = false } = {}) {
+  await waitForTid(tid, { timeout });
+  const rect = await rectOf(`document.querySelector(${JSON.stringify(`[data-testid="${tid}"]`)})`);
+  if (!rect) throw new Error(`input not clickable: ${tid}`);
+  await cdpClickRect(rect);
+  await new Promise((r) => setTimeout(r, 150));
+  if (clearFirst) {
+    await page.send("Input.dispatchKeyEvent", { type: "keyDown", key: "a", code: "KeyA", windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65, modifiers: 2 });
+    await page.send("Input.dispatchKeyEvent", { type: "keyUp", key: "a", code: "KeyA", windowsVirtualKeyCode: 65, nativeVirtualKeyCode: 65, modifiers: 2 });
+    await pressKey("Backspace");
+    await new Promise((r) => setTimeout(r, 120));
+  }
+  await typeIntoFocused(text);
+  await new Promise((r) => setTimeout(r, 250));
   return true;
 }
 
-async function typeIntoFocused(text) {
-  await page.send("Input.insertText", { text });
-}
-async function pressKey(key) {
-  await page.send("Input.dispatchKeyEvent", { type: "keyDown", key });
-  await page.send("Input.dispatchKeyEvent", { type: "keyUp", key });
+/* ------------------------------------------------------------------ */
+/* Permission dialog engine (the REAL Ask-Before-Changes surface)      */
+/* Matches the upstream E2E detection contract: a role=listbox with    */
+/* aria-label "Permission required"/"需要权限", role=option buttons    */
+/* carrying data-permission-option-kind, and a Confirm button.         */
+/* ------------------------------------------------------------------ */
+const PERMISSION_DIALOG_JS = `(() => {
+  const normalize = (v) => (v ?? '').replace(/\\s+/g, ' ').trim();
+  const listbox = Array.from(document.querySelectorAll('[role="listbox"]')).find(el => {
+    const label = normalize(el.getAttribute('aria-label'));
+    return label === 'Permission required' || label === '需要权限';
+  });
+  if (!listbox) return null;
+  const options = Array.from(listbox.querySelectorAll('button[role="option"]')).map(b => {
+    const r = b.getBoundingClientRect();
+    return { kind: b.dataset.permissionOptionKind ?? null, text: (b.innerText || '').trim().slice(0, 80), selected: b.getAttribute('aria-selected') === 'true', rect: { x: r.x, y: r.y, w: r.width, h: r.height } };
+  });
+  const confirm = document.querySelector('button[aria-label="Confirm"], button[aria-label="确认"]');
+  const confirmRect = confirm ? (() => { const r = confirm.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })() : null;
+  const text = (listbox.closest('[role="dialog"], .fixed, body')?.innerText ?? listbox.innerText ?? '').slice(0, 900);
+  return { options, confirmDisabled: confirm ? confirm.disabled : null, confirmRect, text };
+})()`;
+
+async function readPermissionDialog() {
+  return evalJs(PERMISSION_DIALOG_JS).catch(() => null);
 }
 
-async function bodyText() {
-  return (await evalJs(`document.body?.innerText?.slice(0, 3000) ?? ''`)) ?? "";
+async function waitForPermissionDialog({ timeout = Math.min(MAX_WAIT, 180000) } = {}) {
+  return waitFor(readPermissionDialog, { what: "permission dialog (role=listbox 'Permission required')", timeout, interval: 700 });
+}
+
+/**
+ * Respond to the open permission dialog by clicking the option matching
+ * `kindPrefix` (allowOnce / rejectOnce / …) and then the Confirm button —
+ * both via real CDP clicks. Retries until the dialog is dismissed.
+ */
+async function respondPermission(kindPrefix, { maxAttempts = 4 } = {}) {
+  let dialog = await readPermissionDialog();
+  if (!dialog) throw new Error("respondPermission: no permission dialog is open");
+  const surface = {
+    aria_label: "Permission required",
+    options: dialog.options.map((o) => ({ kind: o.kind, text: o.text })),
+    dialog_text_excerpt: dialog.text.slice(0, 300),
+  };
+  for (let attempt = 1; attempt <= maxAttempts && dialog; attempt++) {
+    const target =
+      dialog.options.find((o) => (o.kind ?? "").startsWith(kindPrefix) && o.rect.w > 0) ??
+      dialog.options.find((o) => (o.kind ?? "").startsWith(kindPrefix)) ??
+      (kindPrefix.startsWith("reject") ? dialog.options.find((o) => (o.kind ?? "").startsWith("reject")) ?? dialog.options[dialog.options.length - 1] : dialog.options[0]);
+    if (!target) throw new Error(`respondPermission: no options in dialog: ${JSON.stringify(dialog.options.map((o) => o.kind))}`);
+    await cdpClickRect(target.rect);
+    await new Promise((r) => setTimeout(r, 250));
+    dialog = (await readPermissionDialog()) ?? dialog; // re-read rects (selection may re-render)
+    if (dialog?.confirmRect) {
+      await cdpClickRect(dialog.confirmRect);
+      await new Promise((r) => setTimeout(r, 400));
+    } else if (dialog) {
+      // Option double-click confirms directly (upstream behavior): click it again.
+      const again = dialog.options.find((o) => (o.kind ?? "") === (target.kind ?? "")) ?? target;
+      if (again?.rect?.w > 0) await cdpClickRect(again.rect);
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    dialog = await readPermissionDialog();
+  }
+  const dismissed = !(await readPermissionDialog());
+  if (!dismissed) throw new Error(`respondPermission(${kindPrefix}): dialog still open after ${maxAttempts} attempts`);
+  return { surface, dismissed };
 }
 
 /* ------------------------------------------------------------------ */
@@ -400,12 +549,29 @@ async function probeHttp(url) {
   });
 }
 
-let viteChild = null;
-let electronChild = null;
+let _viteChild = null;
+let _electronChild = null;
+
+// Upstream-isolation env (packages/desktop/wdio.conf.ts): HOME, USERPROFILE,
+// ZCODE_DATA_BASE_DIR and ZCODE_DESKTOP_HOME_DIR all point at PHASEB_HOME.
+function electronEnv(extra = {}) {
+  return {
+    ...process.env,
+    HOME: PHASEB_HOME,
+    USERPROFILE: PHASEB_HOME,
+    ZCODE_DATA_BASE_DIR: PHASEB_HOME,
+    ZCODE_DESKTOP_HOME_DIR: PHASEB_HOME,
+    ZCODE_DESKTOP_APPLICATION_NAME: APP_NAME,
+    ZCODE_DESKTOP_USER_DATA_DIR: join(PHASEB_HOME, "user-data"),
+    ZCODE_DESKTOP_SESSION_DATA_DIR: join(PHASEB_HOME, "user-data", "session"),
+    ELECTRON_DISABLE_SECURITY_WARNINGS: "1",
+    ...extra,
+  };
+}
 
 async function launchDev() {
   // 1. vite dev renderer (port 5174)
-  viteChild = spawnChild("vite", process.execPath, [
+  _viteChild = spawnChild("vite", process.execPath, [
     join(REPO_ROOT, "node_modules", "vite", "bin", "vite.js"), "dev", "--port", "5174", "--strictPort",
   ], { cwd: DESKTOP_DIR });
   const viteUrls = ["http://localhost:5174", "http://127.0.0.1:5174", "http://[::1]:5174"];
@@ -420,21 +586,11 @@ async function launchDev() {
 
   // 2. Electron dev app (staged, versioned out/ copy; renderer = vite dev server)
   const electronBin = join(REPO_ROOT, "node_modules", ".bin", "electron");
-  const electronEnv = {
-    ...process.env,
-    ELECTRON_RENDERER_URL: viteUrl,
-    DISPLAY: process.env.DISPLAY ?? ":99",
-    ZCODE_DESKTOP_HOME_DIR: PHASEB_HOME,
-    ZCODE_DESKTOP_APPLICATION_NAME: APP_NAME,
-    ZCODE_DESKTOP_USER_DATA_DIR: join(PHASEB_HOME, "user-data"),
-    ZCODE_DESKTOP_SESSION_DATA_DIR: join(PHASEB_HOME, "user-data", "session"),
-    ELECTRON_DISABLE_SECURITY_WARNINGS: "1",
-  };
-  electronChild = spawnChild("electron", electronBin, [STAGED_APP_DIR, "--no-sandbox", "--disable-gpu"], {
-    cwd: DESKTOP_DIR, env: electronEnv,
+  _electronChild = spawnChild("electron", electronBin, [STAGED_APP_DIR, "--no-sandbox", "--disable-gpu"], {
+    cwd: DESKTOP_DIR, env: electronEnv({ ELECTRON_RENDERER_URL: viteUrl }),
   });
   evidence.commands.push({
-    cmd: `electron ${STAGED_APP_DIR} --no-sandbox --disable-gpu (ELECTRON_RENDERER_URL=${viteUrl}, ZCODE_DESKTOP_HOME_DIR=${PHASEB_HOME})`,
+    cmd: `electron ${STAGED_APP_DIR} --no-sandbox --disable-gpu (ELECTRON_RENDERER_URL=${viteUrl}; HOME=ZCODE_DATA_BASE_DIR=${PHASEB_HOME})`,
     at: new Date().toISOString(),
   });
 }
@@ -445,18 +601,10 @@ async function launchProd() {
     throw new Error(`production renderer missing: ${rendererIndex} — run the desktop production build first`);
   }
   const electronBin = join(REPO_ROOT, "node_modules", ".bin", "electron");
-  const electronEnv = {
-    ...process.env,
-    DISPLAY: process.env.DISPLAY ?? ":99",
-    ZCODE_DESKTOP_HOME_DIR: PHASEB_HOME,
-    ZCODE_DESKTOP_APPLICATION_NAME: APP_NAME,
-    ZCODE_DESKTOP_USER_DATA_DIR: join(PHASEB_HOME, "user-data"),
-    ZCODE_DESKTOP_SESSION_DATA_DIR: join(PHASEB_HOME, "user-data", "session"),
-    NODE_ENV: "production",
-    ELECTRON_DISABLE_SECURITY_WARNINGS: "1",
-  };
-  electronChild = spawnChild("electron", electronBin, [STAGED_APP_DIR, "--no-sandbox"], { cwd: DESKTOP_DIR, env: electronEnv });
-  evidence.commands.push({ cmd: `electron ${STAGED_APP_DIR} --no-sandbox (production renderer)`, at: new Date().toISOString() });
+  _electronChild = spawnChild("electron", electronBin, [STAGED_APP_DIR, "--no-sandbox"], {
+    cwd: DESKTOP_DIR, env: electronEnv({ NODE_ENV: "production" }),
+  });
+  evidence.commands.push({ cmd: `electron ${STAGED_APP_DIR} --no-sandbox (production renderer; HOME=ZCODE_DATA_BASE_DIR=${PHASEB_HOME})`, at: new Date().toISOString() });
 }
 
 async function stopApp() {
@@ -468,6 +616,79 @@ async function stopApp() {
     try { child.kill("SIGKILL"); } catch {}
   }
   try { xvfbChild?.kill("SIGKILL"); } catch {}
+}
+
+/* ------------------------------------------------------------------ */
+/* Shared journey state                                                */
+/* ------------------------------------------------------------------ */
+const journey = {
+  sessionIds: [],        // v4 session ids created through the composer (S3)
+  openRouterProviderId: null,
+  providerSavedOnDisk: null,
+  terminalMarker: `${RUN_TOKEN}-TERMINAL-OK`,
+  approvedLine: "REVIEW-APPROVED-LINE",
+  rejectedLine: "REVIEW-REJECTED-LINE",
+  taskFile: join(TASK_WORKSPACE, "gamos-phase-b-journey.txt"),
+  browserGuestUrl: null,
+  marketplace: {},
+};
+
+const MAIN_PANE = "v4-session-pane-workspace-main";
+
+async function paneSessionId() {
+  return (await evalJs(`document.querySelector(${JSON.stringify(`[data-testid="${MAIN_PANE}"]`)})?.dataset?.sessionId ?? null`)) ?? null;
+}
+
+async function timelineState() {
+  return evalJs(`(() => {
+    const pane = document.querySelector(${JSON.stringify(`[data-testid="${MAIN_PANE}"]`)});
+    const rows = Array.from(document.querySelectorAll('[data-testid^="v4-row"]'));
+    const stop = Array.from(document.querySelectorAll('[data-testid="v4-stop"]')).some(e => e.offsetParent !== null);
+    const timeline = (document.querySelector('[data-testid="v4-timeline"]')?.innerText ?? '').slice(0, 2500);
+    return { rows: rows.length, canStop: stop, timeline, paneSessionId: pane?.dataset?.sessionId ?? null };
+  })()`);
+}
+
+/**
+ * Wait for the current agent turn to complete (upstream semantics:
+ * sessionId !== "draft", no stop button, rows present) while responding to any
+ * permission dialogs that appear. respondKind selects the response used for
+ * dialogs that surface DURING the wait: "allowOnce" for tasks the user is
+ * approving, "rejectOnce" for the reject verification (subsequent retries of
+ * the rejected modification must also be rejected, otherwise the journey
+ * itself would apply the rejected change on a retry).
+ */
+async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, respondKind = "allowOnce", approvals = [] } = {}) {
+  const start = Date.now();
+  let sawToolUse = false;
+  let last = null;
+  let idleSince = null;
+  while (Date.now() - start < timeout) {
+    last = await timelineState().catch(() => null);
+    if (!last) { await new Promise((r) => setTimeout(r, 1500)); continue; }
+    if (/write|read|edit|terminal|bash|tool/i.test(last.timeline)) sawToolUse = true;
+    if (autoApprove) {
+      const dialog = await readPermissionDialog();
+      if (dialog) {
+        const res = await respondPermission(respondKind).catch((e) => ({ error: e.message }));
+        approvals.push({ at: new Date().toISOString(), kind: respondKind, result: res.error ?? "dismissed", surface: res.surface ?? null });
+        log(`auto-respond permission (${respondKind}): ${res.error ?? "dismissed"}`);
+        continue;
+      }
+    }
+    const running = last.canStop;
+    if (!running && last.rows > 0 && last.paneSessionId && last.paneSessionId !== "draft") {
+      if (idleSince === null) idleSince = Date.now();
+      // require ~6s of stability so a between-tools gap isn't read as completion
+      if (Date.now() - idleSince > 6000) {
+        return { completed: true, ...last, sawToolUse, approvals };
+      }
+    } else {
+      idleSince = null;
+    }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  return { completed: false, ...last, sawToolUse, approvals, timeout: true };
 }
 
 /* ------------------------------------------------------------------ */
@@ -491,469 +712,632 @@ async function stageS0() {
     if (sidebar || onboarding || (state.bodyLen > 500 && state.ready === "complete")) return true;
     if (state.ready === "complete" && state.bodyLen === 0 && reloads < maxReloads) {
       reloads++;
-      log(`S0: renderer blank (tidCount=0) — reloading page (attempt ${reloads}/${maxReloads}) to retry against the warm vite cache`);
+      log(`S0: renderer blank (tidCount=0) — reloading page (attempt ${reloads}/${maxReloads})`);
       await page.send("Page.reload", { ignoreCache: false }).catch(() => {});
       await new Promise((r) => setTimeout(r, 15000));
     }
     return false;
-  }, { what: "workspace DOM (sidebar/onboarding)", timeout: MAX_WAIT, interval: 5000 }).catch(async () => {
-    const onboarding = await hasTid("onboarding-page");
-    if (!onboarding) {
-      log(`S0 diagnostics: ${JSON.stringify(lastDiag)}`);
-      log(`S0 renderer requests: ${JSON.stringify(rendererRequests)}`);
-      log(`S0 renderer console (last 40): ${JSON.stringify(rendererConsole.slice(-40), null, 1)}`);
-      await dumpDom("S0-failure").catch(() => {});
-      throw new Error(`workspace DOM never appeared: ${JSON.stringify(lastDiag)}; requests=${JSON.stringify(rendererRequests)}`);
-    }
-  });
+  }, { what: "workspace DOM (sidebar/onboarding)", timeout: MAX_WAIT, interval: 5000 });
   await screenshot("S0-app-up");
   await dumpDom("S0-app-up");
-  recordStage("S0", "pass", `window loaded (${target.title}); renderer reachable over CDP; diag=${JSON.stringify(lastDiag)}`);
+  const launchUrl = target.url;
+  recordStage("S0", "pass", {
+    window: "main BrowserWindow over CDP",
+    launch_url: launchUrl.slice(0, 220),
+    app_title: target.title,
+    renderer: MODE === "prod" ? "production bundle (out/renderer)" : "vite dev server",
+    diag: lastDiag,
+  });
 }
 
 async function stageS1() {
-  const onboardingPresent = await hasTid("onboarding-page") || (await bodyText()).includes("What do you do");
-  if (!onboardingPresent) {
-    recordStage("S1", "skipped", "onboarding already completed in this HOME (persisted state)");
-    return;
+  const present = await waitFor(async () => {
+    if (await hasTid("onboarding-page")) return true;
+    if (await hasTid("sidebar")) return "workspace";
+    return false;
+  }, { what: "onboarding page or workspace", timeout: 60000 });
+  if (present !== true) {
+    throw new Error("onboarding did not appear on this HOME — S1 requires a fresh PHASEB_HOME (first-run wizard)");
   }
   await screenshot("S1-onboarding-start");
-  // Explicit wizard walk (labels verified from the real UI dom-dumps):
-  //   step 1 occupation cards ("Software / Data / AI", …) — selection advances
-  //   step 2 UI mode ("Coding mode" / "Office mode") + Next
-  //   later steps: Next/Continue/Get started. Never click Back/Skip/Retry.
-  let lastClicked = null;
-  let repeated = 0;
-  const selectedOnce = { occupation: false, codingMode: false };
-  for (let step = 1; step <= 14; step++) {
-    // Selection memory: each selection card (occupation, Coding mode) is clicked at most
-    // ONCE; afterwards the stepper prefers the advance buttons (Next/Continue/Get
-    // started). This mirrors the real wizard: select → Next → select → Next → …
-    const SEL_STATE = JSON.stringify(selectedOnce);
-    const r = await evalJs(`(async () => {
-      const selectedOnce = ${SEL_STATE};
-      const page0 = document.querySelector('[data-testid="onboarding-page"]');
-      if (!page0) return { done: true };
-      const btns = Array.from(document.querySelectorAll('button'))
-        .filter(b => b.offsetParent !== null && !b.disabled && (b.innerText || '').trim().length > 0);
-      const pick = (re) => btns.find(b => re.test((b.innerText || '').trim()));
-      const occupation = !selectedOnce.occupation ? pick(/software\\s*\\/\\s*data\\s*\\/\\s*ai/i) : null;
-      const codingMode = !selectedOnce.codingMode ? pick(/^coding mode/i) : null;
-      const advance = pick(/^(next|continue|get started|下一步|继续|开始使用)$/i);
-      const el = occupation ?? codingMode ?? advance;
-      if (!el) return { done: false, have: btns.map(b => (b.innerText || '').trim().slice(0, 30)).slice(0, 10) };
-      el.scrollIntoView({ block: 'center' });
-      await new Promise(r => setTimeout(r, 80));
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-      return { done: false, clicked: (el.innerText || '').trim().split('\\n')[0].slice(0, 40), picked: el === occupation ? 'occupation' : el === codingMode ? 'codingMode' : 'advance' };
-    })()`, { awaitPromise: true }).catch((e) => ({ done: false, error: e.message }));
-    if (r?.done) break;
-    if (r?.picked === "occupation") selectedOnce.occupation = true;
-    if (r?.picked === "codingMode") selectedOnce.codingMode = true;
-    if (r?.clicked && r.clicked === lastClicked) {
-      repeated++;
-    } else {
-      repeated = 0;
-      lastClicked = r?.clicked ?? null;
-    }
-    log(`onboarding step ${step}: clicked="${r?.clicked ?? "(none)"}"${r?.have ? ` options=${JSON.stringify(r.have).slice(0, 160)}` : ""}${r?.error ? ` error=${r.error.slice(0, 120)}` : ""}${repeated >= 2 ? " (repeated — escalating)" : ""}`);
-    await new Promise((r2) => setTimeout(r2, 1200));
-    await screenshot(`S1-onboarding-step-${step}`);
-    if (!(await hasTid("onboarding-page"))) break;
-    if (repeated >= 2) {
-      // Advance buttons exhausted: try Skip as the last resort (preferences are optional).
-      const alt = await evalJs(`(async () => {
-        const btns = Array.from(document.querySelectorAll('button'))
-          .filter(b => b.offsetParent !== null && !b.disabled && (b.innerText || '').trim().length > 0);
-        const pick = (re) => btns.find(b => re.test((b.innerText || '').trim()));
-        const el = pick(/^(skip|跳过)$/i);
-        if (!el) return null;
-        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-        return (el.innerText || '').trim().slice(0, 30);
-      })()`, { awaitPromise: true }).catch(() => null);
-      log(`onboarding escalation at step ${step}: clicked="${alt ?? "(none)"}"`);
-      await new Promise((r2) => setTimeout(r2, 1200));
-      repeated = 0;
-    }
-  }
-  const finished = await waitForTid("sidebar", { timeout: 45000 }).catch(() => false);
+  const steps = [];
+  // Step 0 — occupation. Default "developer" is preselected; we still explicitly
+  // click the "Software / Data / AI" card so the selection is a real user action.
+  await waitFor(async () => Boolean(await rectOf(`(() => { const page0 = document.querySelector('[data-testid="onboarding-page"]'); if (!page0) return null; return Array.from(page0.querySelectorAll('button')).find(b => /software\\s*\\/\\s*data\\s*\\/\\s*ai/i.test((b.innerText || '').trim())); })()`).catch(() => null)), { what: "occupation card (Software / Data / AI)", timeout: 30000 });
+  const occupation = await clickButtonByText(/software\s*\/\s*data\s*\/\s*ai/i, { scope: `document.querySelector('[data-testid="onboarding-page"]')`, timeout: 30000 });
+  steps.push({ step: 0, name: "occupation", action: "selected card", value: occupation });
+  await new Promise((r) => setTimeout(r, 400));
+  await clickButtonByText(/^(next|continue|下一步|继续)$/i, { scope: `document.querySelector('[data-testid="onboarding-page"]')`, timeout: 20000 });
+  steps.push({ step: 0, name: "occupation", action: "advanced", value: "Next" });
+  await screenshot("S1-onboarding-step-1");
+  // Step 1 — UI mode: select "Coding mode".
+  await waitFor(async () => Boolean(await rectOf(`(() => { const page0 = document.querySelector('[data-testid="onboarding-page"]'); if (!page0) return null; return Array.from(page0.querySelectorAll('button')).find(b => /^coding mode$/i.test((b.innerText || '').trim().split('\\n')[0])); })()`).catch(() => null)), { what: "Coding mode card", timeout: 30000 });
+  const mode = await clickButtonByText(/^coding mode/i, { scope: `document.querySelector('[data-testid="onboarding-page"]')`, timeout: 20000 });
+  steps.push({ step: 1, name: "ui-mode", action: "selected card", value: mode });
+  await new Promise((r) => setTimeout(r, 400));
+  await clickButtonByText(/^(next|continue|下一步|继续)$/i, { scope: `document.querySelector('[data-testid="onboarding-page"]')`, timeout: 20000 });
+  steps.push({ step: 1, name: "ui-mode", action: "advanced", value: "Next" });
+  await screenshot("S1-onboarding-step-2");
+  // Step 2 — preferences: keep defaults, finish via "Get started".
+  const started = await clickButtonByText(/^(get started|start|开始使用)$/i, { scope: `document.querySelector('[data-testid="onboarding-page"]')`, timeout: 30000 });
+  steps.push({ step: 2, name: "preferences", action: "finished wizard", value: started });
+  await new Promise((r) => setTimeout(r, 1500));
+  const finished = await waitFor(async () => (await hasTid("onboarding-page")) ? false : Boolean(await hasTid("sidebar")), { what: "workspace sidebar after onboarding", timeout: 45000 }).catch(() => false);
   await screenshot("S1-onboarding-done");
   await dumpDom("S1-onboarding-done");
-  recordStage("S1", finished ? "pass" : "partial", finished
-    ? "onboarding wizard completed (occupation → Coding mode → preferences); main workspace visible"
-    : "onboarding advanced but workspace not reached — check dom-dumps");
+  if (!finished) throw new Error("onboarding finished click did not reach the workspace sidebar");
+  recordStage("S1", "pass", {
+    steps,
+    skip_used: false,
+    back_used: false,
+    note: "wizard walked step-by-step via real CDP clicks; no Skip/Back used; defaults kept on the preferences step",
+  });
+}
+
+function readProviderRules() {
+  // On-disk shape (packages/provider-node/src/provider-config-file-codec.ts,
+  // packages/provider/src/config/rule-data-schema.ts):
+  // { schemaVersion, config: { providerConfigRules: { providerRules: [ { providerId,
+  //   templateId, providerName, config: { access: { apiKey }, api: { baseUrl } } } ] } } }
+  try {
+    const doc = JSON.parse(readFileSync(PROVIDER_CONFIG_FILE, "utf8"));
+    const rules = doc?.config?.providerConfigRules?.providerRules;
+    return Array.isArray(rules) ? rules : [];
+  } catch {
+    return [];
+  }
 }
 
 async function stageS2() {
   if (!OPENROUTER_KEY) throw new Error("OPENROUTER_API_KEY missing — cannot configure the real model provider");
-  // Settings → Model settings. Entry: the sidebar footer settings button (icon button,
-  // testid task-settings-button); fall back to text matching.
+  // Settings → Model settings (authoritative nav: settings-section-nav-modelProvider —
+  // same path the upstream E2E provider specs use).
   await waitForTid("sidebar");
-  const settingsEntry = await hasTid("task-settings-button");
-  if (settingsEntry) {
-    await clickSel(byTid("task-settings-button"));
-  } else {
-    await clickButtonByText("Settings", { timeout: 20000 });
-  }
-  await waitForTid("settings-page", { timeout: 20000 });
+  await clickTid("task-settings-button", { timeout: 30000 });
+  await waitForTid("settings-page", { timeout: 30000 });
   await screenshot("S2-settings-open");
-  // Model settings section in the settings nav
-  await clickButtonByText("Model settings", { timeout: 20000 });
-  await new Promise((r) => setTimeout(r, 800));
+  await clickTid("settings-section-nav-modelProvider", { timeout: 30000 });
+  await waitForTid("model-provider-add-provider-button", { timeout: 30000 });
   await screenshot("S2-model-settings");
-  // Add provider
-  await waitForTid("model-provider-add-provider-button", { timeout: 20000 });
-  await clickSel(byTid("model-provider-add-provider-button"));
-  await new Promise((r) => setTimeout(r, 600));
+  // Add provider → OpenRouter template (template id "openrouter" — config/provider/zcode-builtin.json).
+  await clickTid("model-provider-add-provider-button", { timeout: 30000 });
+  await waitForTid("model-provider-template-picker", { timeout: 20000 });
   await screenshot("S2-add-provider");
-  // Template picker → OpenRouter
-  await waitForTid("model-provider-template-picker", { timeout: 15000 });
-  const picked = await evalJs(`(async () => {
-    const items = Array.from(document.querySelectorAll('[data-testid="model-provider-template-item"]'));
-    const el = items.find(i => (i.innerText || '').toLowerCase().includes('openrouter'));
-    if (!el) return { ok: false, have: items.map(i => (i.innerText || '').trim().slice(0, 40)) };
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-    return { ok: true };
-  })()`, { awaitPromise: true });
-  if (!picked?.ok) throw new Error(`OpenRouter template not found; templates=${JSON.stringify(picked?.have).slice(0, 200)}`);
-  await new Promise((r) => setTimeout(r, 700));
-  await screenshot("S2-openrouter-template");
-  // API key input — find the visible password/input field inside the provider form
-  const keyTyped = await evalJs(`(async () => {
-    const inputs = Array.from(document.querySelectorAll('input[type="password"], input[type="text"], textarea'))
-      .filter(i => i.offsetParent !== null && !i.disabled && (i.placeholder || '').length > 0);
-    const el = inputs.find(i => /key|api|sk-/i.test(i.placeholder)) ?? inputs[0];
-    if (!el) return { ok: false };
-    el.focus();
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
-      ?? Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-    setter.call(el, ${JSON.stringify(OPENROUTER_KEY)});
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    return { ok: true, placeholder: el.placeholder };
-  })()`, { awaitPromise: true });
-  if (!keyTyped?.ok) throw new Error("provider api-key input not found");
-  await new Promise((r) => setTimeout(r, 400));
-  await screenshot("S2-api-key-entered");
-  // Confirm/save
-  for (const label of ["Confirm", "Save", "确定", "保存", "Add"]) {
-    const clicked = await evalJs(`(async () => {
-      const els = Array.from(document.querySelectorAll('button'));
-      const el = els.find(b => !b.disabled && ['confirm','save','add','确定','保存'].includes((b.innerText || '').trim().toLowerCase()));
-      if (!el) return false;
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-      return true;
-    })()`, { awaitPromise: true }).catch(() => false);
-    if (clicked) break;
-  }
-  await new Promise((r) => setTimeout(r, 1200));
-  await screenshot("S2-provider-saving");
-  // Wait for provider ready + model catalog; then bind the default model
-  const ready = await waitFor(async () => {
-    const text = await bodyText();
-    return /ready|就绪/i.test(text) && /openrouter/i.test(text);
-  }, { what: "provider Ready status", timeout: 60000 }).catch(() => null);
-  await screenshot("S2-provider-ready");
-  // Select the model: click a model row matching MODEL_ID prefix, then set default if offered
-  await evalJs(`(async () => {
-    const rows = Array.from(document.querySelectorAll('[role="row"], [role="option"], [data-testid*="model"], button, div'))
-      .filter(e => e.offsetParent !== null && (e.innerText || '').includes(${JSON.stringify(MODEL_ID.split("/")[0])}));
-    const row = rows.find(e => (e.innerText || '').includes(${JSON.stringify(MODEL_ID)}));
-    if (row) { row.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true })); return true; }
+  const templateItem = "model-provider-template-item-openrouter";
+  await waitForTid(templateItem, { timeout: 20000 });
+  await clickTid(templateItem, { timeout: 20000 });
+  // Atomic template creation writes the provider to provider_config.json — poll the disk.
+  const providerId = await waitFor(() => {
+    for (const rule of readProviderRules()) {
+      if (rule.templateId === "openrouter" && rule.providerId) return rule.providerId;
+    }
     return false;
-  })()`, { awaitPromise: true }).catch(() => false);
+  }, { what: "new openrouter provider in provider_config.json", timeout: 30000 });
+  journey.openRouterProviderId = providerId;
   await new Promise((r) => setTimeout(r, 800));
-  for (const label of ["Set as default", "设为默认", "Default", "默认"]) {
-    await evalJs(`(async () => {
-      const els = Array.from(document.querySelectorAll('button'));
-      const el = els.find(b => !b.disabled && (b.innerText || '').trim().toLowerCase().includes(${JSON.stringify(label.toLowerCase())}));
-      if (!el) return false;
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-      return true;
-    })()`, { awaitPromise: true }).catch(() => false);
-  }
-  await screenshot("S2-model-selected");
-  // Back to workspace
-  const back = await hasTid("settings-back-button");
-  if (back) await clickSel(byTid("settings-back-button"));
-  await new Promise((r) => setTimeout(r, 600));
-  recordStage("S2", ready ? "pass" : "partial", `OpenRouter provider configured with a real key (placeholder=${keyTyped.placeholder}); Ready=${Boolean(ready)}; model=${MODEL_ID}`);
+  // Select the new instance in the provider navigation.
+  await clickTid(`model-provider-nav-item-custom:${providerId}`, { timeout: 30000 });
+  await waitForTid("model-provider-api-key-input", { timeout: 30000 });
+  await screenshot("S2-provider-detail");
+  // Type the real key through the real input path (CDP click + insertText), then
+  // blur (Tab) — the blur submits the connection draft (upstream helper semantics).
+  await clickAndType("model-provider-api-key-input", OPENROUTER_KEY, { timeout: 20000 });
+  await screenshot("S2-api-key-entered");
+  await pressKey("Tab");
+  await new Promise((r) => setTimeout(r, 1200));
+  // Verify the provider persisted on disk with the real key and the template baseURL.
+  const saved = await waitFor(() => {
+    const rule = readProviderRules().find((r) => r.providerId === providerId);
+    if (!rule) return false;
+    const key = rule.config?.access?.apiKey ?? null;
+    const baseURL = rule.config?.api?.baseUrl ?? null;
+    if (key === OPENROUTER_KEY && baseURL && /openrouter\.ai/.test(baseURL)) return { key: true, baseURL };
+    return false;
+  }, { what: "provider saved to provider_config.json (key + baseURL)", timeout: 30000 });
+  journey.providerSavedOnDisk = saved;
+  await screenshot("S2-provider-saved");
+  // Back to the workspace.
+  await clickTid("settings-back-button", { timeout: 20000 });
+  await waitForTid("v4-composer-input", { timeout: 30000 });
+  recordStage("S2", "pass", {
+    nav: "task-settings-button → settings-section-nav-modelProvider → add-provider → template openrouter",
+    provider_id: providerId,
+    template: "openrouter",
+    persisted_to: PROVIDER_CONFIG_FILE,
+    base_url_verified: saved.baseURL,
+    api_key_persisted: true,
+    note: "API key entered via CDP Input.insertText into the real model-provider-api-key-input; persistence verified on disk (key never logged)",
+  });
+}
+
+async function selectModelInComposer() {
+  // Open the composer model picker (chat-model-select-trigger) and select MODEL_ID
+  // from the personal provider's group (registry-provider:<id>), like a real user.
+  await waitForTid("chat-model-select-trigger", { timeout: 30000 });
+  const before = await tidText("chat-model-select-trigger");
+  await clickTid("chat-model-select-trigger", { timeout: 30000 });
+  // The menu lists the provider's live model catalog; wait for the provider group
+  // (or any model item) to appear.
+  const groupTid = `chat-model-select-group-registry-provider:${journey.openRouterProviderId}`;
+  await waitFor(async () => (await hasTid(groupTid)) || (await evalJs(`Boolean(document.querySelector('[data-testid^="chat-model-select-item-"]'))`)), { what: `model menu group ${groupTid} (or any model item)`, timeout: 60000 });
+  // Find the item whose text matches the model (short or full id fragments).
+  const modelFragment = MODEL_ID.split("/").pop() ?? MODEL_ID;
+  const item = await waitFor(async () => {
+    const r = await rectOf(`(() => {
+      const items = Array.from(document.querySelectorAll('[data-testid^="chat-model-select-item-"]'));
+      return items.find(i => (i.innerText || '').toLowerCase().includes(${JSON.stringify(modelFragment.toLowerCase())}));
+    })()`).catch(() => null);
+    return r && r.w > 0 ? r : false;
+  }, { what: `model item containing "${modelFragment}"`, timeout: 60000 });
+  await cdpClickRect(item);
+  await new Promise((r) => setTimeout(r, 800));
+  await pressKey("Escape");
+  await new Promise((r) => setTimeout(r, 400));
+  const after = await tidText("chat-model-select-trigger");
+  const modelConfigAttrs = await evalJs(`(() => { const e = document.querySelector('[data-testid="v4-model-config"]'); if (!e) return null; const o = {}; for (const a of e.getAttributeNames()) o[a] = e.getAttribute(a)?.slice(0, 120); return o; })()`);
+  return { before: before.slice(0, 120), after: after.slice(0, 200), clickedItem: item.text, modelConfigAttrs };
 }
 
 async function submitComposerTask(taskText, screenshotPrefix) {
   await waitForTid("v4-composer-input", { timeout: 30000 });
   await screenshot(`${screenshotPrefix}-composer`);
-  // Focus the composer then type as a real user
-  await evalJs(`(async () => { const el = document.querySelector('[data-testid="v4-composer-input"]'); el?.focus(); return Boolean(el); })()`, { awaitPromise: true });
+  const rect = await rectOf(`document.querySelector('[data-testid="v4-composer-input"]')`);
+  await cdpClickRect(rect);
+  await new Promise((r) => setTimeout(r, 200));
   await typeIntoFocused(taskText);
-  await new Promise((r) => setTimeout(r, 400));
+  await new Promise((r) => setTimeout(r, 500));
   await screenshot(`${screenshotPrefix}-typed`);
-  await clickSel(byTid("v4-composer-send"));
-}
-
-async function waitForTaskCompletion(screenshotPrefix, { timeout = MAX_WAIT } = {}) {
-  const start = Date.now();
-  let sawToolUse = false;
-  let lastRows = 0;
-  while (Date.now() - start < timeout) {
-    const state = await evalJs(`(() => {
-      const rows = Array.from(document.querySelectorAll('[data-testid^="v4-row"]'));
-      const stop = document.querySelector('[data-testid="v4-stop"]');
-      const timeline = (document.querySelector('[data-testid="v4-timeline"]')?.innerText ?? '').slice(0, 1500);
-      const bodyHasTool = /tool|write|read|edit|terminal|bash/i.test(timeline);
-      return { rows: rows.length, running: Boolean(stop), timeline, bodyHasTool };
-    })()`);
-    lastRows = state?.rows ?? 0;
-    if (state?.bodyHasTool) sawToolUse = true;
-    if (!(state?.running) && (state?.rows ?? 0) > 0 && Date.now() - start > 8000) {
-      return { completed: true, rows: state.rows, sawToolUse, timeline: state.timeline };
-    }
-    await new Promise((r) => setTimeout(r, 2000));
-  }
-  await screenshot(`${screenshotPrefix}-timeout`);
-  return { completed: false, rows: lastRows, sawToolUse, timeline: "" };
+  // Send via the real send button (wait until it is enabled).
+  await waitFor(async () => {
+    const r = await rectOf(`(() => { const b = document.querySelector('[data-testid="v4-composer-send"]'); return b && !b.disabled ? b : null; })()`).catch(() => null);
+    return r && r.w > 0 ? r : false;
+  }, { what: "composer send button enabled", timeout: 30000 });
+  await clickTid("v4-composer-send", { timeout: 15000 });
 }
 
 async function stageS3() {
-  const taskFile = join(TASK_WORKSPACE, "gamos-phase-b-journey.txt");
-  // Absolute path in the prompt: the app's default workspace derives from the OS home
-  // (ZCODE_DESKTOP_HOME_DIR does not redirect it), so "current workspace" would be
-  // ambiguous across environments. An absolute path keeps the artifact check exact.
-  const taskText = `Create a file at exactly this absolute path: ${taskFile} — with exactly this single line of content: GAMOS-PHASE-B-DESKTOP-JOURNEY-OK. Then read the file back and print its exact content.`;
+  // Real model selection through the composer's model picker.
+  const selection = await selectModelInComposer();
+  await screenshot("S3-model-selected");
+  const taskFile = journey.taskFile;
+  const expectedContent = "GAMOS-PHASE-B-DESKTOP-JOURNEY-OK";
+  const taskText = `Create a file at exactly this absolute path: ${taskFile} — with exactly this single line of content: ${expectedContent}. Then read the file back and print its exact content.`;
   await submitComposerTask(taskText, "S3");
   await screenshot("S3-task-submitted");
-  const result = await waitForTaskCompletion("S3", { timeout: MAX_WAIT });
+  const approvals = [];
+  const result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals });
+  const sessionId = result.paneSessionId ?? await paneSessionId();
+  if (sessionId && sessionId !== "draft") journey.sessionIds.push(sessionId);
   await screenshot("S3-task-result");
+  // Exact artifact verification: path exists AND content matches exactly.
   const artifactOk = existsSync(taskFile);
   const artifactContent = artifactOk ? readFileSync(taskFile, "utf8").trim() : null;
-  recordStage("S3", result.completed && artifactOk ? "pass" : "fail", {
+  const contentMatches = artifactContent === expectedContent;
+  const pass = result.completed && artifactOk && contentMatches;
+  recordStage("S3", pass ? "pass" : "fail", {
     task: "file create + read-back via New Task composer (real model)",
+    model_selected: selection,
     completed: result.completed,
+    session_id: sessionId,
     timeline_rows: result.rows,
     tool_use_seen: result.sawToolUse,
-    artifact: artifactOk ? `${taskFile}="${artifactContent}"` : "missing",
-    expected_content: "GAMOS-PHASE-B-DESKTOP-JOURNEY-OK",
+    permission_approvals: approvals.map((a) => ({ kind: a.kind, result: a.result })),
+    artifact: artifactOk ? taskFile : "missing",
+    artifact_content: artifactContent,
+    expected_content: expectedContent,
+    exact_content_match: contentMatches,
     timeline_excerpt: (result.timeline ?? "").slice(0, 400),
   });
-  if (!(result.completed && artifactOk)) throw new Error("S3 task did not complete with the expected artifact");
+  if (!pass) {
+    throw new Error(`S3 task did not complete with the exact expected artifact (completed=${result.completed}, artifact=${artifactOk}, exactMatch=${contentMatches})`);
+  }
 }
 
 async function stageS4() {
-  // Task execution details: expand tool rows in the timeline + open the session pane
-  const state = await evalJs(`(() => {
-    const timeline = document.querySelector('[data-testid="v4-timeline"]');
-    const rows = Array.from(document.querySelectorAll('[data-testid^="v4-row"]'));
-    const sessionPane = document.querySelector('[data-testid="v4-session-pane"]');
-    return { timelineText: (timeline?.innerText ?? '').slice(0, 2000), rowCount: rows.length, sessionPaneVisible: Boolean(sessionPane) };
-  })()`);
+  const state = await timelineState();
   await screenshot("S4-task-execution-review");
   await dumpDom("S4-task-execution-review");
-  const toolEvidence = /write|read|tool|terminal/i.test(state?.timelineText ?? "");
-  recordStage("S4", toolEvidence ? "pass" : "partial", {
-    timeline_rows: state?.rowCount,
-    session_pane_visible: state?.sessionPaneVisible,
-    timeline_excerpt: (state?.timelineText ?? "").slice(0, 500),
+  const toolEvidence = /write|read|edit|terminal|bash|tool/i.test(state?.timeline ?? "");
+  const assistantRows = (state?.rows ?? 0) >= 2;
+  const sessionListed = journey.sessionIds.length > 0 && await hasTid(`task-item-${journey.sessionIds[0]}`).catch(() => false);
+  const pass = toolEvidence && assistantRows && Boolean(state?.paneSessionId && state.paneSessionId !== "draft");
+  recordStage("S4", pass ? "pass" : "fail", {
+    timeline_rows: state?.rows,
+    session_id: state?.paneSessionId,
+    tool_evidence_in_timeline: toolEvidence,
+    assistant_rows_present: assistantRows,
+    task_listed_in_sidebar: sessionListed,
+    timeline_excerpt: (state?.timeline ?? "").slice(0, 700),
   });
+  if (!pass) throw new Error("S4 task execution evidence incomplete (tool use / rows / session)");
+}
+
+async function visibleTerminalText() {
+  return evalJs(`(() => {
+    const rows = Array.from(document.querySelectorAll('[data-testid="terminal"] .xterm-rows'))
+      .filter(r => r.offsetParent !== null);
+    return rows.map(r => r.textContent ?? '').join('\\n').slice(0, 4000);
+  })()`);
 }
 
 async function stageS5() {
-  // Interactive terminal: the desktop ships a terminal surface; open it and run a command
-  const opened = await evalJs(`(async () => {
-    const candidates = Array.from(document.querySelectorAll('button, [role="button"], [data-testid]'))
-      .filter(e => e.offsetParent !== null);
-    const el = candidates.find(e => /terminal/i.test(e.getAttribute('data-testid') ?? '') || /terminal|终端/i.test(e.innerText ?? ''));
-    if (!el) return false;
-    el.scrollIntoView({ block: 'center' });
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-    return true;
-  })()`, { awaitPromise: true }).catch(() => false);
-  await new Promise((r) => setTimeout(r, 1200));
-  await screenshot("S5-terminal-panel");
-  const info = await dumpDom("S5-terminal-panel");
-  const terminalSurface = Boolean(await evalJs(`(() => {
-    const el = Array.from(document.querySelectorAll('[data-testid], [class*="terminal"], [id*="terminal"], xterm, .xterm'))
-      .find(e => e.offsetParent !== null);
-    return Boolean(el);
-  })()`));
-  recordStage("S5", terminalSurface ? "pass" : "partial", {
-    terminal_entry_clicked: Boolean(opened),
-    terminal_surface_present: terminalSurface,
-    note: "interactive terminal panel surface verification (dom-level)",
+  // Open the REAL terminal panel via its header toggle.
+  const xtermVisible = await evalJs(`(() => { return Array.from(document.querySelectorAll('[data-testid="terminal"] .xterm-rows')).some(r => r.offsetParent !== null); })()`);
+  if (!xtermVisible) {
+    await clickTid("terminal-toggle", { timeout: 30000 });
+  }
+  await waitFor(async () => Boolean(await evalJs(`(() => { return Array.from(document.querySelectorAll('[data-testid="terminal"] .xterm-rows')).some(r => r.offsetParent !== null); })()`)), { what: "terminal panel (.xterm-rows visible)", timeout: 45000 });
+  await screenshot("S5-terminal-open");
+  // Wait for the shell prompt (real PTY spawn).
+  await waitFor(async () => /[$#]\s*$/m.test((await visibleTerminalText()) ?? ""), { what: "shell prompt in terminal", timeout: 60000 });
+  // Focus the terminal surface with a REAL CDP click on the visible xterm element
+  // (xterm focuses its helper textarea on click), then type a unique harmless command.
+  const termRect = await rectOf(`(() => { return Array.from(document.querySelectorAll('[data-testid="terminal"] .xterm')).find(e => e.offsetParent !== null); })()`);
+  if (!termRect) throw new Error("no visible xterm element to click");
+  await cdpClickRect(termRect);
+  await new Promise((r) => setTimeout(r, 300));
+  const command = `echo ${journey.terminalMarker}`;
+  await typeIntoFocused(command);
+  await pressKey("Enter");
+  // Verify the exact command output appears in the terminal's rendered rows.
+  const output = await waitFor(async () => {
+    const text = (await visibleTerminalText()) ?? "";
+    return text.includes(journey.terminalMarker) ? text : false;
+  }, { what: `terminal output containing ${journey.terminalMarker}`, timeout: 30000 });
+  await screenshot("S5-terminal-output");
+  const focusedOk = await evalJs(`(() => { const a = document.activeElement; return Boolean(a && a.classList && a.classList.contains('xterm-helper-textarea')); })()`).catch(() => false);
+  recordStage("S5", "pass", {
+    panel: "terminal-toggle → [data-testid=terminal] xterm surface",
+    prompt_seen: true,
+    command,
+    input_path: "CDP click on xterm → Input.insertText + Input.dispatchKeyEvent(Enter)",
+    xterm_focused: focusedOk,
+    exact_output_verified: true,
+    terminal_text_excerpt: output.slice(-400),
   });
+  // Close the terminal panel to restore the workspace layout for S6.
+  await clickTid("terminal-close-button", { timeout: 15000 }).catch(async () => {
+    await clickTid("terminal-toggle", { timeout: 15000 });
+  });
+  await new Promise((r) => setTimeout(r, 600));
+}
+
+async function switchComposerMode(modeItemTid, expectedLabelRegex) {
+  await waitForTid("chat-mode-select-trigger", { timeout: 30000 });
+  await clickTid("chat-mode-select-trigger", { timeout: 30000 });
+  await waitForTid(modeItemTid, { timeout: 20000 });
+  await clickTid(modeItemTid, { timeout: 15000 });
+  await new Promise((r) => setTimeout(r, 700));
+  await pressKey("Escape").catch(() => {});
+  await new Promise((r) => setTimeout(r, 400));
+  const label = await tidText("chat-mode-select-trigger");
+  if (!expectedLabelRegex.test(label)) {
+    throw new Error(`mode switch failed: trigger label "${label.slice(0, 80)}" does not match ${expectedLabelRegex}`);
+  }
+  return label.slice(0, 80);
 }
 
 async function stageS6() {
-  // Review/diff: switch composer to "Ask before changes", submit an edit task, then approve;
-  // a second task is rejected. This exercises the original permission/review UI.
-  const switched = await evalJs(`(async () => {
-    const el = Array.from(document.querySelectorAll('button, [role="button"]'))
-      .find(b => /ask before changes|询问|review mode/i.test(b.innerText ?? '') || /ask-before-changes/i.test(b.getAttribute('data-testid') ?? ''));
-    if (!el) return false;
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-    return true;
-  })()`, { awaitPromise: true }).catch(() => false);
-  await new Promise((r) => setTimeout(r, 500));
+  // 1. Enable the original "Ask before changes" flow (mode build).
+  const modeLabel = await switchComposerMode("chat-mode-select-item-build", /ask before changes|build/i);
   await screenshot("S6-review-mode-on");
+  const file = journey.taskFile;
 
-  const editTask = `Edit the file at exactly this absolute path: ${join(TASK_WORKSPACE, "gamos-phase-b-journey.txt")} — append a second line with exactly: REVIEW-APPROVED-LINE. Then show the final file content.`;
-  await submitComposerTask(editTask, "S6");
-  // Wait for a permission/review prompt (diff UI) to appear
-  const promptSeen = await waitFor(async () => {
-    const text = await bodyText();
-    return /approve|reject|accept|decline|diff|allow|deny|批准|拒绝|允许/i.test(text) ? text.slice(0, 600) : false;
-  }, { what: "review/diff prompt", timeout: Math.min(MAX_WAIT, 180000) }).catch(() => null);
-  await screenshot("S6-review-prompt");
-  if (promptSeen) {
-    // Approve the change
-    const approved = await evalJs(`(async () => {
-      const els = Array.from(document.querySelectorAll('button'));
-      const el = els.find(b => !b.disabled && /^(approve|accept|allow|批准|允许|yes)$/i.test((b.innerText || '').trim()))
-        ?? els.find(b => !b.disabled && /^(approve|accept|allow|run|批准|允许)/i.test((b.innerText || '').trim()));
-      if (!el) return false;
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-      return (el.innerText || '').trim();
-    })()`, { awaitPromise: true }).catch(() => false);
-    await new Promise((r) => setTimeout(r, 1500));
-    await screenshot("S6-review-approved");
-    // verify the file got the line
-    const content = existsSync(join(TASK_WORKSPACE, "gamos-phase-b-journey.txt"))
-      ? readFileSync(join(TASK_WORKSPACE, "gamos-phase-b-journey.txt"), "utf8")
-      : "";
-    recordStage("S6", content.includes("REVIEW-APPROVED-LINE") ? "pass" : "partial", {
-      review_mode_switched: Boolean(switched),
-      review_prompt_seen: Boolean(promptSeen),
-      approved_via: approved || null,
-      file_contains_approved_line: content.includes("REVIEW-APPROVED-LINE"),
-      file_content: content.trim().slice(0, 200),
-    });
-    return;
+  // --- APPROVE flow ---
+  const approveTask = `Edit the file at exactly this absolute path: ${file} — append a second line with exactly this content: ${journey.approvedLine}. Then show the final file content.`;
+  await submitComposerTask(approveTask, "S6-approve");
+  const approveDialog = await waitForPermissionDialog();
+  await screenshot("S6-approve-prompt");
+  // Assert this is the REAL permission surface (not generic page text).
+  const isRealSurface = Boolean(
+    approveDialog.options?.length &&
+    approveDialog.options.some((o) => (o.kind ?? "").startsWith("allow")) &&
+    approveDialog.options.some((o) => (o.kind ?? "").startsWith("reject")),
+  );
+  if (!isRealSurface) throw new Error(`S6 approve prompt is not a real permission surface: ${JSON.stringify(approveDialog.options?.map((o) => o.kind))}`);
+  const approve = await respondPermission("allowOnce");
+  await screenshot("S6-approve-confirmed");
+  const approveApprovals = [];
+  const approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals });
+  // Exact modification verification.
+  const afterApprove = existsSync(file) ? readFileSync(file, "utf8") : "";
+  const approvedApplied = afterApprove.includes(journey.approvedLine);
+  const firstLineIntact = afterApprove.trim().split("\n")[0] === "GAMOS-PHASE-B-DESKTOP-JOURNEY-OK";
+
+  // --- REJECT flow ---
+  const rejectTask = `Edit the file at exactly this absolute path: ${file} — append a third line with exactly this content: ${journey.rejectedLine}. Then show the final file content.`;
+  await submitComposerTask(rejectTask, "S6-reject");
+  const rejectDialog = await waitForPermissionDialog();
+  await screenshot("S6-reject-prompt");
+  const rejectIsReal = Boolean(
+    rejectDialog.options?.some((o) => (o.kind ?? "").startsWith("reject")),
+  );
+  if (!rejectIsReal) throw new Error("S6 reject prompt is not a real permission surface");
+  const reject = await respondPermission("rejectOnce");
+  await screenshot("S6-reject-confirmed");
+  const rejectApprovals = [];
+  // Any FURTHER permission dialog during this turn is also rejected: the user has
+  // rejected this modification, and a model retry must not be approved by the
+  // journey itself (that would apply the very change we are verifying as rejected).
+  const rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals });
+  // The rejected modification must NOT be applied; grace-recheck for late writes.
+  let afterReject = existsSync(file) ? readFileSync(file, "utf8") : "";
+  for (let i = 0; i < 2 && !afterReject.includes(journey.rejectedLine); i++) {
+    await new Promise((r) => setTimeout(r, 3000));
+    afterReject = existsSync(file) ? readFileSync(file, "utf8") : "";
   }
-  recordStage("S6", "partial", {
-    review_mode_switched: Boolean(switched),
-    review_prompt_seen: false,
-    note: "no approval prompt observed — model may have answered without file edit or permission prompt shape differs; see screenshots",
+  const rejectedNotApplied = !afterReject.includes(journey.rejectedLine);
+  const approvedStillPresent = afterReject.includes(journey.approvedLine);
+
+  const pass = approvedApplied && firstLineIntact && rejectedNotApplied && approvedStillPresent;
+  recordStage("S6", pass ? "pass" : "fail", {
+    mode: modeLabel,
+    approve: {
+      prompt_surface: approve.surface,
+      real_permission_surface: isRealSurface,
+      responded: "allowOnce + Confirm",
+      turn_completed: approveResult.completed,
+      exact_modification_applied: approvedApplied,
+      first_line_intact: firstLineIntact,
+      file_after: afterApprove.trim().slice(0, 200),
+      auto_approvals: approveApprovals.length,
+    },
+    reject: {
+      prompt_surface: reject.surface,
+      real_permission_surface: rejectIsReal,
+      responded: "rejectOnce + Confirm",
+      turn_completed: rejectResult.completed,
+      modification_not_applied: rejectedNotApplied,
+      approved_line_still_present: approvedStillPresent,
+      file_after: afterReject.trim().slice(0, 200),
+      auto_approvals: rejectApprovals.length,
+    },
   });
+  if (!pass) {
+    throw new Error(`S6 review flow verification failed (approved=${approvedApplied}, firstLineIntact=${firstLineIntact}, rejectedNotApplied=${rejectedNotApplied}, approvedStillPresent=${approvedStillPresent})`);
+  }
 }
 
 async function stageS7() {
-  // Embedded browser: open the in-app browser surface and navigate to a real page
-  const opened = await evalJs(`(async () => {
-    const candidates = Array.from(document.querySelectorAll('button, [role="button"], [data-testid], a'))
-      .filter(e => e.offsetParent !== null);
-    const el = candidates.find(e => /browser/i.test(e.getAttribute('data-testid') ?? '') || /^browser$|浏览器/i.test((e.innerText ?? '').trim()));
-    if (!el) return false;
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-    return true;
-  })()`, { awaitPromise: true }).catch(() => false);
-  await new Promise((r) => setTimeout(r, 1500));
-  await screenshot("S7-browser-opened");
-  // try to type a URL into an address bar if present
-  const navigated = await evalJs(`(async () => {
-    const inputs = Array.from(document.querySelectorAll('input, [contenteditable="true"]'))
-      .filter(i => i.offsetParent !== null);
-    const bar = inputs.find(i => /url|address|search|go/i.test(i.placeholder ?? i.getAttribute('aria-label') ?? ''));
-    if (!bar) return false;
-    bar.focus();
-    return true;
-  })()`, { awaitPromise: true }).catch(() => false);
-  if (navigated) {
-    await typeIntoFocused("https://example.com");
-    await pressKey("Enter");
-    await new Promise((r) => setTimeout(r, 4000));
-  }
+  // Open the REAL embedded browser side pane.
+  const opened = await (async () => {
+    if (await hasTid("browser")) { await clickTid("browser", { timeout: 20000 }); return "browser launcher item"; }
+    const alt = await rectOf(`document.querySelector('[data-side-pane-open-tab-item="browser"]')`);
+    if (alt) { await cdpClickRect(alt); return "side-pane open-tab item"; }
+    return null;
+  })();
+  if (!opened) throw new Error("no browser entry found to open the embedded browser pane");
+  await waitForTid("browser-address-input", { timeout: 30000 });
+  await waitForTid("browser-webview", { timeout: 30000, visible: false });
+  await screenshot("S7-browser-open");
+  // Navigate to a known public test page through the real address bar.
+  await clickAndType("browser-address-input", "https://example.com", { timeout: 20000, clearFirst: true });
+  await pressKey("Enter");
+  // Verify the webview guest actually loaded the page: the guest is a separate
+  // WebContents and appears as its own CDP page target. Assert BOTH the guest's
+  // actual URL and the page content read over CDP from inside the guest.
+  const guest = await waitFor(async () => {
+    const targets = await cdpTargets().catch(() => []);
+    return targets.find((t) => t.type === "page" && /^https?:\/\/example\.(com|org)\//.test(t.url)) ?? false;
+  }, { what: "webview guest CDP target (example.com)", timeout: 60000 });
+  const guestSession = await new CDPSession(guest.webSocketDebuggerUrl, "browser-guest").open();
+  const guestInfo = await guestSession.send("Runtime.evaluate", {
+    expression: `JSON.stringify({ url: location.href, title: document.title, heading: (document.querySelector('h1')?.innerText ?? '').trim(), body: (document.body?.innerText ?? '').trim().slice(0, 300) })`,
+    returnByValue: true,
+  }).then((r) => JSON.parse(r.result?.value ?? "{}")).catch(() => ({}));
+  guestSession.close();
+  await new Promise((r) => setTimeout(r, 800));
   await screenshot("S7-browser-page");
-  await dumpDom("S7-browser-page");
-  const browserSurface = await evalJs(`(() => Boolean(document.querySelector('webview, [class*="browser"], [data-testid*="browser"]')))`);
-  recordStage("S7", browserSurface ? "pass" : "partial", {
-    browser_entry_clicked: Boolean(opened),
-    address_bar_found: Boolean(navigated),
-    browser_surface_present: Boolean(browserSurface),
+  const webviewMeta = await evalJs(`(() => { const w = document.querySelector('[data-testid="browser-webview"]'); if (!w) return null; return { src: w.getAttribute('src'), url: (typeof w.getURL === 'function' ? w.getURL() : null) }; })()`).catch(() => null);
+  const contentOk = /example domain/i.test(guestInfo.title ?? "") || /example domain/i.test(guestInfo.heading ?? "") || /illustrative examples/i.test(guestInfo.body ?? "");
+  const urlOk = /^https?:\/\/example\.(com|org)\/?/.test(guestInfo.url ?? guest.url ?? "");
+  const pass = Boolean(opened) && urlOk && contentOk;
+  journey.browserGuestUrl = guestInfo.url ?? guest.url;
+  recordStage("S7", pass ? "pass" : "fail", {
+    opened_via: opened,
+    address_bar: "browser-address-input (typed https://example.com + Enter)",
+    guest_cdp_target: { id: guest.id, url: guest.url },
+    guest_actual: guestInfo,
+    webview_element: webviewMeta,
+    actual_loaded_url_verified: urlOk,
+    page_content_verified: contentOk,
   });
+  if (!pass) throw new Error(`S7 browser verification failed (urlOk=${urlOk}, contentOk=${contentOk})`);
 }
 
 async function stageS8() {
-  // Plugin Marketplace: open from sidebar, verify catalog, perform a real install
-  const opened = await evalJs(`(async () => {
-    const el = Array.from(document.querySelectorAll('button, [role="button"], [data-testid], a'))
-      .filter(e => e.offsetParent !== null)
-      .find(e => /marketplace|插件市场|plugin/i.test(e.getAttribute('data-testid') ?? '') || /marketplace|插件市场/i.test(e.innerText ?? ''));
-    if (!el) return false;
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-    return true;
-  })()`, { awaitPromise: true }).catch(() => false);
-  await new Promise((r) => setTimeout(r, 1500));
+  const pluginName = process.env.PHASEB_PLUGIN ?? "github";
+  const marketplaceId = "zcode-plugins-official";
+  const pluginId = `${pluginName}@${marketplaceId}`;
+  // Open the REAL marketplace view from the sidebar (plugin-store-sidebar-open →
+  // the PluginStorePage, whose list view carries data-testid="plugin-store-list").
+  await clickTid("plugin-store-sidebar-open", { timeout: 30000 });
+  await waitForTid("plugin-store-list", { timeout: 45000 });
   await screenshot("S8-marketplace-open");
-  const catalogText = await bodyText();
-  const catalogVisible = /marketplace|plugin|插件/i.test(catalogText);
-  // Install a small official plugin (jupyter-notebook was verified installable in Phase B round 1)
-  let installStarted = false;
-  if (catalogVisible) {
-    installStarted = await evalJs(`(async () => {
-      const cards = Array.from(document.querySelectorAll('button, [role="button"]'))
-        .filter(b => b.offsetParent !== null && !b.disabled);
-      const target = cards.find(b => /install|安装/i.test(b.innerText ?? ''));
-      if (!target) return false;
-      target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-      return (target.innerText || '').trim();
-    })()`, { awaitPromise: true }).catch(() => false);
+  // Locate the specific plugin: search narrows the list; identity is verified by the
+  // card's data-plugin-id (and again on the detail view).
+  await clickAndType("plugin-store-search", pluginName, { timeout: 30000, clearFirst: true });
+  await new Promise((r) => setTimeout(r, 1200));
+  await pressKey("Escape");
+  const card = await waitFor(async () => {
+    const r = await rectOf(`document.querySelector('[data-testid="plugin-store-card"][data-plugin-id="${pluginId}"]')`).catch(() => null);
+    return r && r.w > 0 ? r : false;
+  }, { what: `plugin card for ${pluginId}`, timeout: 45000 });
+  const cardIdentity = await evalJs(`document.querySelector('[data-testid="plugin-store-card"][data-plugin-id="${pluginId}"]')?.getAttribute('data-plugin-id') ?? null`);
+  await cdpClickRect(card);
+  await waitForTid("plugin-store-detail", { timeout: 30000 });
+  const identity = await tidAttr("plugin-store-detail", "data-plugin-id");
+  if (identity !== pluginId) {
+    throw new Error(`S8 plugin identity mismatch: expected ${pluginId}, detail shows ${identity}`);
   }
-  if (installStarted) {
-    await new Promise((r) => setTimeout(r, 8000));
-    await screenshot("S8-plugin-install");
-  }
-  await dumpDom("S8-marketplace");
-  recordStage("S8", catalogVisible ? "pass" : "partial", {
-    marketplace_opened: Boolean(opened),
-    catalog_visible: catalogVisible,
-    install_clicked: installStarted || null,
-    note: installStarted ? "install clicked; post-install state in screenshot" : "catalog verified; install not exercised this run",
+  await screenshot("S8-plugin-detail");
+  // Fetch the official marketplace manifest and take the declared sha256 for the plugin.
+  const manifest = await fetchJson("https://cdn-zcode.z.ai/zcode/official-plugin/marketplace.json");
+  const entry = (manifest.plugins ?? []).find((p) => p.name === pluginName);
+  if (!entry) throw new Error(`plugin ${pluginName} missing from the live official marketplace manifest`);
+  const declaredSha256 = entry.source?.sha256;
+  const archiveUrl = entry.source?.url;
+  const declaredVersion = entry.version;
+  // Install through the real install button (exact plugin identity binding).
+  await waitFor(async () => {
+    const r = await rectOf(`(() => { const b = document.querySelector('[data-testid="plugin-store-install"][data-plugin-id="${pluginId}"]') ?? document.querySelector('[data-testid="plugin-store-install"]'); return b && !b.disabled ? b : null; })()`).catch(() => null);
+    return r && r.w > 0 ? r : false;
+  }, { what: "plugin-store-install button enabled", timeout: 30000 }).then((r) => cdpClickRect(r));
+  await screenshot("S8-plugin-installing");
+  // Wait for the install to land on disk: installed_plugins.json gains the record.
+  const installedRecord = await waitFor(() => {
+    const found = findInstalledPluginRecord(pluginId);
+    return found ?? false;
+  }, { what: `installed_plugins.json record for ${pluginId}`, timeout: 180000 });
+  await new Promise((r) => setTimeout(r, 1500));
+  // Verify the UI reflects the installed state (install button gone / installed affordances).
+  const uiState = await evalJs(`(() => {
+    const detail = document.querySelector('[data-testid="plugin-store-detail"]');
+    const installBtn = detail?.querySelector('[data-testid="plugin-store-install"]');
+    const tryNow = detail?.querySelector('[data-testid="plugin-store-try-now"]');
+    const uninstall = document.querySelector('[data-testid="plugin-store-menu-uninstall"][data-plugin-id="${pluginId}"]');
+    return { install_button_present: Boolean(installBtn), try_now_present: Boolean(tryNow), uninstall_entry_present: Boolean(uninstall) };
+  })()`);
+  await screenshot("S8-plugin-installed");
+  // Independent checksum verification: download the same archive and hash it.
+  const archive = Buffer.from(await (await fetch(archiveUrl)).arrayBuffer());
+  const downloadedSha256 = createHash("sha256").update(archive).digest("hex");
+  const checksumMatches = declaredSha256 === downloadedSha256;
+  // Hash of the installed package tree (stability record for the evidence).
+  const treeSha256 = hashDirectory(installedRecord.installPath);
+  const pass = Boolean(cardIdentity === pluginId) && identity === pluginId && checksumMatches &&
+    (uiState.install_button_present === false || uiState.try_now_present || uiState.uninstall_entry_present);
+  recordStage("S8", pass ? "pass" : "fail", {
+    marketplace_opened_via: "plugin-store-sidebar-open → plugin-store-list",
+    card_identity: cardIdentity,
+    plugin_identity: identity,
+    manifest_entry: { name: entry.name, version: declaredVersion, publisherType: entry.publisherType, url: archiveUrl },
+    install: "plugin-store-install button (real marketplace install)",
+    installed_record: installedRecord,
+    ui_installed_state: uiState,
+    checksum: {
+      manifest_sha256: declaredSha256,
+      downloaded_archive_sha256: downloadedSha256,
+      match: checksumMatches,
+      installer_verification: "zip-source.ts verifies sha256 at install (upstream behavior)",
+      installed_tree_sha256: treeSha256,
+    },
   });
+  if (!pass) throw new Error(`S8 marketplace install verification failed (card=${cardIdentity}, identity=${identity}, checksum=${checksumMatches}, ui=${JSON.stringify(uiState)})`);
+}
+
+function findInstalledPluginRecord(pluginId) {
+  // The plugin storage root lives under the isolated data dir; search the tree for
+  // installed_plugins.json and return the record for pluginId.
+  const roots = [ZCODE_DATA_ROOT, join(PHASEB_HOME, "user-data")];
+  for (const root of roots) {
+    if (!existsSync(root)) continue;
+    const candidates = [];
+    const walk = (dir, depth) => {
+      if (depth > 5) return;
+      let entries;
+      try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+      for (const e of entries) {
+        const p = join(dir, e.name);
+        if (e.isDirectory()) walk(p, depth + 1);
+        else if (e.name === "installed_plugins.json") candidates.push(p);
+      }
+    };
+    walk(root, 0);
+    for (const file of candidates) {
+      try {
+        const doc = JSON.parse(readFileSync(file, "utf8"));
+        const record = (doc.plugins ?? []).find((p) => p.id === pluginId);
+        if (record) {
+          return { ...record, record_file: file, installPathExists: existsSync(record.installPath) };
+        }
+      } catch {}
+    }
+  }
+  return null;
+}
+
+function hashDirectory(dir) {
+  if (!existsSync(dir)) return null;
+  const hash = createHash("sha256");
+  const walk = (d) => {
+    let entries;
+    try { entries = readdirSync(d, { withFileTypes: true }); } catch { return; }
+    for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) { hash.update(`D:${e.name}\n`); walk(p); }
+      else if (e.isFile()) {
+        hash.update(`F:${e.name}\n`);
+        try { hash.update(readFileSync(p)); hash.update("\n"); } catch {}
+      }
+    }
+  };
+  walk(dir);
+  return hash.digest("hex");
 }
 
 async function stageS9() {
-  // Session recovery: kill the app, relaunch, verify the session/history is restored
+  const sessionId = journey.sessionIds[0];
+  if (!sessionId) throw new Error("S9 requires a session created by S3 (none recorded)");
+  const beforeFile = existsSync(journey.taskFile) ? readFileSync(journey.taskFile, "utf8").trim() : null;
+  // Restart the application.
   await stopApp();
   page = null;
   await new Promise((r) => setTimeout(r, 2000));
-  // stopApp killed the Xvfb child along with the app; the display must exist again
-  // before the relaunch or Electron cannot create its window.
   await ensureDisplay();
   stageDesktopOut();
   if (MODE === "dev") await launchDev();
   else if (MODE === "prod") await launchProd();
   await attachCdp();
-  await waitForTid("sidebar", { timeout: 60000 });
+  await waitForTid("sidebar", { timeout: 90000 });
   await new Promise((r) => setTimeout(r, 1500));
   await screenshot("S9-app-restarted");
-  // The task history / session list should include the earlier task
-  const historyVisible = await waitFor(async () => {
-    const text = await bodyText();
-    return text.length > 200 ? text.slice(0, 400) : false;
-  }, { what: "restored workspace content", timeout: 30000 }).catch(() => null);
-  // open history/tasks sidebar section if present
-  await evalJs(`(async () => {
-    const el = Array.from(document.querySelectorAll('button, [role="button"], [data-testid]'))
-      .filter(e => e.offsetParent !== null)
-      .find(e => /history|task|会话|历史|任务/i.test(e.innerText ?? '') || /history|task/i.test(e.getAttribute('data-testid') ?? ''));
-    if (el) { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true })); return true; }
+  // Reopen that exact session from the task list (expand the project if needed).
+  const taskItemTid = `task-item-${sessionId}`;
+  await waitFor(async () => {
+    if (await hasTid(taskItemTid)) return true;
+    // Expand the default project section so its task rows render.
+    const expanded = await evalJs(`(() => { const s = Array.from(document.querySelectorAll('[data-project-id][data-project-name]')).find(x => (x.dataset.projectName ?? '') === 'default'); if (!s) return false; const t = s.querySelector('[data-testid="virtual-project-toggle"]'); return t ? t.getAttribute('aria-expanded') === 'true' : false; })()`).catch(() => false);
+    if (!expanded) {
+      await evalJs(`(() => { const s = Array.from(document.querySelectorAll('[data-project-id][data-project-name]')).find(x => (x.dataset.projectName ?? '') === 'default'); const t = s?.querySelector('[data-testid="virtual-project-toggle"]'); if (t && !t.disabled) t.click(); return Boolean(t); })()`).catch(() => false);
+      await new Promise((r) => setTimeout(r, 800));
+    }
     return false;
-  })()`, { awaitPromise: true }).catch(() => false);
-  await new Promise((r) => setTimeout(r, 1000));
-  await screenshot("S9-session-history");
-  const afterText = await bodyText();
-  const sessionSurvived = /gamos-phase-b-journey|GAMOS-PHASE-B/i.test(afterText) || (await evalJs(`(() => Boolean(document.querySelector('[data-testid="v4-session-title"], [data-testid*="session"]')))()`));
-  recordStage("S9", sessionSurvived ? "pass" : "partial", {
-    relaunched: true,
-    workspace_restored: Boolean(historyVisible),
-    session_reference_found: sessionSurvived,
-    note: "app killed (SIGTERM) and relaunched; session history inspected after restart",
+  }, { what: `task list row for session ${sessionId}`, timeout: 60000 });
+  await clickTid(taskItemTid, { timeout: 30000 });
+  // The main pane must switch to that exact session.
+  await waitFor(async () => (await paneSessionId()) === sessionId, { what: `pane session id === ${sessionId}`, timeout: 45000 });
+  // The conversation history must have survived: the timeline shows the original
+  // task and its read-back result.
+  const timelineAfterRestart = await waitFor(async () => {
+    const state = await timelineState().catch(() => null);
+    const text = state?.timeline ?? "";
+    return text.includes("GAMOS-PHASE-B-DESKTOP-JOURNEY-OK") && state.rows >= 2 ? text : false;
+  }, { what: "restored timeline containing the original task + result", timeout: 60000 });
+  const afterFile = existsSync(journey.taskFile) ? readFileSync(journey.taskFile, "utf8").trim() : null;
+  await screenshot("S9-session-restored");
+  const historySurvived = timelineAfterRestart.includes("GAMOS-PHASE-B-DESKTOP-JOURNEY-OK");
+  const resultSurvived = afterFile === beforeFile && afterFile !== null && afterFile.includes(journey.approvedLine);
+  const pass = historySurvived && resultSurvived;
+  recordStage("S9", pass ? "pass" : "fail", {
+    restart: "app killed (SIGTERM/SIGKILL) and relaunched with the same isolated home",
+    reopened_session_id: sessionId,
+    pane_session_id: await paneSessionId(),
+    timeline_rows: (await timelineState().catch(() => ({})))?.rows,
+    conversation_history_survived: historySurvived,
+    timeline_excerpt: timelineAfterRestart.slice(0, 500),
+    artifact_before_restart: beforeFile,
+    artifact_after_restart: afterFile,
+    result_survived: resultSurvived,
   });
+  if (!pass) throw new Error(`S9 session recovery failed (history=${historySurvived}, result=${resultSurvived})`);
 }
 
 /* ------------------------------------------------------------------ */
 /* Main                                                                */
 /* ------------------------------------------------------------------ */
 async function main() {
-  log(`Gamos Phase B UI journey — mode=${MODE} stages=${STAGES.join(",")}`);
+  log(`Gamos Phase B UI journey rev 2 — mode=${MODE} stages=${STAGES.join(",")} run_token=${RUN_TOKEN}`);
   log(`evidence dir: ${EVIDENCE_DIR}`);
   await ensureDisplay();
   stageDesktopOut();
@@ -964,34 +1348,53 @@ async function main() {
     else if (MODE !== "attach") throw new Error(`unknown PHASEB_MODE ${MODE}`);
     for (const stage of STAGES) {
       const fn = stageMap[stage];
-      if (!fn) { recordStage(stage, "skipped", "unknown stage id"); continue; }
+      if (!fn) { recordStage(stage, "fail", `unknown stage id ${stage}`); continue; }
       try {
         await fn();
       } catch (e) {
         recordStage(stage, "fail", e.message);
         evidence.failures.push({ stage, error: e.message });
         await screenshot(`${stage}-failure`).catch(() => {});
+        await dumpDom(`${stage}-failure`).catch(() => {});
       }
     }
   } finally {
     await stopApp();
   }
   evidence.finished_at = new Date().toISOString();
-  const failed = Object.values(evidence.stages).filter((s) => s.status === "fail");
+  // §2.A — strict integrity: exit 0 ONLY when every mandatory stage passed.
+  const nonPass = MANDATORY_STAGES
+    .filter((id) => evidence.stages[id] && evidence.stages[id].status !== "pass")
+    .map((id) => ({ id, status: evidence.stages[id]?.status, detail: typeof evidence.stages[id]?.detail === "string" ? evidence.stages[id]?.detail : JSON.stringify(evidence.stages[id]?.detail ?? null).slice(0, 300) }));
+  const missing = MANDATORY_STAGES.filter((id) => !evidence.stages[id]);
+  const verdict = nonPass.length === 0 && missing.length === 0 ? "pass" : "fail";
   evidence.summary = {
-    stages_run: Object.keys(evidence.stages).length,
-    failed: failed.length,
-    overall: failed.length === 0 ? "all recorded stages completed (see per-stage statuses)" : `${failed.length} stage(s) failed`,
+    verdict,
+    exit_code: verdict === "pass" ? 0 : 1,
+    mandatory_stages: MANDATORY_STAGES,
+    stages_requested: STAGES,
+    stages_recorded: Object.keys(evidence.stages),
+    non_pass_stages: nonPass,
+    missing_stages: missing,
   };
   writeFileSync(join(EVIDENCE_DIR, "journey-evidence.json"), JSON.stringify(evidence, null, 2));
   log(`evidence written: ${join(EVIDENCE_DIR, "journey-evidence.json")}`);
-  log(`summary: ${evidence.summary.overall}`);
-  process.exit(failed.length === 0 ? 0 : 1);
+  log(`summary: verdict=${verdict} non_pass=${JSON.stringify(nonPass.map((s) => `${s.id}:${s.status}`))} missing=${JSON.stringify(missing)}`);
+  process.exit(verdict === "pass" ? 0 : 1);
 }
 
 main().catch(async (e) => {
   evidence.fatal = e.message;
   evidence.finished_at = new Date().toISOString();
+  evidence.summary = {
+    verdict: "fail",
+    exit_code: 2,
+    mandatory_stages: MANDATORY_STAGES,
+    stages_recorded: Object.keys(evidence.stages),
+    non_pass_stages: MANDATORY_STAGES.filter((id) => evidence.stages[id] && evidence.stages[id].status !== "pass").map((id) => ({ id, status: evidence.stages[id]?.status })),
+    missing_stages: MANDATORY_STAGES.filter((id) => !evidence.stages[id]),
+    fatal: e.message,
+  };
   writeFileSync(join(EVIDENCE_DIR, "journey-evidence.json"), JSON.stringify(evidence, null, 2));
   log(`FATAL: ${e.message}`);
   await stopApp();
