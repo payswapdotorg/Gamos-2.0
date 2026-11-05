@@ -134,8 +134,10 @@
       "phase_id",
       "status",
       "tested_commit",
+      "workflow_run_head_sha",
       "workflow_run_id",
       "workflow_run_url",
+      "workflow_run_conclusion",
       "completed_at",
       "environment",
       "gate_results"
