@@ -9,7 +9,6 @@ import {
   serializeAcceptanceRecord,
   hashAcceptanceRecord,
   evaluateAcceptanceStatus,
-  type AcceptanceRecord,
 } from "../src/domain/acceptance-record.js";
 import { validPlanInput, validAcceptanceInput } from "./fixtures.js";
 

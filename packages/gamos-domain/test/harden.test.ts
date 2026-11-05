@@ -7,7 +7,6 @@ import { parseGameArtifact } from "../src/domain/game-artifact.js";
 import { registerCapability, resolveCapability } from "../src/domain/capability-registry.js";
 import {
   validGameIR,
-  validIdentity,
   validConceptInput,
   validPlanInput,
   validAcceptanceInput,

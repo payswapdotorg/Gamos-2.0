@@ -1,6 +1,4 @@
-import type { GameConcept } from "./domain/game-concept.js";
 import type { GameSpec } from "./domain/game-spec.js";
-import type { GamePlan } from "./domain/game-plan.js";
 import { createGameConcept } from "./domain/game-concept.js";
 import { parseGameSpec } from "./domain/game-spec.js";
 
