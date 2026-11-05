@@ -75,7 +75,7 @@ jobs:
             libxss1 libxtst6 fonts-noto-cjk fonts-noto-color-emoji
 
       - name: Frozen-lockfile install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile || (echo "::warning::retrying install after known pnpm@10.33.2 hoisted-linker ENOENT race (react-scan/esbuild rename)" && pnpm install --frozen-lockfile)
 
       - name: Build desktop agent CLI chain (runtime agent bundle)
         run: node scripts/build-desktop-agent-cli.mjs
