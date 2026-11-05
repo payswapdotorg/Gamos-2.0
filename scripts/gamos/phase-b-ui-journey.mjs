@@ -1459,43 +1459,112 @@ async function stageS7() {
   // the pane is open or closed — with the ⌥⌘B workspace shortcut (real CDP
   // Input.dispatchKeyEvent key events, Alt=1|Meta=4) and the pane's
   // add-trigger ("+") menu as fallbacks.
+  //
+  // Run 42061508909 evidence: with S3–S6 now passing, the workspace holds a REAL
+  // task session, and the task-scoped side-pane memory (useAppPanels
+  // readTaskSidePaneMemoryKey) starts the pane COLLAPSED for that task — the
+  // pane is no longer pre-open on the launcher state like it was when S3–S6
+  // failed fast with an empty draft workspace. Every opening step below is
+  // therefore INSTRUMENTED (toggle aria-label + pane width + launcher/add-trigger
+  // presence logged before/after each attempt) so any future failure pinpoints
+  // the exact layer (click landing vs handler firing vs pane mounting vs
+  // launcher row rendering), and each attempt waits for the pane ANIMATION and
+  // lazy launcher mount (AnimatedSidePanePanel) instead of a fixed 900ms probe.
+  const PANE_STATE_JS = assertPageJs("side pane state probe", `(() => {
+    const toggle = document.querySelector('[data-testid="side-pane-toggle"]');
+    const launcherRow = document.querySelector('[data-side-pane-open-tab-item="browser"]');
+    const addTrigger = document.querySelector('[data-side-pane-add-trigger]');
+    const addressInput = document.querySelector('[data-testid="browser-address-input"]');
+    const paneHost = document.querySelector('.side-pane-open-tab-shell');
+    const launcherRows = Array.from(document.querySelectorAll('[data-side-pane-open-tab-item]')).map(e => e.getAttribute('data-side-pane-open-tab-item'));
+    const visibleRect = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; };
+    return {
+      toggleAriaLabel: toggle?.getAttribute('aria-label') ?? null,
+      launcherRowPresent: Boolean(launcherRow),
+      launcherRowRect: visibleRect(launcherRow),
+      launcherRowIds: launcherRows,
+      addTriggerPresent: Boolean(addTrigger),
+      addTriggerRect: visibleRect(addTrigger),
+      addressInputPresent: Boolean(addressInput),
+      launcherShellRect: visibleRect(paneHost),
+    };
+  })()`);
+  const paneState = async () => evalJs(PANE_STATE_JS).catch(() => null);
+  const isPaneOpen = (state) => {
+    if (!state) return false;
+    if (state.addressInputPresent) return true;
+    if (state.launcherRowPresent && state.launcherRowRect?.w > 0) return true;
+    if (state.addTriggerPresent && state.addTriggerRect?.w > 0) return true;
+    if (state.launcherShellRect?.w > 0) return true;
+    return false;
+  };
+  const logPane = (tag) => paneState().then((s) => log(`pane-state [${tag}]: ${JSON.stringify(s)}`));
   const clickOpenTabBrowser = async () => {
     const r = await rectOf(`document.querySelector('[data-side-pane-open-tab-item="browser"]')`).catch(() => null);
     if (!r || !(r.w > 0)) return false;
     await cdpClickRect(r);
     return true;
   };
+  // After a toggle/shortcut attempt, give the pane ANIMATION + lazy launcher
+  // mount real time, then click the browser launcher row.
+  const waitLauncherAndClick = async (timeoutMs) => {
+    const found = await waitFor(async () => {
+      const r = await rectOf(`document.querySelector('[data-side-pane-open-tab-item="browser"]')`).catch(() => null);
+      return r && r.w > 0 ? r : false;
+    }, { what: "browser launcher row in the opened side pane", timeout: timeoutMs }).catch(() => null);
+    if (!found) return false;
+    await cdpClickRect(found);
+    return true;
+  };
+  const clickAddTriggerBrowser = async () => {
+    const add = await rectOf(`document.querySelector('[data-side-pane-add-trigger]')`).catch(() => null);
+    if (!add || !(add.w > 0)) return false;
+    await cdpClickRect(add);
+    await new Promise((r) => setTimeout(r, 700));
+    const item = await rectOf(`(() => { const items = Array.from(document.querySelectorAll('[data-side-pane-open-tab-item="browser"], [role="menuitem"]')); return items.find(el => /browser|浏览器/i.test(el.innerText || '') && el.getBoundingClientRect().width > 0) ?? null; })()`).catch(() => null);
+    if (item && item.w > 0) { await cdpClickRect(item); return true; }
+    return false;
+  };
   const opened = await (async () => {
+    await logPane("initial");
     if (await clickOpenTabBrowser()) return "side-pane open-tab launcher row (browser)";
-    // Open the side pane via its title-bar toggle (real CDP click) — once. If the
-    // pane opens on the launcher (empty) state the browser row is right there; if
-    // it opens on existing tabs the add-trigger fallback below applies. Clicking
-    // the toggle repeatedly would oscillate open/closed.
-    const toggle = await rectOf(`document.querySelector('[data-testid="side-pane-toggle"]')`).catch(() => null);
-    if (toggle && toggle.w > 0) {
+    // Open the side pane via its title-bar toggle (real CDP click). The pane may
+    // open on the launcher (empty) state — the browser row is then polled and
+    // clicked — or on existing tabs — the add-trigger fallback applies. The
+    // toggle is re-clicked (up to 3 total) only when its aria-label shows the
+    // pane did NOT expand, so open/closed oscillation cannot occur.
+    for (let toggleAttempt = 1; toggleAttempt <= 3; toggleAttempt++) {
+      const before = await paneState();
+      const toggle = await rectOf(`document.querySelector('[data-testid="side-pane-toggle"]')`).catch(() => null);
+      if (!toggle || !(toggle.w > 0)) { log(`toggle attempt ${toggleAttempt}: side-pane-toggle not clickable`); break; }
       await cdpClickRect(toggle);
-      await new Promise((r) => setTimeout(r, 900));
-      if (await clickOpenTabBrowser()) return "side-pane-toggle → open-tab launcher row (browser)";
+      if (await waitLauncherAndClick(12000)) return `side-pane-toggle (attempt ${toggleAttempt}) → open-tab launcher row (browser)`;
+      if (await clickAddTriggerBrowser()) return `side-pane-toggle (attempt ${toggleAttempt}) → add-trigger → open-tab menu → browser item`;
+      await logPane(`after toggle attempt ${toggleAttempt}`);
+      const after = await paneState();
+      const expanded = Boolean(before && after && after.toggleAriaLabel !== before.toggleAriaLabel);
+      if (expanded) {
+        // The toggle FIRED (aria flipped) but neither the browser launcher row
+        // nor the add-trigger surfaced. Re-clicking would COLLAPSE the pane
+        // again — stop toggling and let the ⌥⌘B diagnostics below decide.
+        log(`toggle attempt ${toggleAttempt}: pane toggled (${after?.toggleAriaLabel ?? "?"}) but no browser entry surfaced`);
+        break;
+      }
+      log(`toggle attempt ${toggleAttempt}: aria-label unchanged (${after?.toggleAriaLabel ?? "?"}) — the click did not toggle; retrying`);
     }
-    for (let i = 0; i < 8; i++) {
-      // Fallback: the app's real ⌥⌘B workspace shortcut as CDP key events.
+    // Fallback: the app's real ⌥⌘B workspace shortcut as CDP key events.
+    for (let i = 0; i < 4; i++) {
       await page.send("Input.dispatchKeyEvent", { type: "keyDown", key: "b", code: "KeyB", windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66, modifiers: 5 });
       await page.send("Input.dispatchKeyEvent", { type: "keyUp", key: "b", code: "KeyB", windowsVirtualKeyCode: 66, nativeVirtualKeyCode: 66, modifiers: 5 });
-      await new Promise((r) => setTimeout(r, 900));
-      if (await clickOpenTabBrowser()) return `⌥⌘B CDP shortcut → open-tab launcher row (browser) (attempt ${i + 1})`;
-      // Fallback: the pane's add-trigger ("+") opens the open-tab menu.
-      const add = await rectOf(`document.querySelector('[data-side-pane-add-trigger]')`).catch(() => null);
-      if (add && add.w > 0) {
-        await cdpClickRect(add);
-        await new Promise((r) => setTimeout(r, 600));
-        const item = await rectOf(`(() => { const items = Array.from(document.querySelectorAll('[data-side-pane-open-tab-item="browser"], [role="menuitem"]')); return items.find(el => /browser|浏览器/i.test(el.innerText || '') && el.getBoundingClientRect().width > 0) ?? null; })()`).catch(() => null);
-        if (item && item.w > 0) { await cdpClickRect(item); return "side-pane add-trigger → open-tab menu → browser item"; }
-      }
-      await new Promise((r) => setTimeout(r, 1200));
+      if (await waitLauncherAndClick(9000)) return `⌥⌘B CDP shortcut → open-tab launcher row (browser) (attempt ${i + 1})`;
+      if (await clickAddTriggerBrowser()) return `⌥⌘B CDP shortcut (attempt ${i + 1}) → add-trigger → open-tab menu → browser item`;
+      await logPane(`after ⌥⌘B attempt ${i + 1}`);
+      await new Promise((r) => setTimeout(r, 800));
     }
+    await logPane("all fallbacks exhausted");
     return null;
   })();
-  if (!opened) throw new Error("no browser entry found to open the embedded browser pane (launcher row, side-pane-toggle, ⌥⌘B shortcut, add-trigger fallbacks all exhausted)");
+  if (!opened) throw new Error("no browser entry found to open the embedded browser pane (launcher row, side-pane-toggle, ⌥⌘B shortcut, add-trigger fallbacks all exhausted — see pane-state logs)");
   await waitForTid("browser-address-input", { timeout: 30000 });
   await screenshot("S7-browser-open");
   // Navigate FIRST — then wait for the webview. The <webview> guest only mounts
