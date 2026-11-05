@@ -1,0 +1,28 @@
+{
+  "phase_id": "M0",
+  "status": "passed",
+  "tested_commit": "<40-character commit SHA actually tested>",
+  "workflow_run_id": 0,
+  "workflow_run_url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/<run-id>",
+  "completed_at": "<ISO-8601 UTC timestamp>",
+  "environment": {
+    "runner": "<GitHub-hosted or documented real integration runner>",
+    "os": "<OS/version>",
+    "runtime": "<toolchain and engine/service versions>"
+  },
+  "gate_results": [
+    {
+      "gate_id": "M0-G1",
+      "status": "passed",
+      "command": "<exact command or CI job>",
+      "result_summary": "<actual result>",
+      "evidence_paths": [
+        "<committed log or artifact path>"
+      ],
+      "artifact_sha256": [
+        "<64-character SHA-256>"
+      ]
+    }
+  ],
+  "notes": "Template only. For a real phase record, include exactly one result for every required gate. Do not treat this template as acceptance evidence."
+}
