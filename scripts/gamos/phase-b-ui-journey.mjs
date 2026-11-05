@@ -537,7 +537,7 @@ async function stageS1() {
     await new Promise(r => setTimeout(r, 80));
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
     return { done: false, clicked: (el.innerText || '').trim().split('\\n')[0].slice(0, 40) };
-  })`;
+  })()`;
   let lastClicked = null;
   let repeated = 0;
   for (let step = 1; step <= 14; step++) {
