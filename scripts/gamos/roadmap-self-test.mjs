@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { validateRoadmap } from "./roadmap-check.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("../../", import.meta.url)));
@@ -76,6 +77,71 @@ test("dependency cycles are rejected",() => {
 test("user phase approval cannot be re-enabled accidentally",() => {
   const x=clone(); x.phase_policy.user_confirmation_required=true;
   assert.ok(codes(validateRoadmap(x)).includes("AUTONOMY"));
+});
+test("completed milestone requires matching on-disk evidence and real gate artifacts",() => {
+  const tempRoot=mkdtempSync(join(tmpdir(),"gamos-roadmap-evidence-"));
+  const put=(relative,content) => {
+    const target=join(tempRoot,relative);
+    mkdirSync(dirname(target),{recursive:true});
+    writeFileSync(target,content);
+  };
+  try {
+    put(".gamos-architecture-baseline.json",JSON.stringify({baseline:{pinned_sha:canonical.source_anchors.zcode_baseline_sha}}));
+    const requiredRefs=[
+      "docs/gamos/PRODUCT-NORTH-STAR.md","docs/gamos/ARCHITECTURE.md",
+      "docs/gamos/IMPLEMENTATION-STATUS.md","docs/gamos/README.md",
+      "docs/gamos/contracts/01-gaming-domain-and-gameir.md",
+      "docs/gamos/contracts/02-capability-registry.md",
+      "docs/gamos/contracts/05-intent-and-workflow-orchestration.md",
+      "docs/gamos/contracts/06-permission-and-approval-mapping.md",
+      "docs/gamos/contracts/09-plugin-trust-and-provenance.md",
+      "docs/gamos/workers/worker-a-brief.md","docs/gamos/workers/worker-b-brief.md",
+      "docs/gamos/workers/worker-c-brief.md","docs/gamos/workers/tl-integration-plan.md"
+    ];
+    for(const ref of requiredRefs) put(ref,"fixture reference");
+    put("docs/gamos/contracts/01-gaming-domain-and-gameir.md",
+      "pinned " + canonical.source_anchors.playliquid_gameir_commit + "\nno " +
+      String.fromCharCode(96) + "acceptance" + String.fromCharCode(96) + " field");
+    const x=clone();
+    const m=x.milestones.find(item=>item.id==="M0");
+    m.status="complete";
+    const testedCommit="c".repeat(40);
+    const runId=98765;
+    const runUrl="https://github.com/payswapdotorg/Gamos-2.0/actions/runs/" + runId;
+    const completedAt="2026-11-05T00:00:00Z";
+    const gateResults=m.acceptance_gates.map(gate=>{
+      const evidencePath="evidence/roadmap/" + gate.id + ".log";
+      put(evidencePath,"real test output fixture");
+      return {
+        gate_id:gate.id,status:"passed",command:"node test-command",
+        result_summary:"passed on test fixture repository",
+        evidence_paths:[evidencePath],artifact_sha256:[]
+      };
+    });
+    const record={
+      phase_id:"M0",status:"passed",tested_commit:testedCommit,
+      workflow_run_head_sha:testedCommit,workflow_run_conclusion:"success",
+      workflow_run_id:runId,workflow_run_url:runUrl,completed_at:completedAt,
+      environment:{runner:"self-test",os:"test",runtime:"node"},
+      gate_results:gateResults
+    };
+    const evidenceFile="evidence/roadmap/M0.json";
+    put(evidenceFile,JSON.stringify(record,null,2));
+    m.completion_evidence={
+      evidence_file:evidenceFile,tested_commit:testedCommit,
+      workflow_run_head_sha:testedCommit,workflow_run_conclusion:"success",
+      workflow_run_id:runId,workflow_run_url:runUrl,completed_at:completedAt,
+      gate_ids:m.acceptance_gates.map(gate=>gate.id).sort()
+    };
+    const valid=validateRoadmap(x,{repoRoot:tempRoot});
+    assert.deepEqual(valid.errors,[]);
+    assert.deepEqual(valid.ready,["M1"]);
+    record.gate_results[0].status="failed";
+    put(evidenceFile,JSON.stringify(record,null,2));
+    assert.ok(codes(validateRoadmap(x,{repoRoot:tempRoot})).includes("EVIDENCE"));
+  } finally {
+    rmSync(tempRoot,{recursive:true,force:true});
+  }
 });
 console.log("1.." + count);
 console.log("# roadmap self-test: " + count + " passed, 0 failed");
