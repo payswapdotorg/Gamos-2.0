@@ -711,7 +711,8 @@ async function timelineState() {
     const rows = Array.from(document.querySelectorAll('[data-testid^="v4-row"]'));
     const stop = Array.from(document.querySelectorAll('[data-testid="v4-stop"]')).some(e => e.offsetParent !== null);
     const timeline = (document.querySelector('[data-testid="v4-timeline"]')?.innerText ?? '').slice(0, 2500);
-    return { rows: rows.length, canStop: stop, timeline, paneSessionId: pane?.dataset?.sessionId ?? null };
+    const errorBanner = document.querySelector('[data-testid="chat-error-banner"]');
+    return { rows: rows.length, canStop: stop, timeline, paneSessionId: pane?.dataset?.sessionId ?? null, errorBanner: Boolean(errorBanner) };
   })()`);
 }
 
@@ -743,6 +744,13 @@ async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, r
       }
     }
     const running = last.canStop;
+    if (!running && last.errorBanner && last.rows > 0 && last.paneSessionId && last.paneSessionId !== "draft") {
+      // The turn FAILED (chat-error-banner present, no stop button): report it
+      // so callers can resubmit exactly like a real user instead of idling to
+      // the full timeout (run 42104260632: free-tier model request failed,
+      // banner surfaced, 5 minutes of dead waiting).
+      return { completed: false, turnFailed: true, ...last, sawToolUse, approvals };
+    }
     if (!running && last.rows > 0 && last.paneSessionId && last.paneSessionId !== "draft") {
       if (idleSince === null) idleSince = Date.now();
       // require ~6s of stability so a between-tools gap isn't read as completion
@@ -1278,7 +1286,18 @@ async function stageS3() {
   await submitComposerTask(taskText, "S3");
   await screenshot("S3-task-submitted");
   const approvals = [];
-  const result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals });
+  let result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals });
+  // Real-user retry (run 42104260632 root cause): when the model TURN itself
+  // fails (chat-error-banner; free-tier rate/credit flakiness), a user resubmits
+  // the task. One retry keeps the verification exact — the artifact must still
+  // exist with exactly the expected content.
+  if (result.turnFailed) {
+    log("S3: model turn failed (chat-error-banner) — resubmitting the task once (real-user retry)");
+    await screenshot("S3-turn-failed");
+    await submitComposerTask(taskText, "S3-retry");
+    result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals });
+    result = { ...result, retriedAfterTurnFailure: true };
+  }
   const sessionId = result.paneSessionId ?? await paneSessionId();
   if (sessionId && sessionId !== "draft") journey.sessionIds.push(sessionId);
   await screenshot("S3-task-result");
@@ -1418,7 +1437,13 @@ async function stageS6() {
   const approve = await respondPermission("allowOnce");
   await screenshot("S6-approve-confirmed");
   const approveApprovals = [];
-  const approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals });
+  let approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals });
+  if (approveResult.turnFailed) {
+    log("S6 approve: model turn failed (chat-error-banner) — resubmitting once (real-user retry)");
+    await submitComposerTask(approveTask, "S6-approve-retry");
+    approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals });
+    approveResult = { ...approveResult, retriedAfterTurnFailure: true };
+  }
   // Exact modification verification.
   const afterApprove = existsSync(file) ? readFileSync(file, "utf8") : "";
   const approvedApplied = afterApprove.includes(journey.approvedLine);
@@ -1439,7 +1464,14 @@ async function stageS6() {
   // Any FURTHER permission dialog during this turn is also rejected: the user has
   // rejected this modification, and a model retry must not be approved by the
   // journey itself (that would apply the very change we are verifying as rejected).
-  const rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals });
+  let rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals });
+  if (rejectResult.turnFailed) {
+    log("S6 reject: model turn failed (chat-error-banner) — resubmitting once (real-user retry)");
+    await submitComposerTask(rejectTask, "S6-reject-retry");
+    // The retried turn must again be REJECTED when it asks permission.
+    rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals });
+    rejectResult = { ...rejectResult, retriedAfterTurnFailure: true };
+  }
   // The rejected modification must NOT be applied; grace-recheck for late writes.
   let afterReject = existsSync(file) ? readFileSync(file, "utf8") : "";
   for (let i = 0; i < 2 && !afterReject.includes(journey.rejectedLine); i++) {
