@@ -161,7 +161,7 @@
     {
       "id": "M0",
       "title": "Fork, baseline, governance and original-ZCode acceptance",
-      "status": "active",
+      "status": "complete",
       "depends_on": [],
       "objective": "Prove Gamos is a safe, faithful fork of the pinned ZCode application before adding gaming behavior.",
       "outcomes": [
@@ -230,7 +230,23 @@
         "inherited E2E regression",
         "feature-preservation assertions"
       ],
-      "completion_evidence": null
+      "completion_evidence": {
+        "evidence_file": "evidence/roadmap/M0.json",
+        "tested_commit": "bef775cd4cba2532b6e08b4c03b01f9bf7725655",
+        "workflow_run_head_sha": "bef775cd4cba2532b6e08b4c03b01f9bf7725655",
+        "workflow_run_conclusion": "success",
+        "workflow_run_id": 42071819027,
+        "workflow_run_url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/42071819027",
+        "completed_at": "2026-11-05T17:24:39Z",
+        "gate_ids": [
+          "M0-G1",
+          "M0-G2",
+          "M0-G3",
+          "M0-G4",
+          "M0-G5",
+          "M0-G6"
+        ]
+      }
     },
     {
       "id": "M1",

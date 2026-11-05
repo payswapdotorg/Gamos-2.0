@@ -11,7 +11,7 @@
 > Honest, evidence-based status. No green checkmark implies completion when only
 > a contract or UI exists. Updated at every integration point.
 >
-> **Last updated:** 2026-11-05 (M0 closure round COMPLETE: Phase-0 contract revision 2 per architect M0-closure corrections A+B applied via GAMOS-AUTH-0004; Phase B journey repaired and FULLY GREEN on CI — run 42071819027 @ `bef775cd`, all mandatory stages S0–S9 pass, verdict=pass exit 0, real model + production renderer; inherited desktop E2E (4 verified specs) + upstream-provider replay both green in the same run; close-out evidence in `evidence/phase-b/m0-closure-ci-evidence.json`. Canonical roadmap integrated from `gamos/roadmap-tdd-ssot`: ROADMAP.json is the sole normative phase authority; per the autonomous M0-closure/M1 directive the TL owns phase advancement — no architect-approval checkpoint remains between M0 and M1)
+> **Last updated:** 2026-11-05T20:05Z (M0 COMPLETE — autonomous closure per the M0-closure/M1 directive: six canonical gates verified against committed evidence of run 42071819027 @ `bef775cd` (S0–S9 all pass, verdict=pass exit 0; inherited 4-spec container suite + upstream-provider replay fixture green); five TL evidence-quality inspections recorded below; `evidence/roadmap/M0.json` committed with per-gate SHA-256; ROADMAP.json M0 status=complete with completion evidence bound to the tested commit; roadmap validator + 12/12 self-tests + governance checks green. M1 activation follows required-CI validation of this completion commit)
 
 ---
 
@@ -161,3 +161,54 @@ ROADMAP.json with exact run metadata, run the roadmap validator + self-tests,
 and run required CI on the completion commit. Only after that commit passes is
 M1 activated. `IMPLEMENTATION-STATUS.md` records evidence and decisions only;
 it never independently controls phase status.
+
+## M0 completion decision (autonomous closure, 2026-11-05T20:05Z)
+
+The TL inspected the committed close-out evidence (`evidence/phase-b/m0-closure-ci-evidence.json`,
+run 42071819027 @ `bef775cd4cba2532b6e08b4c03b01f9bf7725655`, attempt 1, conclusion success,
+3/3 jobs green) rather than treating summaries as proof. Evidence-quality findings:
+
+1. **S2 model validity/attribution — verified.** The free-tier model
+   `nvidia/nemotron-3-ultra-550b-a55b:free` is persisted through the real
+   `addPersonalModel` path (`packages/provider/src/config-service.ts`):
+   `providers.openrouter.personalModelIds` + the per-provider models map with
+   `enabled: true`. The close-out's `provider_model_rules`/`manual_provider_model_rules`
+   false readings probe the *personal-config-rule* override layers, which a plainly
+   added model does not use — the raw id string lands in the provider record itself.
+   S3 records the real OpenRouter generation, session id, exact artifact content and
+   tool use attributable to that model, so the successful real-model task is
+   attributable to the intended model.
+2. **S8 install-vs-try-now — install proven.** Upstream
+   `packages/ui/src/settings/PluginStoreDetailView.tsx` renders
+   `item.installed ? (item menu + try-now) : (install button)`. The recorded UI
+   state (`install_button_present: false`, `try_now_present: true`) is exactly the
+   upstream `installed === true` rendering; "Try now" is the affordance shown for
+   installed regular plugins (prefills a prompt to use it), not try-without-install.
+   The `uninstall_entry_present: false` reading reflects the closed item-menu
+   dropdown (the uninstall entry lives inside `PluginStoreItemMenu`). The on-disk
+   `installed_plugins.json` record with `installPath`, the independent archive
+   checksum match (manifest sha256 == separately downloaded archive sha256) and the
+   installed-tree hash prove real installation.
+3. **S6 rejected modification — verified absent.** The journey asserts
+   `!file.includes(REJECTED-LINE)` after the reject (with a 2×3s grace re-check for
+   late writes) plus `approved_line_still_present`; all subsequent permission prompts
+   during the rejected turn are also rejected so a model retry cannot smuggle the
+   change in.
+4. **S7 in-guest browser read — verified.** URL/title/body are read through the
+   webview element (`getURL` + `executeJavaScript` inside the guest WebContents);
+   the browser-level CDP `/json/list` scan is a non-gating bonus. No unsupported
+   browser-level CDP target requirement is imposed.
+5. **Credential scan coverage — verified.** The CI scan step greps the exact
+   `evidence/phase-b/journey-ci/` directory that `actions/upload-artifact` uploads
+   (screenshots, DOM dumps, sanitized run log, journey-evidence.json), and the
+   close-out additionally documents a local re-scan of the downloaded artifact:
+   zero hits for the OpenRouter key.
+
+Six-gate disposition: M0-G1..M0-G6 all `passed`; per-gate commands, results,
+committed evidence paths and SHA-256 hashes are recorded in
+`evidence/roadmap/M0.json` and enforced by `scripts/gamos/roadmap-check.mjs`.
+ROADMAP.json now marks M0 `complete` with completion evidence bound to the tested
+commit `bef775cd…` and run 42071819027. Explicit exclusions: live-provider
+execution (documented 404; not an M0 requirement) and any claim of the complete
+upstream E2E suite passing. M1 activation proceeds only after required CI validates
+this completion commit.

@@ -1,0 +1,98 @@
+{
+  "phase_id": "M0",
+  "status": "passed",
+  "tested_commit": "bef775cd4cba2532b6e08b4c03b01f9bf7725655",
+  "workflow_run_id": 42071819027,
+  "workflow_run_url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/42071819027",
+  "completed_at": "2026-11-05T17:24:39Z",
+  "environment": {
+    "runner": "GitHub-hosted ubuntu-latest (phase-b) + ubuntu-latest (governance)",
+    "os": "Ubuntu 24.04 (GitHub runner image)",
+    "runtime": "Node 24 / pnpm 10.33.2 frozen lockfile; Electron production renderer; container desktop-E2E via upstream Dockerfile.desktop-e2e; OpenRouter free-tier model nvidia/nemotron-3-ultra-550b-a55b:free"
+  },
+  "gate_results": [
+    {
+      "gate_id": "M0-G1",
+      "status": "passed",
+      "command": "git ls-remote fork vs zai-org/ZCode upstream (main/feat/tags identical) + governance-check baseline ancestry on every CI run",
+      "result_summary": "main @ a9fe401eede6e6e5e01be9048679c206fe6f02d9 identical to upstream; feat/ui-plugin and all four tags identical; baseline ancestry verified by the pinned governance verifier in every run incl. run 42071819027; zero upstream-tracked files modified/deleted (additive-only fork)",
+      "evidence_paths": [
+        "docs/gamos/UPSTREAM-BASELINE.md",
+        "evidence/phase-a/governance-v2-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "7e5e1a677eb2c1cff045b23ed736423321efb422bdadf2cd9066b22f1a9d146d",
+        "f3928000a5e2068f17378596b69406c5ad9df1791fefbbc8b20f03c028104dfd"
+      ]
+    },
+    {
+      "gate_id": "M0-G2",
+      "status": "passed",
+      "command": "gamos-governance workflow (governance + 14-scenario tamper self-test + upstream architecture gate) on gamos/development",
+      "result_summary": "Green on every commit of the closure round; latest at the tested commit: run 42071819091 @ bef775cd (trust anchor verified, 15 control hashes, 14/14 self-test scenarios, architecture:check zero violations); roadmap validator + 12/12 roadmap self-tests also enforced in the architecture job",
+      "evidence_paths": [
+        "evidence/phase-a/governance-v2-ci-evidence.json",
+        "evidence/phase-b/m0-closure-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "f3928000a5e2068f17378596b69406c5ad9df1791fefbbc8b20f03c028104dfd",
+        "08e4d147fde89a6d9560617ce70359e28049c25f778440ff53124c0db0e46f98"
+      ]
+    },
+    {
+      "gate_id": "M0-G3",
+      "status": "passed",
+      "command": "gamos-phase-b-e2e job 'Phase B desktop journey (real model, production renderer)' S0 — pnpm install --frozen-lockfile + pnpm build:bootstrap + production-renderer launch over CDP",
+      "result_summary": "Run 42071819027 @ bef775cd: complete production application build and launch as the original ZCode (S0 pass: app_title ZCode, production renderer window verified over CDP); sandbox-floor install/build/launch evidence additionally recorded in evidence/phase-b/verification-evidence.json",
+      "evidence_paths": [
+        "evidence/phase-b/m0-closure-ci-evidence.json",
+        "evidence/phase-b/verification-evidence.json"
+      ],
+      "artifact_sha256": [
+        "08e4d147fde89a6d9560617ce70359e28049c25f778440ff53124c0db0e46f98",
+        "e31c1aaaea77c2dd958dcb61aa375717d043e72f923e85cd34bc7f79c5f841d9"
+      ]
+    },
+    {
+      "gate_id": "M0-G4",
+      "status": "passed",
+      "command": "scripts/gamos/phase-b-ui-journey.mjs (PHASEB_MODE=prod) — strict S0-S9 verdict: exit 0 only when every mandatory stage records pass",
+      "result_summary": "Run 42071819027 @ bef775cd: S0-S9 ALL PASS, verdict=pass, exit 0, non_pass=[] and missing=[] (machine-readable journey-evidence.json in the run artifact, 39 screenshots). S6 Review approve AND reject both verified against the resulting file (approved line applied exactly; rejected line absent, with grace re-check; real permission surface with allow/reject option kinds; selection verified via aria-selected before Confirm); S5 real xterm with exact command output; S7 embedded browser guest URL https://example.com/ + page title/body read in-guest via the webview element; S8 plugin identity github@zcode-plugins-official with manifest sha256 == independently downloaded archive sha256 and on-disk installed_plugins.json record; S9 exact-session recovery after app kill + relaunch with the same isolated home",
+      "evidence_paths": [
+        "evidence/phase-b/m0-closure-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "08e4d147fde89a6d9560617ce70359e28049c25f778440ff53124c0db0e46f98"
+      ]
+    },
+    {
+      "gate_id": "M0-G5",
+      "status": "passed",
+      "command": "gamos-phase-b-e2e jobs 'Inherited desktop E2E (container, 4 verified specs)' + 'Inherited upstream-provider spec (in-repo recorded replay fixture)'",
+      "result_summary": "Run 42071819027 @ bef775cd: both jobs success — the four verified inherited desktop E2E specs pass through the upstream-sanctioned container path (replay-isolated), and the upstream-provider spec passes via the upstream-documented in-repo recorded replay fixture. Live-provider execution was NOT performed (documented 404 on the configured upstream-provider route) and is an explicit exclusion, not an M0 requirement; no claim is made that the complete upstream suite passes",
+      "evidence_paths": [
+        "evidence/phase-b/m0-closure-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "08e4d147fde89a6d9560617ce70359e28049c25f778440ff53124c0db0e46f98"
+      ]
+    },
+    {
+      "gate_id": "M0-G6",
+      "status": "passed",
+      "command": "pnpm run architecture:check (upstream gate, zero violations) + docs/gamos/FEATURE-PRESERVATION-MATRIX.md source anchors",
+      "result_summary": "32-feature preservation matrix reconciled with verified source anchors; upstream architecture:check reports zero violations on every governance run of the closure round (incl. run 42071819091 @ bef775cd); no inherited feature hidden or removed (additive-only fork, zero upstream-tracked files modified)",
+      "evidence_paths": [
+        "docs/gamos/FEATURE-PRESERVATION-MATRIX.md",
+        "evidence/phase-b/m0-closure-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "c7172ce1e37c11d4abaa64986aab21bfcd101c95597e24b3f38251000eb68af6",
+        "08e4d147fde89a6d9560617ce70359e28049c25f778440ff53124c0db0e46f98"
+      ]
+    }
+  ],
+  "notes": "Authoritative journey/regression evidence is workflow run 42071819027 on the tested commit bef775cd4cba2532b6e08b4c03b01f9bf7725655 (attempt 1, conclusion success, all 3 jobs green). TL independently inspected the evidence quality per the autonomous-closure directive: (1) S2 model validity — the free-tier model is persisted through the real addPersonalModel path (providers.openrouter.personalModelIds + models map, enabled:true); the provider_model_rules/manual_provider_model_rules diagnostics probe the personal-config-rule layers, which a plainly added model does not use; S3 records the real OpenRouter generation, session id, exact artifact content and tool use attributable to that model. (2) S8 install proof — upstream PluginStoreDetailView renders item.installed ? (try-now + item menu) : (install button); the recorded UI state (install_button absent, try-now present) is exactly the upstream installed state; the uninstall entry lives inside the closed item menu; the on-disk installed_plugins.json record with installPath, the independent archive checksum match and the installed-tree hash prove real installation, not try-without-install. (3) S6 rejected modification is verified absent from the resulting file (with a grace re-check and all subsequent permission prompts during the rejected turn also rejected). (4) S7 browser URL/content are read in-guest via the webview element; the browser-level CDP /json/list target is a non-gating bonus scan. (5) The key-exposure scan step greps the exact evidence directory that is uploaded as the run artifact (screenshots, DOM dumps, sanitized log, journey-evidence.json), and the close-out record additionally documents a local re-scan of the downloaded artifact: zero hits. Live-provider execution and the complete upstream E2E suite remain explicit exclusions. No credentials appear in any committed artifact.",
+  "workflow_run_head_sha": "bef775cd4cba2532b6e08b4c03b01f9bf7725655",
+  "workflow_run_conclusion": "success"
+}

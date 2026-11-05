@@ -13,13 +13,36 @@ let count = 0;
 function test(name,fn) { fn(); count++; console.log("ok " + count + " - " + name); }
 function clone() { return structuredClone(canonical); }
 function codes(result) { return result.errors.map(e => e.slice(1,e.indexOf("]"))); }
+// Reset the first milestone to an unfinished state so dependency/evidence tests
+// stay valid across real phase transitions of the canonical roadmap (once M0 is
+// genuinely complete in ROADMAP.json, tests that assume an incomplete dependency
+// must derive that state explicitly instead of relying on the canonical snapshot).
+function unfinished() {
+  const x=clone(); const m0=x.milestones.find(m=>m.id==="M0");
+  m0.status="active"; m0.completion_evidence=null;
+  return x;
+}
 
-test("canonical roadmap passes structural validation",() => {
-  const r=validateRoadmap(clone());
+test("canonical roadmap passes structural validation and its completion evidence verifies against the repository",() => {
+  const r=validateRoadmap(clone(),{repoRoot:ROOT});
   assert.deepEqual(r.errors,[]);
-  assert.deepEqual(r.active,["M0"]);
-  assert.deepEqual(r.ready,[]);
-  assert.deepEqual(r.blocked,["M1","M2","M3","M4","M5","M6","M7"]);
+  // State partition invariants hold regardless of which milestones are complete.
+  const ids=canonical.milestones.map(m=>m.id);
+  const complete=canonical.milestones.filter(m=>m.status==="complete").map(m=>m.id);
+  const covered=new Set([...r.active,...r.ready,...r.blocked,...complete]);
+  for(const id of ids) assert.ok(covered.has(id),id+" must be classified active/ready/blocked/complete");
+  assert.equal(r.active.length+r.ready.length+r.blocked.length+complete.length,ids.length);
+  for(const id of r.ready) {
+    const m=canonical.milestones.find(x=>x.id===id);
+    for(const dep of m.depends_on||[]) {
+      assert.equal(canonical.milestones.find(x=>x.id===dep).status,"complete",id+" ready but dependency "+dep+" not complete");
+    }
+  }
+  // Canonical truth: every milestone marked complete must carry valid on-disk evidence
+  // that the full validator (including artifact hashing) accepts on the real repo tree.
+  for(const m of canonical.milestones.filter(x=>x.status==="complete")) {
+    assert.ok(m.completion_evidence&&m.completion_evidence.evidence_file,m.id+" complete without evidence pointer");
+  }
 });
 test("exact M0-M7 milestone inventory is enforced",() => {
   const x=clone(); x.milestones=x.milestones.filter(m=>m.id!=="M7");
@@ -30,24 +53,24 @@ test("duplicate milestone ids are rejected",() => {
   assert.ok(codes(validateRoadmap(x)).includes("MILESTONES"));
 });
 test("a phase cannot start before its dependencies complete",() => {
-  const x=clone(); x.milestones.find(m=>m.id==="M1").status="active";
+  const x=unfinished(); x.milestones.find(m=>m.id==="M1").status="active";
   assert.ok(codes(validateRoadmap(x)).includes("DEPENDENCY"));
 });
 test("active phase count cannot exceed configured parallelism",() => {
-  const x=clone(); x.phase_policy.parallel_active_milestones_max=1;
+  const x=unfinished(); x.phase_policy.parallel_active_milestones_max=1;
   x.milestones.find(m=>m.id==="M1").status="active";
   assert.ok(codes(validateRoadmap(x)).includes("STATUS"));
 });
 test("a dependent phase cannot be completed before its dependency",() => {
-  const x=clone(); x.milestones.find(m=>m.id==="M1").status="complete";
+  const x=unfinished(); x.milestones.find(m=>m.id==="M1").status="complete";
   assert.ok(codes(validateRoadmap(x)).includes("DEPENDENCY"));
 });
 test("a completed phase without committed evidence is rejected",() => {
-  const x=clone(); x.milestones[0].status="complete";
+  const x=unfinished(); x.milestones[0].status="complete";
   assert.ok(codes(validateRoadmap(x)).includes("EVIDENCE"));
 });
 test("a completed phase with a missing required gate is rejected",() => {
-  const x=clone();
+  const x=unfinished();
   const m=x.milestones[0]; m.status="complete";
   m.completion_evidence={
     evidence_file:"evidence/roadmap/M0.json",tested_commit:"a".repeat(40),
