@@ -6,7 +6,7 @@ import {
   discoverUnrealProject,
   discoverBabylonProject,
   detectProjectEngines,
-} from "../src/domain/discovery/project-probes.js";
+} from "../src/adapters/discovery/project-probes.js";
 
 /**
  * Real project discovery from actual files/metadata (contract 04 §1 — M1.3 TDD RED).

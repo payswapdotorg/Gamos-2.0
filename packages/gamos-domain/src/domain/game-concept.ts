@@ -5,21 +5,11 @@
 
 import { canonicalJson, canonicalSha256, assertJsonSafe } from "../adapters/canonical.js";
 
-/** Engine families Gamos knows by name (M1.3 discovers real installations). */
-export type EngineFamily = "unity" | "blender" | "babylon" | "godot" | "unreal" | "core";
+import { isEngineFamily, ENGINE_FAMILY_LIST as ENGINE_FAMILIES } from "../engine-family.js";
+import type { EngineFamily } from "../engine-family.js";
 
-const ENGINE_FAMILIES: readonly EngineFamily[] = Object.freeze([
-  "unity",
-  "blender",
-  "babylon",
-  "godot",
-  "unreal",
-  "core",
-]);
-
-function isEngineFamily(value: unknown): value is EngineFamily {
-  return typeof value === "string" && (ENGINE_FAMILIES as readonly string[]).includes(value);
-}
+export type { EngineFamily };
+export { isEngineFamily };
 
 /** A user-stated engine/platform preference, which may be a soft preference. */
 export interface EngineFamilyPreference {
