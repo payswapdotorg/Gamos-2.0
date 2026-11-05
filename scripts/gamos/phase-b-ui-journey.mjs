@@ -522,44 +522,51 @@ async function stageS1() {
   //   step 1 occupation cards ("Software / Data / AI", …) — selection advances
   //   step 2 UI mode ("Coding mode" / "Office mode") + Next
   //   later steps: Next/Continue/Get started. Never click Back/Skip/Retry.
-  const STEP_JS = `(async () => {
-    const page0 = document.querySelector('[data-testid="onboarding-page"]');
-    if (!page0) return { done: true };
-    const btns = Array.from(document.querySelectorAll('button'))
-      .filter(b => b.offsetParent !== null && !b.disabled && (b.innerText || '').trim().length > 0);
-    const pick = (re) => btns.find(b => re.test((b.innerText || '').trim()));
-    const occupation = pick(/software\\s*\\/\\s*data\\s*\\/\\s*ai/i);
-    const codingMode = pick(/^coding mode/i);
-    const advance = pick(/^(next|continue|get started|下一步|继续|开始使用)$/i);
-    const el = occupation ?? codingMode ?? advance;
-    if (!el) return { done: false, have: btns.map(b => (b.innerText || '').trim().slice(0, 30)).slice(0, 10) };
-    el.scrollIntoView({ block: 'center' });
-    await new Promise(r => setTimeout(r, 80));
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-    return { done: false, clicked: (el.innerText || '').trim().split('\\n')[0].slice(0, 40) };
-  })()`;
   let lastClicked = null;
   let repeated = 0;
+  const selectedOnce = { occupation: false, codingMode: false };
   for (let step = 1; step <= 14; step++) {
-    const r = await evalJs(STEP_JS, { awaitPromise: true }).catch((e) => ({ done: false, error: e.message }));
+    // Selection memory: each selection card (occupation, Coding mode) is clicked at most
+    // ONCE; afterwards the stepper prefers the advance buttons (Next/Continue/Get
+    // started). This mirrors the real wizard: select → Next → select → Next → …
+    const SEL_STATE = JSON.stringify(selectedOnce);
+    const r = await evalJs(`(async () => {
+      const selectedOnce = ${SEL_STATE};
+      const page0 = document.querySelector('[data-testid="onboarding-page"]');
+      if (!page0) return { done: true };
+      const btns = Array.from(document.querySelectorAll('button'))
+        .filter(b => b.offsetParent !== null && !b.disabled && (b.innerText || '').trim().length > 0);
+      const pick = (re) => btns.find(b => re.test((b.innerText || '').trim()));
+      const occupation = !selectedOnce.occupation ? pick(/software\\s*\\/\\s*data\\s*\\/\\s*ai/i) : null;
+      const codingMode = !selectedOnce.codingMode ? pick(/^coding mode/i) : null;
+      const advance = pick(/^(next|continue|get started|下一步|继续|开始使用)$/i);
+      const el = occupation ?? codingMode ?? advance;
+      if (!el) return { done: false, have: btns.map(b => (b.innerText || '').trim().slice(0, 30)).slice(0, 10) };
+      el.scrollIntoView({ block: 'center' });
+      await new Promise(r => setTimeout(r, 80));
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
+      return { done: false, clicked: (el.innerText || '').trim().split('\\n')[0].slice(0, 40), picked: el === occupation ? 'occupation' : el === codingMode ? 'codingMode' : 'advance' };
+    })()`, { awaitPromise: true }).catch((e) => ({ done: false, error: e.message }));
     if (r?.done) break;
+    if (r?.picked === "occupation") selectedOnce.occupation = true;
+    if (r?.picked === "codingMode") selectedOnce.codingMode = true;
     if (r?.clicked && r.clicked === lastClicked) {
       repeated++;
     } else {
       repeated = 0;
       lastClicked = r?.clicked ?? null;
     }
-    log(`onboarding step ${step}: clicked="${r?.clicked ?? "(none)"}"${r?.have ? ` options=${JSON.stringify(r.have).slice(0, 160)}` : ""}${repeated >= 2 ? " (repeated — escalating)" : ""}`);
+    log(`onboarding step ${step}: clicked="${r?.clicked ?? "(none)"}"${r?.have ? ` options=${JSON.stringify(r.have).slice(0, 160)}` : ""}${r?.error ? ` error=${r.error.slice(0, 120)}` : ""}${repeated >= 2 ? " (repeated — escalating)" : ""}`);
     await new Promise((r2) => setTimeout(r2, 1200));
     await screenshot(`S1-onboarding-step-${step}`);
     if (!(await hasTid("onboarding-page"))) break;
     if (repeated >= 2) {
-      // Same target clicked 3× without advancing: try the remaining priority buttons explicitly.
+      // Advance buttons exhausted: try Skip as the last resort (preferences are optional).
       const alt = await evalJs(`(async () => {
         const btns = Array.from(document.querySelectorAll('button'))
           .filter(b => b.offsetParent !== null && !b.disabled && (b.innerText || '').trim().length > 0);
         const pick = (re) => btns.find(b => re.test((b.innerText || '').trim()));
-        const el = pick(/^coding mode/i) ?? pick(/^(next|continue|get started|下一步|继续|开始使用)$/i) ?? pick(/^(skip|跳过)$/i);
+        const el = pick(/^(skip|跳过)$/i);
         if (!el) return null;
         el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
         return (el.innerText || '').trim().slice(0, 30);
