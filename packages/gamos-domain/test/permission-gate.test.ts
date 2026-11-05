@@ -108,7 +108,7 @@ describe("Dispatch permission gate â€” existing-permission mapping (M1.6)", () =
     });
     expect(decision.allowed).toBe(false);
     expect(decision.code).toBe("display-server-required");
-    expect(decision.reason).toContain("display"));
+    expect(decision.reason).toContain("display");
   });
 
   it("NEGATIVE: a native engine mutation never bypasses the permission-gated path (contract 06 rule 3)", () => {
@@ -133,7 +133,7 @@ describe("Authority boundary: repository governance vs publishing (contract 06 Â
     expect(decision.authorized).toBe(false);
     expect(decision.authority).toBe("none");
     expect(decision.reason).toContain("repository");
-    expect(decision.reason).toContain("never");
+    expect(decision.reason.toLowerCase()).toContain("never");
   });
   it("release publishing resolves against the USER's publishing scopes only", () => {
     const decision = resolvePublishingAuthorization({

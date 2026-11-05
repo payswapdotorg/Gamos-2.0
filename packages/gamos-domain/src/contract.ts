@@ -153,3 +153,35 @@ export {
 // 生成的是既存基础设施要编译/执行/记账的脚本 artifact —— 本包不调度、不记账、不执行。
 export type { GamePlanWorkflowScript } from "./domain/plan-workflow.js";
 export { buildGamePlanWorkflowScript } from "./domain/plan-workflow.js";
+
+// 权限映射与权力边界（M1.6，directive §13 / contract 06 rev 2）——评估既存 ZCode
+// 权限状态；无第二个权限 broker；仓库治理授权与发布授权严格分离。
+export type {
+  PermissionKind,
+  SessionPermissionState,
+  DispatchOperation,
+  DispatchPermissionRequest,
+  PermissionDecision,
+  PublishingAuthorizationInput,
+  PublishingAuthorization,
+  RepositoryModificationAuthorizationInput,
+  RepositoryModificationAuthorization,
+} from "./domain/permission-gate.js";
+export {
+  evaluateDispatchPermission,
+  resolvePublishingAuthorization,
+  resolveRepositoryModificationAuthorization,
+} from "./domain/permission-gate.js";
+
+// 插件信任与 MCP 进程权力（M1.6，directive §13 / contract 09 rev 2）——进程级
+// 权力如实披露、fail closed 校验；MCP 进程禁用 "sandboxed" 措辞。
+export type {
+  PluginSurface,
+  PluginProvenance,
+  PluginMcpServerDeclaration,
+  PluginProcessRegimeDeclaration,
+  PluginProcessDeclaration,
+  PluginProcessTrust,
+  PluginTrustResult,
+} from "./domain/plugin-trust.js";
+export { validatePluginProcessTrust } from "./domain/plugin-trust.js";
