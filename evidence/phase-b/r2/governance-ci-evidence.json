@@ -1,0 +1,58 @@
+{
+ "recorded_at": "2026-11-05T00:10:00Z",
+ "purpose": "CI evidence for the M0 re-review closure round: governance v2 green on the revised contracts (trust anchor rotated via GAMOS-AUTH-0003 rebaseline) \u2014 runs on gamos/development pushes 0812e481 and 28de3cd1.",
+ "runs": [
+  {
+   "run_id": 41937695576,
+   "workflow": "gamos-governance",
+   "head_sha": "0812e481",
+   "conclusion": "success",
+   "url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/41937695576",
+   "jobs": "3/3 success (governance / self-test / upstream architecture gate)",
+   "key_lines": {
+    "trust_anchor": "verified",
+    "controls": "15 hash-verified governance files",
+    "ledger": "3 authorization entries (14 authorized paths)",
+    "self_test": "14 scenarios: 14 ok, 0 failed",
+    "result": "compliant \u2014 zero unauthorized changes to protected surfaces"
+   }
+  },
+  {
+   "run_id": 41937969219,
+   "workflow": "gamos-governance",
+   "head_sha": "28de3cd159392c2cb6ded68fd060ecb049ea837f",
+   "conclusion": "success",
+   "url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/41937969219",
+   "jobs": [
+    {
+     "id": 126951179466,
+     "name": "Governance (baseline & protected surfaces)",
+     "conclusion": "success"
+    },
+    {
+     "id": 126951179915,
+     "name": "Governance self-test (tamper rejection)",
+     "conclusion": "success"
+    },
+    {
+     "id": 126951179776,
+     "name": "Upstream architecture gate",
+     "conclusion": "success"
+    }
+   ],
+   "job_logs": [
+    "logs/governance-job-126951179466.log",
+    "logs/governance-job-126951179915.log",
+    "logs/governance-job-126951179776.log"
+   ],
+   "key_lines": {
+    "trust_anchor": "verified (pin 2be1e62b88e54e9aadc9f56c7d9d3e5d5f9767ee22aa42b1ea557161fdf26152)",
+    "controls": "15 hash-verified governance files (7 contracts at revision 1)",
+    "ledger": "3 authorization entries (14 authorized paths) \u2014 GAMOS-AUTH-0003 present",
+    "self_test": "14 scenarios: 14 ok, 0 failed",
+    "result": "compliant \u2014 zero unauthorized changes to protected surfaces"
+   }
+  }
+ ],
+ "notes": "Phase-0 contract revision 1 is therefore verified tamper-resistant in CI: the revised contracts are hash-bound in baseline.controls, the workflow trust anchor pins the rotated baseline, the authorization ledger carries the complete GAMOS-AUTH-0003 entry, and the tamper-rejection suite still passes 14/14 after the rotation."
+}
