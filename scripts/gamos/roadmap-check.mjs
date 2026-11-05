@@ -116,14 +116,16 @@ export function validateRoadmap(roadmap, options = {}) {
   const completeIds = new Set(milestones.filter(m => m.status === "complete").map(m => m.id));
   for (const m of milestones) {
     const missingDependencies = (m.depends_on || []).filter(dep => !completeIds.has(dep));
-    if (m.status === "active" && missingDependencies.length) {
-      fail("DEPENDENCY",m.id + " is active before dependencies complete: " + missingDependencies.join(", "));
+    if ((m.status === "active" || m.status === "complete") && missingDependencies.length) {
+      fail("DEPENDENCY",m.id + " cannot be " + m.status + " before dependencies complete: " + missingDependencies.join(", "));
     }
     if (m.status === "complete") {
       const ev = m.completion_evidence;
       if (!ev || !ev.evidence_file || !HEX_SHA.test(ev.tested_commit || "") ||
+          ev.workflow_run_head_sha !== ev.tested_commit || ev.workflow_run_conclusion !== "success" ||
           !Number.isInteger(ev.workflow_run_id) || ev.workflow_run_id <= 0 ||
           !String(ev.workflow_run_url || "").startsWith("https://github.com/payswapdotorg/Gamos-2.0/actions/runs/") ||
+          !String(ev.workflow_run_url || "").endsWith("/" + ev.workflow_run_id) ||
           !Number.isFinite(Date.parse(ev.completed_at || ""))) {
         fail("EVIDENCE",m.id + " cannot be complete without evidence_file, tested_commit, successful workflow run id/url and completed_at");
         continue;
@@ -144,7 +146,8 @@ export function validateRoadmap(roadmap, options = {}) {
               fail("EVIDENCE",m.id + ": evidence file identity/status/tested_commit does not match ROADMAP.json");
             }
             if (record.workflow_run_id !== ev.workflow_run_id || record.workflow_run_url !== ev.workflow_run_url ||
-                record.completed_at !== ev.completed_at) {
+                record.workflow_run_head_sha !== ev.workflow_run_head_sha ||
+                record.workflow_run_conclusion !== ev.workflow_run_conclusion || record.completed_at !== ev.completed_at) {
               fail("EVIDENCE",m.id + ": workflow run/timestamp metadata differs between evidence file and ROADMAP.json");
             }
             const results = Array.isArray(record.gate_results) ? record.gate_results : [];
