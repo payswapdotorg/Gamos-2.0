@@ -20,8 +20,7 @@
 The canonical phase states and dependencies are maintained only in
 docs/gamos/ROADMAP.json and validated by scripts/gamos/roadmap-check.mjs.
 This evidence ledger intentionally does not maintain a duplicate milestone
-completion table. At the time this record was established, M0 was active and
-M1-M7 planned; consult ROADMAP.json for the live state.
+completion table. Consult ROADMAP.json for the live phase state and readiness.
 
 ## Architect-review phase tracker
 
