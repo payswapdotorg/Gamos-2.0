@@ -850,17 +850,77 @@ async function stageS2() {
   });
 }
 
+async function ensureDraftBoundToDefaultWorkspace() {
+  // Fresh apps open in a "Select project" state: the composer is unbound and the
+  // model/mode controls do not render. Mirror the upstream E2E flow
+  // (startDraftFromProject): hover the default project row, click its create-task
+  // action, wait for the main pane to become a bound draft.
+  const already = await evalJs(`(() => {
+    const trigger = document.querySelector('[data-testid="composer-workspace-trigger"]');
+    const pane = document.querySelector('[data-testid="v4-session-pane-workspace-main"]');
+    const text = (trigger?.innerText ?? '').trim();
+    return { bound: !/select project/i.test(text), triggerText: text.slice(0, 60), sessionId: pane?.dataset?.sessionId ?? null };
+  })()`).catch(() => null);
+  if (already?.bound) return already;
+  log(`draft binding: composer unbound ("${already?.triggerText ?? "?"}") — binding via the default project row`);
+  const section = await waitFor(async () => {
+    const r = await rectOf(`document.querySelector('[data-project-id][data-project-name="default"]')`).catch(() => null);
+    return r && r.w > 0 ? r : false;
+  }, { what: "default project section", timeout: 45000 });
+  // Real hover over the project row (reveals the hover action area).
+  await page.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: Math.round(section.x + section.w / 2), y: Math.round(section.y + Math.min(section.h / 2, 24)) });
+  await new Promise((r) => setTimeout(r, 500));
+  const createBtn = await waitFor(async () => {
+    const r = await rectOf(`document.querySelector('[data-project-id][data-project-name="default"] [data-testid="virtual-project-create-task"]')`).catch(() => null);
+    return r && r.w > 0 ? r : false;
+  }, { what: "virtual-project-create-task in the default project", timeout: 20000 });
+  await cdpClickRect(createBtn);
+  await waitFor(async () => evalJs(`(() => {
+    const pane = document.querySelector('[data-testid="v4-session-pane-workspace-main"]');
+    const trigger = document.querySelector('[data-testid="composer-workspace-trigger"]');
+    const input = document.querySelector('[data-testid="v4-composer-input"]');
+    const text = (trigger?.innerText ?? '').trim();
+    return pane?.dataset?.sessionId === 'draft' && Boolean(input) && !/select project/i.test(text);
+  })()`).catch(() => false), { what: "main pane draft bound to the default workspace", timeout: 45000 });
+  return { bound: true };
+}
+
 async function selectModelInComposer() {
+  // Bind the composer to the default workspace first (fresh apps open in a
+  // "Select project" state where the model/mode controls do not render).
+  const binding = await ensureDraftBoundToDefaultWorkspace();
+  await waitForTid("chat-model-select-trigger", { timeout: 45000 });
+  const before = await tidText("chat-model-select-trigger");
   // Open the composer model picker (chat-model-select-trigger) and select MODEL_ID
   // from the personal provider's group (registry-provider:<id>), like a real user.
-  await waitForTid("chat-model-select-trigger", { timeout: 30000 });
-  const before = await tidText("chat-model-select-trigger");
-  await clickTid("chat-model-select-trigger", { timeout: 30000 });
+  // With an empty/absent catalog the trigger is the "Manage models" variant that
+  // opens provider settings instead — detect that, go back, and retry.
+  let menuOpened = false;
+  for (let attempt = 1; attempt <= 4 && !menuOpened; attempt++) {
+    await clickTid("chat-model-select-trigger", { timeout: 20000 });
+    await new Promise((r) => setTimeout(r, 600));
+    if (await hasTid("settings-page")) {
+      log(`model picker attempt ${attempt}: trigger opened provider settings (catalog not ready) — going back and retrying`);
+      if (await hasTid("settings-back-button")) await clickTid("settings-back-button", { timeout: 15000 });
+      await waitForTid("v4-composer-input", { timeout: 30000 });
+      await new Promise((r) => setTimeout(r, 3000));
+      continue;
+    }
+    menuOpened = await waitFor(
+      async () => Boolean(await evalJs(`Boolean(document.querySelector('[data-testid^="chat-model-select-item-"]'))`)),
+      { what: "model menu items", timeout: 20000 },
+    ).then(() => true).catch(() => false);
+    if (!menuOpened) {
+      await pressKey("Escape").catch(() => {});
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+  if (!menuOpened) throw new Error("model menu did not open with items after provider configuration");
   // The menu lists the provider's live model catalog; wait for the provider group
   // (or any model item) to appear.
   const groupTid = `chat-model-select-group-registry-provider:${journey.openRouterProviderId}`;
   await waitFor(async () => (await hasTid(groupTid)) || (await evalJs(`Boolean(document.querySelector('[data-testid^="chat-model-select-item-"]'))`)), { what: `model menu group ${groupTid} (or any model item)`, timeout: 60000 });
-  // Find the item whose text matches the model (short or full id fragments).
+  // Find the item whose text matches the model (items display the raw model id).
   const modelFragment = MODEL_ID.split("/").pop() ?? MODEL_ID;
   const item = await waitFor(async () => {
     const r = await rectOf(`(() => {
@@ -875,7 +935,7 @@ async function selectModelInComposer() {
   await new Promise((r) => setTimeout(r, 400));
   const after = await tidText("chat-model-select-trigger");
   const modelConfigAttrs = await evalJs(`(() => { const e = document.querySelector('[data-testid="v4-model-config"]'); if (!e) return null; const o = {}; for (const a of e.getAttributeNames()) o[a] = e.getAttribute(a)?.slice(0, 120); return o; })()`);
-  return { before: before.slice(0, 120), after: after.slice(0, 200), clickedItem: item.text, modelConfigAttrs };
+  return { draft_binding: binding, before: before.slice(0, 120), after: after.slice(0, 200), clickedItem: item.text, modelConfigAttrs };
 }
 
 async function submitComposerTask(taskText, screenshotPrefix) {

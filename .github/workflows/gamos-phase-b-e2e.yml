@@ -175,7 +175,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run the upstream container E2E suite (verified specs)
-        run: bash scripts/test-desktop-e2e-container.sh
+        # Retry once on the known pnpm@10.33.2 hoisted-linker ENOENT race inside
+        # the container image build (react-scan/esbuild rename — same workaround as
+        # the desktop-journey install step). Docker layer cache makes the retry cheap.
+        run: bash scripts/test-desktop-e2e-container.sh || (echo "::warning::retrying after known pnpm@10.33.2 hoisted-linker ENOENT race in the container image build" && bash scripts/test-desktop-e2e-container.sh)
 
       - name: Upload container E2E artifacts
         if: always()
@@ -213,7 +216,9 @@ jobs:
       - name: Run the upstream-provider spec against the live provider
         env:
           E2E_PROVIDER_API_KEY: ${{ secrets.PHASEB_OPENROUTER_API_KEY }}
-        run: bash scripts/test-desktop-e2e-container.sh
+        # Retry once on the known pnpm@10.33.2 hoisted-linker ENOENT race inside
+        # the container image build (same workaround as the other container job).
+        run: bash scripts/test-desktop-e2e-container.sh || (echo "::warning::retrying after known pnpm@10.33.2 hoisted-linker ENOENT race in the container image build" && bash scripts/test-desktop-e2e-container.sh)
 
       - name: Scan capture artifacts for accidental key exposure
         if: always()
