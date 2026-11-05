@@ -850,6 +850,34 @@ function readProviderRules() {
   }
 }
 
+function findModelOnDisk(providerId, modelId) {
+  // Personal model rules on disk (rule-data-schema.ts personalModelConfigRules):
+  // config.personalModelConfigRules.providerModelRules / manualProviderModelRules
+  // entries carry { providerId, modelId, config }. Return a truthy descriptor only
+  // when the model id is actually persisted; also verify the raw string content
+  // so an unexpected storage shape is still detected.
+  try {
+    const raw = readFileSync(PROVIDER_CONFIG_FILE, "utf8");
+    if (!raw.includes(modelId)) return false;
+    const doc = JSON.parse(raw);
+    const personal = doc?.config?.personalModelConfigRules;
+    const inProviderRules = (personal?.providerModelRules ?? []).some((r) => r.providerId === providerId && r.modelId === modelId);
+    const inManualRules = (personal?.manualProviderModelRules ?? []).some((r) => r.providerId === providerId && r.modelId === modelId);
+    return {
+      raw_string_present: true,
+      provider_model_rules: inProviderRules,
+      manual_provider_model_rules: inManualRules,
+      location: inProviderRules
+        ? "config.personalModelConfigRules.providerModelRules"
+        : inManualRules
+          ? "config.personalModelConfigRules.manualProviderModelRules"
+          : "other (raw model id string present in provider_config.json)",
+    };
+  } catch {
+    return false;
+  }
+}
+
 async function stageS2() {
   if (!OPENROUTER_KEY) throw new Error("OPENROUTER_API_KEY missing — cannot configure the real model provider");
   // Settings → Model settings (authoritative nav: settings-section-nav-modelProvider —
@@ -933,17 +961,48 @@ async function stageS2() {
   // (role=dialog with a Model ID input + Save, disabled while the catalog
   // max-output query runs) or an inline model input row.
   let addedModelVia = null;
+  // Existing inline model rows BEFORE the click: a genuinely NEW inline row can
+  // only appear at the NEXT index (upstream addUpstreamProviderModel keys the
+  // inline input off testId(TID_MODEL_PROVIDER_MODEL_INPUT,
+  // String(provider.models.length))). A PREFIX match instead hits an EXISTING
+  // model's row and silently edits it rather than adding the new model (run
+  // 42049966765 evidence: the free model never reached provider_config.json and
+  // the composer menu kept listing only the paid template catalog — S3/S4/S6/S9
+  // then cascade-failed). The detection below also POLLS for the dialog (Radix
+  // mount + resolution timing) instead of one-shot probing at a fixed delay.
+  const inlineRowsBefore = await evalJs(`Array.from(document.querySelectorAll('[data-testid^="model-provider-model-input-"]')).map(e => e.dataset.testid)`);
+  const nextInlineIndex = inlineRowsBefore.length;
   await clickTid("model-provider-add-model-button", { timeout: 20000 });
-  await new Promise((r) => setTimeout(r, 900));
-  const dialogModelInput = await rectOf(`(() => {
+  const DIALOG_INPUT_JS = `(() => {
     const dialog = document.querySelector('[role="dialog"]');
     if (!dialog) return null;
     const inputs = Array.from(dialog.querySelectorAll('input'));
     const byLabel = inputs.find(i => /^(模型\\s*id|model\\s*id)$/i.test(((i.closest('label')?.textContent) ?? (i.parentElement?.querySelector('label')?.textContent) ?? i.getAttribute('placeholder') ?? '')).trim()));
     return byLabel ?? inputs.find(i => i.getAttribute('inputmode') !== 'numeric' && !i.readOnly && i.type !== 'checkbox' && i.type !== 'radio') ?? null;
-  })()`).catch(() => null);
-  if (dialogModelInput && dialogModelInput.w > 0) {
-    await cdpClickRect(dialogModelInput);
+  })()`;
+  const NEW_INLINE_JS = `document.querySelector('[data-testid="model-provider-model-input-${nextInlineIndex}"]')`;
+  let which = null;
+  for (let addAttempt = 1; addAttempt <= 2 && !which; addAttempt++) {
+    if (addAttempt > 1) {
+      // Guard against a swallowed first click: dismiss any stray overlay first
+      // (Escape closes a Radix dialog/modal), then click Add model once more.
+      await pressKey("Escape").catch(() => {});
+      await new Promise((r) => setTimeout(r, 800));
+      log("add-model surface not found on the first attempt — clicking model-provider-add-model-button again");
+      await clickTid("model-provider-add-model-button", { timeout: 20000 });
+    }
+    which = await waitFor(async () => {
+      const dialogInput = await rectOf(DIALOG_INPUT_JS).catch(() => null);
+      if (dialogInput && dialogInput.w > 0) return { kind: "dialog", input: dialogInput };
+      const inline = await rectOf(NEW_INLINE_JS).catch(() => null);
+      if (inline && inline.w > 0) return { kind: "inline", input: inline };
+      return false;
+    }, { what: "add-model surface (metadata dialog or a genuinely NEW inline row at the next index)", timeout: 20000 }).catch(() => null);
+  }
+  if (!which) throw new Error("neither the model metadata dialog nor a genuinely new inline model row appeared after model-provider-add-model-button (2 attempts)");
+  if (which.kind === "dialog") {
+    await cdpClickRect(which.input);
+    await new Promise((r) => setTimeout(r, 200));
     await typeIntoFocused(MODEL_ID);
     await new Promise((r) => setTimeout(r, 600));
     const saveBtn = await waitFor(async () => {
@@ -962,17 +1021,23 @@ async function stageS2() {
     }, { what: "model metadata dialog closed after Save", timeout: 30000 });
     addedModelVia = "model metadata dialog (Model ID + Save)";
   } else {
-    const inline = await waitFor(async () => {
-      const r = await rectOf(`document.querySelector('[data-testid^="model-provider-model-input-"]')`).catch(() => null);
-      return r && r.w > 0 ? r : false;
-    }, { what: "inline model input row", timeout: 10000 }).catch(() => null);
-    if (!inline) throw new Error("neither the model metadata dialog nor an inline model input appeared after model-provider-add-model-button");
-    await cdpClickRect(inline);
+    await cdpClickRect(which.input);
+    await new Promise((r) => setTimeout(r, 200));
     await typeIntoFocused(MODEL_ID);
-    await pressKey("Enter");
+    // Commit via blur (Tab) — the upstream setInputValueByTestIdDom semantics
+    // (input + change + blur). Enter is NOT pressed on the inline row: it is not
+    // the documented inline commit path and can mis-trigger the metadata dialog.
+    await pressKey("Tab");
     await new Promise((r) => setTimeout(r, 1500));
-    addedModelVia = "inline model input row (+ Enter)";
+    addedModelVia = `inline model input row ${nextInlineIndex} (+ blur commit)`;
   }
+  // REAL verification: the added model must reach the provider config ON DISK.
+  // A closed dialog / blurred row is UI state, not persistence — poll the file's
+  // personal model rules for the model id and FAIL S2 if it never lands (this is
+  // exactly what the previous revision missed: S2 recorded pass while the model
+  // had never been persisted, cascading into S3/S4/S6/S9 failures).
+  const modelOnDisk = await waitFor(() => findModelOnDisk(providerId, MODEL_ID), { what: `model ${MODEL_ID} persisted to provider_config.json`, timeout: 60000 });
+  journey.freeModelOnDisk = modelOnDisk;
   await screenshot("S2-model-added");
   // Back to the workspace.
   await clickTid("settings-back-button", { timeout: 20000 });
@@ -985,7 +1050,7 @@ async function stageS2() {
     base_url_verified: saved.baseURL,
     base_url_source: saved.baseURLSource,
     api_key_persisted: true,
-    free_tier_model_added: { model: MODEL_ID, via: addedModelVia, reason: "template catalog is paid-tier; the key's ~10 credits cannot afford paid models (402 evidence) — the free-tier model is required for real tasks" },
+    free_tier_model_added: { model: MODEL_ID, via: addedModelVia, reason: "template catalog is paid-tier; the key's ~10 credits cannot afford paid models (402 evidence) — the free-tier model is required for real tasks", on_disk_verified: journey.freeModelOnDisk },
     note: "API key entered via CDP Input.insertText into the real model-provider-api-key-input; persistence verified on disk (key never logged)",
   });
 }
@@ -1086,9 +1151,24 @@ async function selectModelInComposer() {
     const r = await rectOf(`(() => {
       const items = Array.from(document.querySelectorAll('[data-testid^="chat-model-select-item-"]'));
       const visible = items.filter(i => (i.innerText || '').trim());
-      return visible.find(i => (i.innerText || '').toLowerCase().includes(${JSON.stringify(modelFragment.toLowerCase())}))
-        ?? visible.find(i => (i.innerText || '').includes(':free'))
-        ?? null;
+      // Match the model id in the DISPLAYED name OR in the item testid: personal
+      // provider items carry the URL-encoded model id inside their testid
+      // (chat-model-select-item-custom:<provider>:<encoded-id>) and the raw id is
+      // the display name — matching both keeps the finder robust to presentation
+      // differences (run 42049966765: items existed but only by testid shape).
+      const modelId = ${JSON.stringify(MODEL_ID)};
+      const encoded = encodeURIComponent(modelId);
+      const matches = (i) => {
+        const lowerText = (i.innerText || '').toLowerCase();
+        const tid = i.dataset.testid ?? '';
+        let decodedTid = tid;
+        try { decodedTid = decodeURIComponent(tid); } catch {}
+        return lowerText.includes(${JSON.stringify(modelFragment.toLowerCase())})
+          || (i.innerText || '').includes(':free')
+          || decodedTid.includes(modelId)
+          || tid.includes(encoded);
+      };
+      return visible.find(matches) ?? null;
     })()`).catch(() => null);
     return r && r.w > 0 ? r : false;
   }, { what: `model item containing "${modelFragment}" (or a :free catalog model)`, timeout: 60000 });
@@ -1375,11 +1455,18 @@ async function stageS7() {
   })();
   if (!opened) throw new Error("no browser entry found to open the embedded browser pane (launcher row, side-pane-toggle, ⌥⌘B shortcut, add-trigger fallbacks all exhausted)");
   await waitForTid("browser-address-input", { timeout: 30000 });
-  await waitForTid("browser-webview", { timeout: 30000, visible: false });
   await screenshot("S7-browser-open");
-  // Navigate to a known public test page through the real address bar.
+  // Navigate FIRST — then wait for the webview. The <webview> guest only mounts
+  // after a navigation is confirmed (BrowserViewportSurface: "只在确认导航后创建
+  // human guest" — the empty state renders BrowserEmptyState INSTEAD of the
+  // webview), so waiting for browser-webview before navigating can never succeed
+  // on a fresh pane (run 42049966765 S7 evidence: pane open, address input
+  // present, no browser-webview element in the DOM dump).
   await clickAndType("browser-address-input", "https://example.com", { timeout: 20000, clearFirst: true });
   await pressKey("Enter");
+  // Navigation started → the webview element must now exist (presence-only check;
+  // the guest CDP target + content verification below is the real proof).
+  await waitForTid("browser-webview", { timeout: 45000, visible: false });
   // Verify the webview guest actually loaded the page: the guest is a separate
   // WebContents and appears as its own CDP page target. Assert BOTH the guest's
   // actual URL and the page content read over CDP from inside the guest.
