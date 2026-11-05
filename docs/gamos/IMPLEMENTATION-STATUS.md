@@ -11,7 +11,7 @@
 > Honest, evidence-based status. No green checkmark implies completion when only
 > a contract or UI exists. Updated at every integration point.
 >
-> **Last updated:** 2026-11-05 (M0 re-review closure round: Phase-0 contracts revised per corrections A–E via GAMOS-AUTH-0003 + ADR-0005; Phase B round 2 — sandbox floor evidence banked, full UI journey + inherited desktop E2E routed to the properly resourced CI runner via .github/workflows/gamos-phase-b-e2e.yml)
+> **Last updated:** 2026-11-05 (M0 closure work: frozen contracts revised through ADR-0005/0006; production-renderer UI journey and inherited desktop E2E routed to CI; canonical roadmap and TDD phase gate added on the roadmap integration branch)
 
 ---
 
@@ -28,7 +28,7 @@ M1-M7 planned; consult ROADMAP.json for the live state.
 | Phase | Scope | Status |
 |---|---|---|
 | A — Repair governance | Tamper-resistant controls, complete authorization schema, failure-case tests, real Actions run | **Complete — green CI runs: 41894115266 @ `5ef39f2c`, 41895183232 @ `391e8438` (attempt 3), 41909484947 @ `549fd991`, 41910262508 @ `468e731f` (rotated anchor + 15 controls + 14/14 self-tests); rulesets active; main verified pristine vs upstream at close-out; evidence in `evidence/phase-a/`** |
-| B — M0 application verification | Frozen-lockfile install, build + launch original ZCode, golden paths, screenshots, regression tests | **Round 1 executed with real evidence (17 UI screenshots + transcripts in evidence/phase-b/). Round 2 (re-review closure): sandbox floor re-verified fresh (install 54.2s exit 0; server/CLI/desktop-process-layer builds all exit 0 with logs in evidence/phase-b/r2/build-logs/; Electron desktop launched under Xvfb from a staged versioned app dir with window + host + CDP live; real-model CLI tasks ×2 exit 0 with exact artifacts; architecture:check OK 0 violations; governance self-test 14/14). Full original-UI journey (New Task submission w/ real model, terminal, review/diff approve+reject, embedded browser, marketplace, session recovery) + production renderer build + inherited desktop E2E suite run on the CI runner via gamos-phase-b-e2e.yml (ADR-0005 sandbox-floor/CI-ceiling model) — run evidence recorded below.** |
+| B — M0 application verification | Frozen-lockfile install, build + launch original ZCode, original-app UI journeys and inherited regression tests | **Sandbox-floor build/launch and real-model CLI evidence are recorded in evidence/phase-b/r2/. CI is configured to run the full production-renderer S0–S9 journey, the four verified inherited container specs and the separate live upstream-provider spec. The latest UI-journey revisions include draft/workspace binding and model-picker fixes; a successful all-jobs CI run and complete M0 evidence record have not yet been committed. This work therefore remains open under the canonical M0 gates in ROADMAP.json.** |
 | C — Freeze Phase-0 architecture contracts | 9 contract areas, using existing ZCode infrastructure only | **Complete — all 9 contracts authored in docs/gamos/contracts/ and FROZEN as hash-protected control files (baseline.controls now 15 files, trust anchor rotated via GAMOS-AUTH-0002); verifier refined to ledger supersession semantics; self-test extended to 14 scenarios (14/14 green locally)** |
 | D — Prepare workers A/B/C | Briefs, evidence requirements, DoD | **Complete — worker A (Unity/Blender/Babylon engine plugins), B (gaming domain/capability registry/intent+workflow), C (GameOS/package+artifact/PlayLiquid alignment) briefs + TL integration plan in docs/gamos/workers/; every brief mandates real evidence, explicit unavailable states, and no mocks; B/C briefs updated to reference contract revision 1 (GAMOS-AUTH-0003)** |
 | C-rev — Phase-0 contract revision 1 (re-review corrections A–E) | GameIR↔PlayLiquid alignment; registry fail-closed; Dynamic Workflow mapping; plugin sandbox vs MCP processes; engine-specific version parsing | **Complete — 7 contracts revised via GAMOS-AUTH-0003 + governance-rebaseline (trust anchor rotated to 2be1e62b…); ADR-0005 records the decision + the Phase B evidence model; governance NOT weakened (self-test 14/14 after rotation)** |
@@ -99,10 +99,11 @@ Authorization `GAMOS-AUTH-0001` (complete v2 record) binds the exact content of 
 
 ## Regression results
 
-Baseline untouched: zero modifications to upstream-tracked files (all Gamos
-sessions to date only added new files; `git diff a9fe401e..HEAD --diff-filter=M`
-= empty). Upstream regression suites not yet executed (requires install/build —
-Phase B work package).
+Baseline untouched at the last verified comparison: zero modifications to
+upstream-tracked files. Current branch changes are additive Gamos docs, scripts,
+CI and evidence. The required current-commit M0 UI and inherited regression
+results are pending the full CI workflow; use ROADMAP.json gate state rather
+than this paragraph to determine phase completion.
 
 ## Remaining risks
 
@@ -114,14 +115,17 @@ Phase B work package).
   rulesets + review, not by in-repo hashing (ADR-0004 threat model).
 - Desktop build/E2E inside the dev sandbox has not been exercised yet (Phase B).
 
-## Next work package
+## Current evidence focus
 
-1. **Phase B closure on CI:** first full run of `.github/workflows/gamos-phase-b-e2e.yml`
-   (desktop-journey S0–S9 with the real model + inherited-desktop-e2e container suite);
-   record run URL, commit SHA, job results and sanitized logs here and in
-   `evidence/phase-b/` (per MILESTONES-AND-ACCEPTANCE.md).
-2. **M0 acceptance review** against `docs/gamos/MILESTONES-AND-ACCEPTANCE.md` once the
-   journey evidence is committed.
-3. **M1/M2 remain gated** until M0 acceptance; worker A/B/C briefs stay prepared
-   (updated to contract revision 1) and must not begin broad engine implementation
-   before acceptance.
+M0 remains active in docs/gamos/ROADMAP.json. The immediate task is to obtain and
+inspect a successful current-commit run of
+.github/workflows/gamos-phase-b-e2e.yml. The run must show every mandatory S0-S9
+stage passing, all four selected inherited desktop E2E specs passing, and the
+separate upstream-provider-live spec passing. Review artifacts and sanitized
+logs; verify API-key exposure scans; record the run URL, workflow run ID, tested
+commit and SHA-256 artifact hashes.
+
+Only after all six M0 gates pass should the TL create evidence/roadmap/M0.json,
+set M0 to complete in ROADMAP.json, run the roadmap self-tests/validator and
+allow required CI to validate the completion commit. The TL then activates M1
+without asking for routine user phase approval.
