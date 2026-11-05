@@ -3,7 +3,7 @@ import {
   createGameConcept,
   serializeGameConcept,
   hashGameConcept,
-} from "../src/game-concept.js";
+} from "../src/domain/game-concept.js";
 import { validConceptInput } from "./fixtures.js";
 
 const _unused = {

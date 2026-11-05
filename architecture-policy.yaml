@@ -1183,7 +1183,10 @@ modules:
     layers:
       adapters: .
     owner: desktop
-  # gamos-domain：由 architecture:adopt 登记
+  # gamos-domain：由 architecture:adopt 登记（M1.1/M1.2 纯游戏域包）。
+  # 分层：domain=纯类型+校验+确定性解析（零 node: 导入）；vendor=PlayLiquid
+  # GameIR 的 byte-exact pin（上游 evaluate.ts 使用 node:crypto，不可本地改动）；
+  # adapters=基于 node:crypto 的 canonical 序列化/hashing 端口实现。
   - id: gamos-domain
     roots:
       - packages/gamos-domain/src
@@ -1193,7 +1196,10 @@ modules:
       - packages/gamos-domain/src/index.ts
       - packages/gamos-domain/src/contract.ts
     layers:
-      domain: .
+      domain: domain
+      vendor: vendor
+      adapters: adapters
+    layerOrder: [vendor, adapters, domain]
     owner: gamos-tl
 
 global:
@@ -1210,6 +1216,10 @@ global:
   acceptedUpstreamSnapshot: scripts/architecture/upstream-snapshot.json
 
 exceptions:
+  - id: gamos-vendored-gameir-upstream-lint-comment
+    rule: disable-count
+    paths: [packages/gamos-domain/src/vendor/playliquid-gameos/src/game-contracts/git.ts]
+    reason: 上游 PlayLiquid GameIR pin 的 byte-exact 副本（PROVENANCE.md：本地改动=治理缺陷）；git.ts:53 的 eslint-disable 注释来自上游，为保持 vendor 完整性不改写，仅豁免本规则的计数。
   - id: session-features-attribution-header-edit
     rule: unmanaged-new-file
     paths: [ apps/zcode-cli/packages/adapters/src/model/runner-attribution.ts ]

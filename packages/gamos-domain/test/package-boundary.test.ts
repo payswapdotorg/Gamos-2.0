@@ -15,10 +15,6 @@ import { validGameIR, validConceptInput } from "./fixtures.js";
  * importing the package must not load anything beyond itself.
  */
 
-import { validConceptInput } from "./fixtures.js";
-
-import { validGameIR } from "./fixtures.js";
-
 describe("Package boundary — the domain package stays pure (M1.1)", () => {
   it("exports the documented API surface and nothing dynamic", async () => {
     const mod = await import("../src/index.js");

@@ -3,14 +3,14 @@ import {
   parseGamePlan,
   serializeGamePlan,
   hashGamePlan,
-} from "../src/game-plan.js";
+} from "../src/domain/game-plan.js";
 import {
   parseAcceptanceRecord,
   serializeAcceptanceRecord,
   hashAcceptanceRecord,
   evaluateAcceptanceStatus,
   type AcceptanceRecord,
-} from "../src/acceptance-record.js";
+} from "../src/domain/acceptance-record.js";
 import { validPlanInput, validAcceptanceInput } from "./fixtures.js";
 
 describe("GamePlan serialization and validation (M1.1 TDD)", () => {

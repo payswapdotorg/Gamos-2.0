@@ -5,7 +5,7 @@ import {
   resolveCapability,
   listCapabilities,
   type CapabilityRecord,
-} from "../src/capability-registry.js";
+} from "../src/domain/capability-registry.js";
 import { completeCapabilityRecord as completeRecord } from "./fixtures.js";
 
 /** Strips one execution-safety field for negative registration tests. */

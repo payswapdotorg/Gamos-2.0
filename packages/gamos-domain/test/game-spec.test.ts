@@ -7,7 +7,7 @@ import {
   serializeGameSpec,
   hashGameSpec,
   GAME_SPEC_FIELD_SET,
-} from "../src/game-spec.js";
+} from "../src/domain/game-spec.js";
 import { validGameIR, validIdentity } from "./fixtures.js";
 
 describe("GameSpec exact GameIR compatibility (M1.1 TDD / M1-G1)", () => {

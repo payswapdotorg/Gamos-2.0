@@ -4,7 +4,7 @@ import {
   serializeGameArtifact,
   hashGameArtifact,
   isVerifiedArtifact,
-} from "../src/game-artifact.js";
+} from "../src/domain/game-artifact.js";
 import { expectedArtifact, verifiedArtifact } from "./fixtures.js";
 
 describe("GameArtifact identity and evidence references (M1.1 TDD)", () => {

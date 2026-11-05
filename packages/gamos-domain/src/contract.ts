@@ -14,14 +14,14 @@ export type {
   GameConceptReference,
   ProjectContextRef,
   GameConcept,
-} from "./game-concept.js";
+} from "./domain/game-concept.js";
 export {
   createGameConcept,
   serializeGameConcept,
   hashGameConcept,
-} from "./game-concept.js";
+} from "./domain/game-concept.js";
 
-export type { GameSpec } from "./game-spec.js";
+export type { GameSpec } from "./domain/game-spec.js";
 export {
   GAME_SPEC_FIELD_SET,
   GAME_IR_VERSION,
@@ -31,7 +31,7 @@ export {
   hashGameSpec,
   validateGameIR,
   isGameIRDocument,
-} from "./game-spec.js";
+} from "./domain/game-spec.js";
 
 export type {
   GameSpecRef,
@@ -42,35 +42,35 @@ export type {
   AcceptanceRecordRef,
   PlanArtifactExpectation,
   GamePlan,
-} from "./game-plan.js";
+} from "./domain/game-plan.js";
 export {
   parseGamePlan,
   serializeGamePlan,
   hashGamePlan,
-} from "./game-plan.js";
+} from "./domain/game-plan.js";
 
 export type {
   AcceptanceCriterion,
   AcceptanceCriterionResult,
   AcceptanceRecord,
-} from "./acceptance-record.js";
+} from "./domain/acceptance-record.js";
 export {
   parseAcceptanceRecord,
   serializeAcceptanceRecord,
   hashAcceptanceRecord,
   evaluateAcceptanceStatus,
-} from "./acceptance-record.js";
+} from "./domain/acceptance-record.js";
 
 export type {
   ArtifactExistenceProof,
   GameArtifact,
-} from "./game-artifact.js";
+} from "./domain/game-artifact.js";
 export {
   parseGameArtifact,
   serializeGameArtifact,
   hashGameArtifact,
   isVerifiedArtifact,
-} from "./game-artifact.js";
+} from "./domain/game-artifact.js";
 
 // 能力注册表（M1.2，`gamos/capability@2`）——同样从本契约出口。
 export type {
@@ -78,10 +78,10 @@ export type {
   ProvenanceRef,
   AvailabilitySpec,
   PermissionSpec,
-} from "./capability-registry.js";
+} from "./domain/capability-registry.js";
 export {
   registerCapability,
   getCapability,
   resolveCapability,
   listCapabilities,
-} from "./capability-registry.js";
+} from "./domain/capability-registry.js";
