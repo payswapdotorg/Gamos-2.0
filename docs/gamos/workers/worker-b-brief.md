@@ -9,7 +9,7 @@
 
 Deliver packages/gamos-domain as an additive pure-domain package:
 
-- GameConcept and GameSpec, where GameSpec is exactly the PlayLiquid GameIRDocument
+- Contract 01 revision 2: GameConcept and GameSpec, where GameSpec is exactly the PlayLiquid GameIRDocument
   from payswapdotorg/PlayLiquid-2.0, package path
   packages/playliquid-gameos/src/game-ir/, pinned commit
   196b305e75decfeaa162d3da479dc125cff1521a. No second or extended GameIR.
