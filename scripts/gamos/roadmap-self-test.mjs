@@ -49,7 +49,7 @@ test("a completed phase with a missing required gate is rejected",() => {
   const m=x.milestones[0]; m.status="complete";
   m.completion_evidence={
     evidence_file:"evidence/roadmap/M0.json",tested_commit:"a".repeat(40),
-    workflow_run_head_sha:"b".repeat(40),workflow_run_conclusion:"success",
+    workflow_run_head_sha:"a".repeat(40),workflow_run_conclusion:"success",
     workflow_run_id:12345,workflow_run_url:"https://github.com/payswapdotorg/Gamos-2.0/actions/runs/12345",
     completed_at:"2026-11-05T00:00:00Z",gate_ids:["M0-G1"]
   };
