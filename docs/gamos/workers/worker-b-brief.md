@@ -16,7 +16,7 @@ Deliver packages/gamos-domain as an additive pure-domain package:
   Unknown versions and extra fields fail closed.
 - Acceptance criteria belong to GamePlan or a separate AcceptanceRecord referenced
   by it. Never add an acceptance field to GameSpec/GameIR.
-- Capability data and validation follow contract 02 revision 2, schema
+- Capability data and validation follow contract 02 revision 1, schema
   gamos/capability@2, complete execution-safety metadata and fail-closed selection.
 - Intent vocabulary, project context and GamePlan builder follow contract 05
   revision 2. GamePlan is a Dynamic Workflow script artifact, executed by the
