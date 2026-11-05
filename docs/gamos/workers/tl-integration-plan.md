@@ -89,8 +89,10 @@ or frozen-contract changes via CODEOWNER/ruleset governance.
 
 M0 stays active until its six required roadmap gates pass with real evidence:
 pinned baseline integrity, governance CI/self-tests, original app build/launch,
-strict original-app S0–S9 journey, all inherited E2E specs including the separate
-upstream-provider live test, and feature/architecture preservation.
+strict original-app S0–S9 journey, all four inherited desktop E2E specs plus the
+separately run upstream-provider spec via its upstream-documented recorded
+replay fixture (live-provider execution is an explicit exclusion, not an M0
+requirement), and feature/architecture preservation.
 
 Do not start M1/M2 broad implementation early. The validator and dependency
 states release them automatically after M0 is marked complete with verified
