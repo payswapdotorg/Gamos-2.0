@@ -4,6 +4,7 @@
  * No third-party dependencies: this runs before workspace installation.
  */
 import { readFileSync, existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -163,11 +164,24 @@ export function validateRoadmap(roadmap, options = {}) {
                   !Array.isArray(r.artifact_sha256)) {
                 fail("EVIDENCE",m.id + ": gate " + (r.gate_id || "(missing)") + " lacks command, result, evidence path or artifact_sha256 array");
               }
-              for (const p of r.evidence_paths || []) {
-                const artifactPath = safeRepoPath(repoRoot,p);
-                if (!artifactPath || !existsSync(artifactPath)) fail("EVIDENCE",m.id + ": evidence artifact missing or unsafe path: " + p);
+              const artifactPaths = Array.isArray(r.evidence_paths) ? r.evidence_paths : [];
+              const artifactHashes = Array.isArray(r.artifact_sha256) ? r.artifact_sha256 : [];
+              if (artifactPaths.length === 0 || artifactHashes.length !== artifactPaths.length) {
+                fail("EVIDENCE",m.id + ": gate " + r.gate_id + " must pair every committed evidence path with one SHA-256");
               }
-              for (const hash of r.artifact_sha256 || []) if (!SHA256.test(hash)) fail("EVIDENCE",m.id + ": malformed SHA-256 in " + r.gate_id);
+              for (let i=0;i<artifactPaths.length;i++) {
+                const p = artifactPaths[i];
+                const artifactPath = safeRepoPath(repoRoot,p);
+                const hash = artifactHashes[i];
+                if (!artifactPath || !existsSync(artifactPath)) {
+                  fail("EVIDENCE",m.id + ": evidence artifact missing or unsafe path: " + p);
+                } else if (!SHA256.test(hash || "")) {
+                  fail("EVIDENCE",m.id + ": malformed or missing SHA-256 for " + p);
+                } else {
+                  const actual = createHash("sha256").update(readFileSync(artifactPath)).digest("hex");
+                  if (actual !== hash.toLowerCase()) fail("EVIDENCE",m.id + ": SHA-256 mismatch for " + p);
+                }
+              }
             }
           }
         }
