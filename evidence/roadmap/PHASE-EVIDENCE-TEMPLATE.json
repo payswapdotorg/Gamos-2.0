@@ -24,5 +24,7 @@
       ]
     }
   ],
-  "notes": "Template only. For a real phase record, include exactly one result for every required gate. Do not treat this template as acceptance evidence."
+  "notes": "Template only. For a real phase record, include exactly one result for every required gate. Do not treat this template as acceptance evidence.",
+  "workflow_run_head_sha": "<must equal tested_commit>",
+  "workflow_run_conclusion": "success"
 }
