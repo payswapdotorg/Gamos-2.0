@@ -226,15 +226,27 @@ jobs:
       #
       # Model ids are the recorded fixture models (upstream-recorded-models.ts);
       # E2E_PROVIDER_MODEL only takes effect in capture mode but is set to the
-      # recorded value for the seeded provider catalog. The expected reply text
-      # matches the recorded fixture reply ("deepseek-e2e-ok"). No real API key is
-      # used: replay mode forces the e2e-fixture-key.
+      # recorded value for the seeded provider catalog. The request prompt is
+      # pinned EXPLICITLY to the recorded fixture's prompt shape ("upstream-e2e-ok"
+      # — the upstream-provider-basic matcher's bodyIncludes token): deriving it
+      # from E2E_PROVIDER_EXPECT_REPLY_TEXT alone (the spec's default) changed the
+      # prompt to "deepseek-e2e-ok", matched no fixture, and every request 500'd
+      # with "Missing Upstream e2e fixture" (run 42040326209 capture evidence).
+      # E2E_PROVIDER_EXPECT_REPLY_TEXT matches the recorded fixture's reply text
+      # ("deepseek-e2e-ok" — the recorded SSE text deltas). Thought-level
+      # assertions are disabled (E2E_PROVIDER_THOUGHT_LEVEL=""): the ordinary
+      # replay seed's reasoning map is "{}" (wdio.conf.ts: "只有专项 wire 用例注入
+      # 思考参数；普通 replay 的响应节奏由 fixture 控制"), so the recorded request
+      # carries no thinking config to assert. No real API key is used: replay mode
+      # forces the e2e-fixture-key.
       ZCODE_E2E_SPEC: "./test/e2e/upstream-provider.test.ts"
       E2E_PROVIDER_PRESET: env
       E2E_PROVIDER_MODEL: deepseek-v4-flash
       E2E_PROVIDER_SECONDARY_MODEL: deepseek-v4-pro
-      E2E_PROVIDER_REPLAY_FIXTURE_PATH: packages/desktop/test/e2e/fixtures/upstream/provider-basic.json
+      E2E_PROVIDER_PROMPT: 'Reply with exactly "upstream-e2e-ok" and no other text.'
       E2E_PROVIDER_EXPECT_REPLY_TEXT: deepseek-e2e-ok
+      E2E_PROVIDER_THOUGHT_LEVEL: ""
+      E2E_PROVIDER_REPLAY_FIXTURE_PATH: packages/desktop/test/e2e/fixtures/upstream/provider-basic.json
       DISPLAY: ":99"
     steps:
       - uses: actions/checkout@v4
