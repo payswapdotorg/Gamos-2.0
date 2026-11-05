@@ -499,29 +499,57 @@ async function respondPermission(kindPrefix, { maxAttempts = 4 } = {}) {
     options: dialog.options.map((o) => ({ kind: o.kind, text: o.text })),
     dialog_text_excerpt: dialog.text.slice(0, 300),
   };
+  let confirmedSelection = null; // evidence: the option verified selected at Confirm time
   for (let attempt = 1; attempt <= maxAttempts && dialog; attempt++) {
     const target =
       dialog.options.find((o) => (o.kind ?? "").startsWith(kindPrefix) && o.rect.w > 0) ??
       dialog.options.find((o) => (o.kind ?? "").startsWith(kindPrefix)) ??
       (kindPrefix.startsWith("reject") ? dialog.options.find((o) => (o.kind ?? "").startsWith("reject")) ?? dialog.options[dialog.options.length - 1] : dialog.options[0]);
     if (!target) throw new Error(`respondPermission: no options in dialog: ${JSON.stringify(dialog.options.map((o) => o.kind))}`);
+    // Click 1 — on an UNSELECTED row this only SELECTS it (PermissionDialog.tsx:
+    // onClick → setSelectedIndex; a second click / Confirm responds). If the row
+    // was already selected this responds DIRECTLY and the dialog dismisses.
     await cdpClickRect(target.rect);
-    await new Promise((r) => setTimeout(r, 250));
-    dialog = (await readPermissionDialog()) ?? dialog; // re-read rects (selection may re-render)
+    await new Promise((r) => setTimeout(r, 300));
+    // SELECTION VERIFICATION before Confirm (run 42068291128 lesson): Confirm
+    // submits orderedOptions[selectedIndex] and the DEFAULT selection is
+    // "Allow" (useState(0)) — "Full access" (option 3) grants no-further-
+    // confirmation. If our click missed the row (stale/shifted rect) or the
+    // React state had not committed, a blind Confirm submitted the wrong option
+    // and the rejected modification went through. The target option must show
+    // aria-selected="true" (re-read, re-click up to 3×) BEFORE Confirm fires.
+    let selectionVerified = false;
+    for (let verifyTry = 0; verifyTry < 3 && !selectionVerified; verifyTry++) {
+      const reread = await readPermissionDialog();
+      if (!reread) {
+        // Dialog already gone — the click responded directly (already-selected
+        // double-click path). Nothing to confirm.
+        selectionVerified = true;
+        dialog = null;
+        break;
+      }
+      const targetOption = reread.options.find((o) => (o.kind ?? "") === (target.kind ?? ""));
+      if (targetOption?.selected) {
+        selectionVerified = true;
+        confirmedSelection = { kind: targetOption.kind, verified_selected: true, at_attempt: attempt, text: (targetOption.text ?? "").slice(0, 80) };
+        dialog = reread; // fresh rects for the Confirm click
+        break;
+      }
+      log(`respondPermission(${kindPrefix}): option not selected yet (attempt ${attempt}, verify ${verifyTry + 1}: selected=${reread.options.map((o) => (o.selected ? "*" : "") + (o.kind ?? "?")).join(",")}) — re-clicking the row`);
+      const reRow = reread.options.find((o) => (o.kind ?? "") === (target.kind ?? ""));
+      if (reRow?.rect?.w > 0) await cdpClickRect(reRow.rect);
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    if (!selectionVerified) throw new Error(`respondPermission(${kindPrefix}): could not verify the option selection (aria-selected) before Confirm — refusing to click Confirm on an unverified selection`);
     if (dialog?.confirmRect) {
       await cdpClickRect(dialog.confirmRect);
-      await new Promise((r) => setTimeout(r, 400));
-    } else if (dialog) {
-      // Option double-click confirms directly (upstream behavior): click it again.
-      const again = dialog.options.find((o) => (o.kind ?? "") === (target.kind ?? "")) ?? target;
-      if (again?.rect?.w > 0) await cdpClickRect(again.rect);
       await new Promise((r) => setTimeout(r, 400));
     }
     dialog = await readPermissionDialog();
   }
   const dismissed = !(await readPermissionDialog());
   if (!dismissed) throw new Error(`respondPermission(${kindPrefix}): dialog still open after ${maxAttempts} attempts`);
-  return { surface, dismissed };
+  return { surface, dismissed, confirmedSelection };
 }
 
 /* ------------------------------------------------------------------ */
@@ -1427,7 +1455,8 @@ async function stageS6() {
     approve: {
       prompt_surface: approve.surface,
       real_permission_surface: isRealSurface,
-      responded: "allowOnce + Confirm",
+      respond_selection_verified: approve.confirmedSelection,
+      responded: "allowOnce (selection verified via aria-selected before Confirm) + Confirm",
       turn_completed: approveResult.completed,
       exact_modification_applied: approvedApplied,
       first_line_intact: firstLineIntact,
@@ -1437,7 +1466,8 @@ async function stageS6() {
     reject: {
       prompt_surface: reject.surface,
       real_permission_surface: rejectIsReal,
-      responded: "rejectOnce + Confirm",
+      respond_selection_verified: reject.confirmedSelection,
+      responded: "rejectOnce (selection verified via aria-selected before Confirm) + Confirm",
       turn_completed: rejectResult.completed,
       modification_not_applied: rejectedNotApplied,
       approved_line_still_present: approvedStillPresent,
@@ -1576,38 +1606,73 @@ async function stageS7() {
   await clickAndType("browser-address-input", "https://example.com", { timeout: 20000, clearFirst: true });
   await pressKey("Enter");
   // Navigation started → the webview element must now exist (presence-only check;
-  // the guest CDP target + content verification below is the real proof).
+  // the in-guest read below is the real proof).
   await waitForTid("browser-webview", { timeout: 45000, visible: false });
-  // Verify the webview guest actually loaded the page: the guest is a separate
-  // WebContents and appears as its own CDP page target. Assert BOTH the guest's
-  // actual URL and the page content read over CDP from inside the guest.
-  const guest = await waitFor(async () => {
-    const targets = await cdpTargets().catch(() => []);
-    return targets.find((t) => t.type === "page" && /^https?:\/\/example\.(com|org)\//.test(t.url)) ?? false;
-  }, { what: "webview guest CDP target (example.com)", timeout: 60000 });
-  const guestSession = await new CDPSession(guest.webSocketDebuggerUrl, "browser-guest").open();
-  const guestInfo = await guestSession.send("Runtime.evaluate", {
-    expression: `JSON.stringify({ url: location.href, title: document.title, heading: (document.querySelector('h1')?.innerText ?? '').trim(), body: (document.body?.innerText ?? '').trim().slice(0, 300) })`,
-    returnByValue: true,
-  }).then((r) => JSON.parse(r.result?.value ?? "{}")).catch(() => ({}));
-  guestSession.close();
+  // PRIMARY verification — read the guest THROUGH the webview element itself:
+  // getURL() is the guest's actual current URL, and executeJavaScript runs inside
+  // the guest WebContents (the same evidence class as CDP-from-inside-the-guest).
+  // Run 42068291128 lesson: the navigation SUCCEEDED (example.com fully rendered
+  // in the pane — screenshot proof) but the browser-level CDP /json/list endpoint
+  // did not expose the webview guest as a page target within 60s, so a
+  // CDP-target-only gate misread a working browser as a failure. The in-guest
+  // read is authoritative; the CDP scan is retained below as BONUS evidence only.
+  const GUEST_READ_JS = assertPageJs("browser guest in-page read", `(async () => {
+    const w = document.querySelector('[data-testid="browser-webview"]');
+    if (!w) return { error: 'no webview element' };
+    const url = typeof w.getURL === 'function' ? w.getURL() : null;
+    let page = null;
+    try {
+      const raw = await w.executeJavaScript('JSON.stringify({ url: location.href, title: document.title, heading: (document.querySelector("h1")?.innerText ?? "").trim(), body: (document.body?.innerText ?? "").trim().slice(0, 400) })');
+      page = JSON.parse(raw);
+    } catch (e) { page = { error: String((e && e.message) || e) }; }
+    return { url, page, src: w.getAttribute('src') };
+  })()`);
+  const guestInfo = await waitFor(async () => {
+    const r = await evalJs(GUEST_READ_JS, { awaitPromise: true }).catch(() => null);
+    if (!r) return false;
+    if (r.error) return false;
+    if (!/^https?:\/\/example\.(com|org)\//.test(r.url ?? "")) return false;
+    if (/example domain|illustrative examples/i.test(`${r.page?.title ?? ""} ${r.page?.heading ?? ""} ${r.page?.body ?? ""}`)) return r;
+    return false;
+  }, { what: "webview guest actually loaded example.com (in-guest read: URL + title/heading/body)", timeout: 60000 });
   await new Promise((r) => setTimeout(r, 800));
   await screenshot("S7-browser-page");
+  // BONUS evidence (non-gating): the browser-level CDP target scan. When the
+  // guest IS listed we additionally attach over CDP and read it from the DevTools
+  // side; when it is not, that is recorded honestly (Electron webview guests are
+  // not consistently surfaced by the /json/list browser endpoint).
+  const guestTarget = await waitFor(async () => {
+    const targets = await cdpTargets().catch(() => []);
+    return targets.find((t) => t.type === "page" && /^https?:\/\/example\.(com|org)\//.test(t.url)) ?? false;
+  }, { what: "webview guest CDP target (bonus scan)", timeout: 15000 }).catch(() => null);
+  let cdpGuestRead = null;
+  if (guestTarget) {
+    const guestSession = await new CDPSession(guestTarget.webSocketDebuggerUrl, "browser-guest").open().catch(() => null);
+    if (guestSession) {
+      cdpGuestRead = await guestSession.send("Runtime.evaluate", {
+        expression: `JSON.stringify({ url: location.href, title: document.title, heading: (document.querySelector('h1')?.innerText ?? '').trim(), body: (document.body?.innerText ?? '').trim().slice(0, 300) })`,
+        returnByValue: true,
+      }).then((r) => JSON.parse(r.result?.value ?? "{}")).catch(() => ({}));
+      guestSession.close();
+    }
+  }
   const webviewMeta = await evalJs(`(() => { const w = document.querySelector('[data-testid="browser-webview"]'); if (!w) return null; return { src: w.getAttribute('src'), url: (typeof w.getURL === 'function' ? w.getURL() : null) }; })()`).catch(() => null);
-  const contentOk = /example domain/i.test(guestInfo.title ?? "") || /example domain/i.test(guestInfo.heading ?? "") || /illustrative examples/i.test(guestInfo.body ?? "");
-  const urlOk = /^https?:\/\/example\.(com|org)\/?/.test(guestInfo.url ?? guest.url ?? "");
+  const guestPage = guestInfo.page ?? {};
+  const contentOk = /example domain/i.test(guestPage.title ?? "") || /example domain/i.test(guestPage.heading ?? "") || /illustrative examples/i.test(guestPage.body ?? "");
+  const urlOk = /^https?:\/\/example\.(com|org)\/?/.test(guestInfo.url ?? guestPage.url ?? "");
   const pass = Boolean(opened) && urlOk && contentOk;
-  journey.browserGuestUrl = guestInfo.url ?? guest.url;
+  journey.browserGuestUrl = guestInfo.url ?? guestPage.url;
   recordStage("S7", pass ? "pass" : "fail", {
     opened_via: opened,
     address_bar: "browser-address-input (typed https://example.com + Enter)",
-    guest_cdp_target: { id: guest.id, url: guest.url },
-    guest_actual: guestInfo,
+    verification_path: "in-guest read via the webview element (getURL + executeJavaScript inside the guest WebContents)",
+    guest_actual: { url: guestInfo.url, page: guestPage, src: guestInfo.src },
+    guest_cdp_target: guestTarget ? { id: guestTarget.id, url: guestTarget.url, cdp_read: cdpGuestRead } : "not surfaced by the browser-level /json/list endpoint (Electron webview guest; non-gating bonus scan)",
     webview_element: webviewMeta,
     actual_loaded_url_verified: urlOk,
     page_content_verified: contentOk,
   });
-  if (!pass) throw new Error(`S7 browser verification failed (urlOk=${urlOk}, contentOk=${contentOk})`);
+  if (!pass) throw new Error(`S7 browser verification failed (urlOk=${urlOk}, contentOk=${contentOk}, guestRead=${JSON.stringify(guestInfo).slice(0, 200)})`);
 }
 
 async function stageS8() {
