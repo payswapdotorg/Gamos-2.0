@@ -36,6 +36,10 @@ test("active phase count cannot exceed configured parallelism",() => {
   x.milestones.find(m=>m.id==="M1").status="active";
   assert.ok(codes(validateRoadmap(x)).includes("STATUS"));
 });
+test("a dependent phase cannot be completed before its dependency",() => {
+  const x=clone(); x.milestones.find(m=>m.id==="M1").status="complete";
+  assert.ok(codes(validateRoadmap(x)).includes("DEPENDENCY"));
+});
 test("a completed phase without committed evidence is rejected",() => {
   const x=clone(); x.milestones[0].status="complete";
   assert.ok(codes(validateRoadmap(x)).includes("EVIDENCE"));
@@ -45,6 +49,7 @@ test("a completed phase with a missing required gate is rejected",() => {
   const m=x.milestones[0]; m.status="complete";
   m.completion_evidence={
     evidence_file:"evidence/roadmap/M0.json",tested_commit:"a".repeat(40),
+    workflow_run_head_sha:"b".repeat(40),workflow_run_conclusion:"success",
     workflow_run_id:12345,workflow_run_url:"https://github.com/payswapdotorg/Gamos-2.0/actions/runs/12345",
     completed_at:"2026-11-05T00:00:00Z",gate_ids:["M0-G1"]
   };
