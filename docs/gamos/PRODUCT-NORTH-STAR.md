@@ -1,6 +1,6 @@
 # Gamos — Product North Star
 
-> Single source of truth for what Gamos is, what it is not, and what "done" means.
+> Product definition and non-negotiable rules. Milestone scope, status and acceptance gates are authoritative in ROADMAP.json.
 
 ---
 
@@ -87,5 +87,6 @@ disconnected plugins.
 - The product builds, installs, launches, updates safely and passes the
   inherited plus Gamos regression suites.
 
-The full, binding criteria are maintained in `MILESTONES-AND-ACCEPTANCE.md`
-(M0–M7) and in the project handoff they were derived from.
+The full, binding milestone scope, dependencies, status and acceptance criteria
+are maintained only in `ROADMAP.json` (M0–M7). This document defines the product
+intent and invariants; it does not maintain a second milestone plan.

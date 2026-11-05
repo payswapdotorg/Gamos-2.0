@@ -1,18 +1,26 @@
 # Gamos — Implementation Status
 
+> **Phase-status authority:** docs/gamos/ROADMAP.json is the sole source of truth
+> for milestone status, scope, dependencies and acceptance gates. This file is a
+> factual evidence/incident ledger only; it must not independently declare a
+> milestone complete, activate a phase or supersede the roadmap validator.
+>
+> Evidence should be appended with exact commits, CI run URLs, commands, outcomes
+> and artifact paths. Keep all conditional/unavailable states explicit.
+
 > Honest, evidence-based status. No green checkmark implies completion when only
 > a contract or UI exists. Updated at every integration point.
 >
-> **Last updated:** 2026-11-05 (M0 closure round COMPLETE: Phase-0 contract revision 2 per architect M0-closure corrections A+B applied via GAMOS-AUTH-0004; Phase B journey repaired and FULLY GREEN on CI — run 42071819027 @ `bef775cd`, all mandatory stages S0–S9 pass, verdict=pass exit 0, real model + production renderer; inherited desktop E2E (4 verified specs) + upstream-provider replay both green in the same run; close-out evidence in `evidence/phase-b/m0-closure-ci-evidence.json`)
+> **Last updated:** 2026-11-05 (M0 closure round COMPLETE: Phase-0 contract revision 2 per architect M0-closure corrections A+B applied via GAMOS-AUTH-0004; Phase B journey repaired and FULLY GREEN on CI — run 42071819027 @ `bef775cd`, all mandatory stages S0–S9 pass, verdict=pass exit 0, real model + production renderer; inherited desktop E2E (4 verified specs) + upstream-provider replay both green in the same run; close-out evidence in `evidence/phase-b/m0-closure-ci-evidence.json`. Canonical roadmap integrated from `gamos/roadmap-tdd-ssot`: ROADMAP.json is the sole normative phase authority; per the autonomous M0-closure/M1 directive the TL owns phase advancement — no architect-approval checkpoint remains between M0 and M1)
 
 ---
 
-## Overall completion (verified deliverables only)
+## Current phase pointer
 
-| Milestone | Verified completion |
-|---|---|
-| M0 — Fork, baseline & governance | Fork **complete & verified**; governance v2 (Phase A) **complete with CI evidence**; inherited-application verification (Phase B) **COMPLETE — full original-UI journey GREEN on CI (run 42071819027: S0–S9 all pass, verdict=pass exit 0) + inherited desktop E2E (4 specs) + upstream-provider replay; contract revision 2 (corrections A+B) applied via GAMOS-AUTH-0004; close-out evidence committed — M0 acceptance gate (9 conditions) satisfied, awaiting architect acceptance** |
-| M1–M7 | 0% (not started; frozen until M0 acceptance) |
+The canonical phase states and dependencies are maintained only in
+docs/gamos/ROADMAP.json and validated by scripts/gamos/roadmap-check.mjs.
+This evidence ledger intentionally does not maintain a duplicate milestone
+completion table. Consult ROADMAP.json for the live phase state and readiness.
 
 ## Architect-review phase tracker
 
@@ -91,10 +99,11 @@ Authorization `GAMOS-AUTH-0001` (complete v2 record) binds the exact content of 
 
 ## Regression results
 
-Baseline untouched: zero modifications to upstream-tracked files (all Gamos
-sessions to date only added new files; `git diff a9fe401e..HEAD --diff-filter=M`
-= empty). Upstream regression suites not yet executed (requires install/build —
-Phase B work package).
+Baseline untouched at the last verified comparison: zero modifications to
+upstream-tracked files. Current branch changes are additive Gamos docs, scripts,
+CI and evidence. The required current-commit M0 UI and inherited regression
+results are pending the full CI workflow; use ROADMAP.json gate state rather
+than this paragraph to determine phase completion.
 
 ## Remaining risks
 
@@ -128,39 +137,27 @@ error masked the open dialog + Enter lacked the form-submit default action;
 permission Confirm submitted the default selection + webview guests not surfaced by
 CDP /json/list (page was loaded — in-guest read is now authoritative).
 
-## Next work package
+## M0 acceptance — six canonical gates (autonomous closure procedure)
 
-1. **M0 acceptance review** against `docs/gamos/MILESTONES-AND-ACCEPTANCE.md` — the
-   journey evidence is now committed (`evidence/phase-b/m0-closure-ci-evidence.json`),
-   the 9-condition gate is mapped below, and the architect acceptance request can be
-   submitted.
-2. **M1/M2 remain gated** until M0 acceptance; worker A/B/C briefs stay prepared
-   and must not begin broad engine implementation before acceptance.
+Per ROADMAP.json, M0 acceptance is keyed on **six canonical gates**, not the
+historical nine-condition ledger. The TL owns phase advancement; no architect
+acceptance checkpoint remains. Mapping of the nine-condition ledger:
 
-## M0 acceptance gate (9 conditions) — status
+| Canonical gate | Covers (historical 9-condition items) | Status per committed evidence |
+|---|---|---|
+| M0-G1 Pinned upstream integrity | fork/baseline integrity, pristine `main` | main identical to upstream `a9fe401e…`; baseline ancestry enforced by governance verifier every run |
+| M0-G2 Governance and self-test CI | (1) governance passes | run 42071819091 @ `bef775cd`: architecture gate + 14/14 self-test + baseline/surfaces |
+| M0-G3 Original application build and launch | (2) builds and launches as original ZCode | S0 pass (production renderer, `pnpm build:bootstrap`, window over CDP) |
+| M0-G4 Strict original-app UI journey | (3) all mandatory stages, (4) review approve+reject, (5) terminal+browser, (6) marketplace install, (7) session recovery | S0–S9 ALL PASS, verdict=pass, exit 0; S6 approve+reject both verified; S5/S7 exact interaction evidence; S8 identity+sha256; S9 killed+relaunched recovery |
+| M0-G5 Inherited regression suite | (8) inherited E2E + honest exclusions | 4 verified container specs pass; upstream-provider spec passes via upstream-documented recorded replay fixture; live-provider run NOT executed (404 evidence documented) — not an M0 requirement |
+| M0-G6 Feature preservation and architecture | feature matrix + architecture:check | 32-feature matrix reconciled at baseline; `architecture:check` zero violations on every run |
 
-1. **Governance passes** — ✓ green on every commit this round (latest: run
-   42071819091 @ `bef775cd`: architecture gate + 14/14 self-test + baseline/surfaces).
-2. **Desktop application builds and launches as the original ZCode** — ✓ S0 pass
-   (production renderer, `pnpm build:bootstrap`, window over CDP).
-3. **UI journey — all mandatory stages pass** — ✓ S0–S9 all pass, verdict=pass, exit 0
-   (strict integrity, machine-readable summary, `non_pass=[]`, `missing=[]`).
-4. **Review approve AND reject verified** — ✓ S6 pass: approved modification applied
-   exactly; rejected modification NOT applied (file contains only
-   `GAMOS-PHASE-B-DESKTOP-JOURNEY-OK` + `REVIEW-APPROVED-LINE`); real permission
-   surface (role=listbox "Permission required" with allow/reject option kinds).
-5. **Terminal + Browser interaction verified** — ✓ S5 pass (real xterm, exact command
-   output); S7 pass (real pane open via toggle → launcher row; address typed + Enter;
-   in-guest read: URL `https://example.com/`, title "Example Domain", body text).
-6. **Marketplace install verified** — ✓ S8 pass (plugin identity
-   `github@zcode-plugins-official`; install button; installed state in UI; manifest
-   sha256 == downloaded archive sha256).
-7. **Session recovery verified** — ✓ S9 pass (app killed + relaunched with same
-   isolated home; session reopened from the task list; history + artifact survived).
-8. **Inherited E2E results + exclusions recorded honestly** — ✓ 4 verified specs pass
-   in the container job; upstream-provider spec passes via the upstream-documented
-   recorded replay fixture; live-provider run NOT executed (404 evidence documented);
-   no claim that the complete upstream suite passes on this fork.
-9. **All evidence submitted and linked to actual workflow runs** — ✓ this record +
-   `evidence/phase-b/m0-closure-ci-evidence.json` link the run URL, commit, jobs,
-   stage digests, screenshots and the closure-attempt history.
+Closure procedure (directive "Autonomous M0 Closure and M1 Implementation" §5):
+independently inspect the run-42071819027 evidence quality (S2 provider/model
+validity attribution, S8 install-vs-try-now proof, S6 rejected-modification
+absence, S7 in-guest browser read, credential scan coverage of uploaded
+artifacts), then create `evidence/roadmap/M0.json`, set M0 `complete` in
+ROADMAP.json with exact run metadata, run the roadmap validator + self-tests,
+and run required CI on the completion commit. Only after that commit passes is
+M1 activated. `IMPLEMENTATION-STATUS.md` records evidence and decisions only;
+it never independently controls phase status.

@@ -1,0 +1,791 @@
+{
+  "format": "gamos-roadmap@1",
+  "product": "Gamos",
+  "repository": "payswapdotorg/Gamos-2.0",
+  "roadmap_version": "1.0.0",
+  "normative": true,
+  "authority_statement": "This file is the sole normative source for Gamos milestone scope, dependency order, milestone status, owners, acceptance gates and phase completion. Markdown documents are explanatory; implementation status snapshots and CI evidence are subordinate to this file.",
+  "product_north_star": "Evolve the existing ZCode application into a gaming-specialized harness in which users use the original New Task composer and selected model to create, develop, test, operate, package and publish games through real engine integrations and a real GameOS/platform.",
+  "source_anchors": {
+    "zcode_upstream_repository": "https://github.com/zai-org/ZCode",
+    "zcode_upstream_tag": "v3.17.2",
+    "zcode_baseline_sha": "a9fe401eede6e6e5e01be9048679c206fe6f02d9",
+    "development_branch": "gamos/development",
+    "pristine_upstream_branch": "main",
+    "playliquid_repository": "payswapdotorg/PlayLiquid-2.0",
+    "playliquid_gameir_path": "packages/playliquid-gameos/src/game-ir/",
+    "playliquid_gameir_commit": "196b305e75decfeaa162d3da479dc125cff1521a"
+  },
+  "authority_boundaries": {
+    "application_shell_and_agent_runtime": "ZCode owns the app shell, New Task composer, sessions/tasks, model/provider routing, permissions, plugin lifecycle, Browser, Terminal, Review, workflows and Dynamic Workflow runtime. Gamos adds domain capabilities, not replacements.",
+    "engine_project_state": "Unity, Blender, Babylon.js, Godot and Unreal remain authoritative for their own project, scene, editor and build state.",
+    "gaming_semantics": "Gamos domain reuses the pinned PlayLiquid GameIR contract exactly; no second or extended GameIR.",
+    "workflows": "GamePlan is executed by ZCode Dynamic Workflow definition/compiler/runtime and dwf_* journal; no parallel scheduler or journal.",
+    "platform_and_distribution": "GameOS and publishing use durable real services and PlayLiquid-compatible delivery conventions; no retired console or in-memory placeholder.",
+    "financial_authority": "PaySwap alone owns financial intent, provider routing, authorization, ledger, execution, settlement, refunds, disputes and reconciliation."
+  },
+  "non_negotiable_rules": [
+    "Gamos is an additive fork of ZCode, not a replacement app. Preserve all inherited features and original New Task controls.",
+    "Do not mass-rename ZCode identifiers, IPC, RPC, environment variables, storage keys or package identities.",
+    "Do not add a second agent runtime, model router, task/session store, permission system, plugin marketplace, scheduler or workflow journal.",
+    "Do not add fields to PlayLiquid GameIRDocument; Gamos acceptance criteria belong in GamePlan or a separate AcceptanceRecord.",
+    "Capability discovery and selection fail closed. Never silently substitute engines, providers, capabilities or execution environments.",
+    "No fake engine availability, fake projects, mocked successful builds, fabricated screenshots, simulated publishing or swallowed errors.",
+    "Fixtures may isolate deterministic unit boundaries; they cannot prove engine, browser, platform, publishing or payment integration.",
+    "Native engine mutations use ZCode permission-gated execution. MCP OS-process privileges are disclosed separately from tool-invocation approval.",
+    "Publishing authorization is the user's target-platform account scope; it is never the repository governance ledger.",
+    "Keep main a pristine upstream mirror. Integrate Gamos implementation through reviewed PRs into gamos/development."
+  ],
+  "phase_policy": {
+    "phase_advancement_owner": "Gamos TL",
+    "user_confirmation_required": false,
+    "parallel_active_milestones_max": 2,
+    "active_milestones_are_dependency_gated": true,
+    "rule": "The TL advances to any milestone whose dependencies are complete and whose required acceptance gates have passing evidence. No additional user approval is required to begin the next planned phase.",
+    "exceptions_requiring_explicit_authorization": [
+      "Existing ZCode permission prompts for native engine mutations and other user-controlled actions.",
+      "The user's target-platform authorization for publishing or releasing a game.",
+      "The user's explicit authorization for live-provider or live-money movement; ordinary CI uses provider sandboxes.",
+      "Repository ruleset/CODEOWNER review for protected upstream surfaces, frozen contracts or governance controls."
+    ],
+    "completion_rule": "A milestone is complete only when every required gate has passing evidence, required CI is green on the tested commit, the evidence bundle is committed and the roadmap validator passes. Documentation, mocks, partial tests or unrelated green workflows are insufficient.",
+    "advancement_rule": "After completion, the validator derives downstream milestones that are ready. The TL may activate up to the configured parallel limit and assign workers without a user phase-approval meeting.",
+    "failure_rule": "A failed, skipped or unevidenced required gate blocks completion and dependent phases. Repair the earliest failing slice and rerun its gate; a later phase cannot bypass it."
+  },
+  "team_model": {
+    "tl": {
+      "responsibility": "Architecture, shared contracts, worker assignments, integration, security, CI, regression, evidence and phase promotion."
+    },
+    "worker_a": {
+      "responsibility": "Native engine plugins and workflows for Unity, Blender, Babylon, Godot and Unreal; engine integration and runtime QA."
+    },
+    "worker_b": {
+      "responsibility": "Gaming domain, exact GameIR conformance, capability registry/discovery, intent, GamePlan and Dynamic Workflow integration."
+    },
+    "worker_c": {
+      "responsibility": "GameOS/platform, package graph, artifacts, durable storage, publishing, creator/community/player experience and PlayLiquid alignment."
+    },
+    "concurrency": "Three workers may work concurrently on isolated branches. Shared contracts and cross-worker APIs are TL-owned. The TL may keep up to two dependency-ready milestones active."
+  },
+  "tdd_policy": {
+    "mandatory_order": [
+      "RED",
+      "GREEN",
+      "HARDEN",
+      "INTEGRATE",
+      "REGRESSION",
+      "EVIDENCE"
+    ],
+    "red": "Write the failing test before production implementation. Run it and record a failure caused by the missing behavior/assertion, not syntax, import, environment or test-runner failure.",
+    "green": "Implement the smallest production change that makes the new test pass. Record exact command, exit code and commit.",
+    "harden": "Add invalid-input, negative, permission-denied, unavailable, cancellation, retry/idempotency, version-mismatch and security tests relevant to the slice.",
+    "integrate": "Run against the real ZCode service, plugin system, Dynamic Workflow runtime, native engine, browser or platform service being integrated. If unavailable, record an explicit state and reproducible runner.",
+    "regression": "Run focused tests, relevant package suites, architecture/governance checks and affected inherited ZCode journeys.",
+    "evidence": "Commit test-first evidence with red and green commit SHAs, commands, test names, runner/environment, run URLs, artifact paths and SHA-256 values. No test passes without an actual execution result.",
+    "fixtures": "Fakes are allowed only for isolated deterministic unit tests. Label them as unit fixtures; they never satisfy integration or milestone acceptance gates.",
+    "test_layers": [
+      "schema and unit tests",
+      "contract/compatibility tests",
+      "permission/security negative tests",
+      "real integration tests",
+      "end-to-end user journeys",
+      "regression and architecture tests",
+      "performance/reliability tests where required"
+    ]
+  },
+  "implementation_rules": {
+    "change_unit": "One PR delivers one reviewable vertical capability or bounded cross-cutting change.",
+    "worker_branches": [
+      "gamos/worker-a",
+      "gamos/worker-b",
+      "gamos/worker-c"
+    ],
+    "integration_branch": "gamos/development",
+    "required_pr_evidence": "Milestone/work-package IDs; contract clauses; source files/callers; RED proof; GREEN result; negative/security cases; real integration or explicit unavailability; regression results; artifact hashes; tested commit; CI run URL.",
+    "required_commands": [
+      "node scripts/gamos/governance-check.mjs --pin <GAMOS_BASELINE_SHA256>",
+      "node scripts/gamos/governance-self-test.mjs",
+      "node scripts/gamos/roadmap-self-test.mjs",
+      "node scripts/gamos/roadmap-check.mjs",
+      "pnpm run architecture:check",
+      "relevant targeted tests and inherited regression suites"
+    ],
+    "no_user_wait": "The TL resolves technical details, sequencing and ordinary trade-offs autonomously within frozen contracts. Ask the user only for a real-world permission or product decision that cannot be inferred from this roadmap and its authority boundaries."
+  },
+  "journey_acceptance": {
+    "A_original_zcode_parity": "Launch, onboarding, New Task, model configuration, project selection, task submission, attachments/context, Browser, Terminal, Review, Plugin Marketplace, ordinary task, history and session recovery.",
+    "B_unity_modification": "Connect, native auth, select real project, inspect scene, modify, review, approve, execute, build, test and inspect evidence.",
+    "C_blender_to_unity": "Create asset in Blender, validate/export/import into Unity, configure scene, build and capture visual/runtime evidence.",
+    "D_babylon_browser_game": "Create project, implement playable experience, run it, open in ZCode Browser Use and verify rendering/behavior.",
+    "E_workflow_parallelism": "Independent gameplay/art/test work with dependency management, delegation, conflict avoidance, progress, cancel, resume and integration.",
+    "F_payment_route_planning": "Sandbox only; distinguish executable, conditional and opportunity routes and show fees/restrictions/auth/consent/idempotency/reconciliation. No live payments in smoke tests.",
+    "G_publishing_player": "Build, validate, publish to a real configured platform, discover as a distinct user, launch/play and verify permission boundaries."
+  },
+  "visual_regression_targets": [
+    "1660x900",
+    "1280x800",
+    "480px narrow",
+    "390x844 mobile"
+  ],
+  "evidence_contract": {
+    "completion_file_template": "evidence/roadmap/PHASE-EVIDENCE-TEMPLATE.json",
+    "completion_file_pattern": "evidence/roadmap/M<n>.json",
+    "required_fields": [
+      "phase_id",
+      "status",
+      "tested_commit",
+      "workflow_run_head_sha",
+      "workflow_run_id",
+      "workflow_run_url",
+      "workflow_run_conclusion",
+      "completed_at",
+      "environment",
+      "gate_results"
+    ],
+    "gate_result_fields": [
+      "gate_id",
+      "status",
+      "command",
+      "result_summary",
+      "evidence_paths",
+      "artifact_sha256"
+    ],
+    "statuses": [
+      "passed",
+      "failed",
+      "blocked"
+    ],
+    "requirement": "A completed milestone evidence file contains one passed result for every required gate and no missing gate; tested_commit is a full SHA. CI on the roadmap completion commit must also pass. Each gate result must have one committed evidence path per SHA-256 entry (equal nonzero array lengths); the roadmap checker recomputes each hash against the committed file bytes."
+  },
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "Fork, baseline, governance and original-ZCode acceptance",
+      "status": "active",
+      "depends_on": [],
+      "objective": "Prove Gamos is a safe, faithful fork of the pinned ZCode application before adding gaming behavior.",
+      "outcomes": [
+        "The upstream v3.17.2 baseline remains intact and main remains the pristine mirror.",
+        "The original application installs, builds, launches and retains inherited user journeys.",
+        "Governance, evidence integrity and phase gates are enforced by required CI."
+      ],
+      "work_packages": [
+        {
+          "id": "M0.1",
+          "owner": "TL",
+          "scope": "Close Phase B original-app verification on the latest UI journey and inherited E2E workflows."
+        },
+        {
+          "id": "M0.2",
+          "owner": "TL",
+          "scope": "Keep pinned baseline, authorization ledger, trust anchor, CODEOWNERS and branch rulesets verifiable."
+        },
+        {
+          "id": "M0.3",
+          "owner": "TL + A/B/C",
+          "scope": "Reconcile M0 contracts, worker briefs, preservation obligations and evidence."
+        }
+      ],
+      "acceptance_gates": [
+        {
+          "id": "M0-G1",
+          "name": "Pinned upstream integrity",
+          "required": true,
+          "verification": "The upstream tag/SHA match, baseline ancestry is intact, no unauthorized upstream-tracked files are modified or deleted, and main remains the pristine mirror."
+        },
+        {
+          "id": "M0-G2",
+          "name": "Governance and self-test CI",
+          "required": true,
+          "verification": "Required governance, self-test and architecture checks pass; all 14 tamper scenarios pass; trust anchor and 15 control hashes verify."
+        },
+        {
+          "id": "M0-G3",
+          "name": "Original application build and launch",
+          "required": true,
+          "verification": "Frozen-lockfile install and complete production application build pass on a suitable runner; the original ZCode desktop app launches."
+        },
+        {
+          "id": "M0-G4",
+          "name": "Strict original-app UI journey",
+          "required": true,
+          "verification": "All mandatory S0-S9 stages pass: onboarding, model/provider, New Task, real model task, terminal output, Review approve/reject, browser URL/content, marketplace install/hash and exact-session recovery."
+        },
+        {
+          "id": "M0-G5",
+          "name": "Inherited regression suite",
+          "required": true,
+          "verification": "All four inherited desktop E2E specs and the separately run upstream-provider live spec pass; skipped/excluded tests do not count."
+        },
+        {
+          "id": "M0-G6",
+          "name": "Feature preservation and architecture",
+          "required": true,
+          "verification": "The 32-feature matrix is reconciled with source/UI evidence; architecture check has zero violations; no inherited feature is hidden or removed."
+        }
+      ],
+      "tdd_focus": [
+        "governance verifier and tamper self-tests",
+        "strict S0-S9 UI assertions",
+        "inherited E2E regression",
+        "feature-preservation assertions"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "M1",
+      "title": "Gaming domain, capability registry and intent foundation",
+      "status": "planned",
+      "depends_on": [
+        "M0"
+      ],
+      "objective": "Add a pure, testable gaming domain that gives the selected ZCode model accurate context without creating a second runtime or UI shell.",
+      "outcomes": [
+        "GameSpec is exactly the pinned PlayLiquid GameIRDocument; no Gamos-specific fields are added.",
+        "Capability discovery is versioned, provenance-bound, availability-aware and fail-closed.",
+        "GamePlan is an existing ZCode Dynamic Workflow script executed by its existing runtime and journal.",
+        "Permissions, approval and process trust reuse ZCode and the frozen contracts."
+      ],
+      "work_packages": [
+        {
+          "id": "M1.1",
+          "owner": "Worker B",
+          "scope": "Create packages/gamos-domain with GameConcept, exact GameIR conformance, GamePlan/AcceptanceRecord references and validators."
+        },
+        {
+          "id": "M1.2",
+          "owner": "Worker B",
+          "scope": "Implement capability schemas, registry validation, fail-closed selection and availability states."
+        },
+        {
+          "id": "M1.3",
+          "owner": "Worker B + TL",
+          "scope": "Implement intent/project context and GamePlan creation through the existing Dynamic Workflow."
+        },
+        {
+          "id": "M1.4",
+          "owner": "TL + Worker A",
+          "scope": "Implement machine-local engine discovery and shared project metadata boundaries."
+        },
+        {
+          "id": "M1.5",
+          "owner": "TL",
+          "scope": "Integrate ZCode permission checks, provenance and MCP process-authority disclosures."
+        }
+      ],
+      "acceptance_gates": [
+        {
+          "id": "M1-G1",
+          "name": "Exact GameIR conformance",
+          "required": true,
+          "verification": "GameSpec has exactly the pinned PlayLiquid GameIRDocument fields; round-trip tests pass; unknown versions and extra fields fail; acceptance belongs to GamePlan/AcceptanceRecord."
+        },
+        {
+          "id": "M1-G2",
+          "name": "Fail-closed capability registry",
+          "required": true,
+          "verification": "Tests reject incomplete safety metadata, unknown/incompatible/unavailable capabilities and unapproved substitutions; no registry-order fallback."
+        },
+        {
+          "id": "M1-G3",
+          "name": "Discovery and availability",
+          "required": true,
+          "verification": "Real machine probes distinguish available, unavailable, conditional, setup, auth, approval and incompatible states; shared project metadata contains no machine-specific paths."
+        },
+        {
+          "id": "M1-G4",
+          "name": "Dynamic Workflow execution",
+          "required": true,
+          "verification": "A GamePlan is authored through an existing ZCode launch surface, compiled/executed by the existing Dynamic Workflow runtime, journaled in dwf_* and resumable/cancellable."
+        },
+        {
+          "id": "M1-G5",
+          "name": "Permission and plugin trust",
+          "required": true,
+          "verification": "Native mutations use ZCode permission gates; MCP process privileges are disclosed; repository governance and platform publishing authorization remain separate."
+        },
+        {
+          "id": "M1-G6",
+          "name": "Real project-context journey",
+          "required": true,
+          "verification": "A real workspace/project is inspected and structured, provenance-backed project/capability context reaches the selected model."
+        }
+      ],
+      "tdd_focus": [
+        "schema round-trip and rejection tests",
+        "fail-closed capability resolution matrix",
+        "engine-version and discovery contract tests",
+        "Dynamic Workflow runtime integration",
+        "permission/provenance negative tests"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "M2",
+      "title": "First-party Unity, Blender and Babylon engine integrations",
+      "status": "planned",
+      "depends_on": [
+        "M1"
+      ],
+      "objective": "Deliver Unity, Blender and Babylon plugins through the original ZCode plugin/MCP system with typed, permission-gated capabilities.",
+      "outcomes": [
+        "Unity projects can be discovered, inspected, changed and built through supported native interfaces.",
+        "Blender scenes can be created, manipulated, rendered and exported through typed operations.",
+        "Babylon projects can be developed and verified in the actual ZCode browser."
+      ],
+      "work_packages": [
+        {
+          "id": "M2.1",
+          "owner": "Worker A",
+          "scope": "Unity native discovery, project inspection, safe edit/build/test operations and evidence."
+        },
+        {
+          "id": "M2.2",
+          "owner": "Worker A",
+          "scope": "Blender typed operations/add-on bridge; live and headless paths share contracts; render/export evidence."
+        },
+        {
+          "id": "M2.3",
+          "owner": "Worker A",
+          "scope": "Babylon typed runtime bridge, project/build/run probes and browser verification."
+        },
+        {
+          "id": "M2.4",
+          "owner": "Worker B",
+          "scope": "Registry metadata, availability and model-facing contracts for all three engines."
+        },
+        {
+          "id": "M2.5",
+          "owner": "TL",
+          "scope": "Plugin trust, process privilege, permission, provenance and inherited regression."
+        }
+      ],
+      "acceptance_gates": [
+        {
+          "id": "M2-G1",
+          "name": "Unity real integration",
+          "required": true,
+          "verification": "A real Unity installation/project is discovered, modified and verified by real editor/batch build or tests with versioned, hashed evidence."
+        },
+        {
+          "id": "M2-G2",
+          "name": "Blender real integration",
+          "required": true,
+          "verification": "A real Blender scene is manipulated through typed operations, saved, rendered and verified; arbitrary Python is not an unreviewed shortcut."
+        },
+        {
+          "id": "M2-G3",
+          "name": "Babylon real integration",
+          "required": true,
+          "verification": "A real Babylon project builds/runs and the ZCode browser verifies the actual runtime URL, rendered content and behavior."
+        },
+        {
+          "id": "M2-G4",
+          "name": "Plugin lifecycle and security",
+          "required": true,
+          "verification": "Install/update/disable/provenance/hash, MCP process disclosure, permission denial and cancellation are tested through ZCode plugin lifecycle."
+        },
+        {
+          "id": "M2-G5",
+          "name": "Cross-plugin regression",
+          "required": true,
+          "verification": "All three engines pass contract/integration suites and applicable inherited ZCode build, permission, marketplace, session and architecture regressions."
+        }
+      ],
+      "tdd_focus": [
+        "manifest/schema tests before plugin code",
+        "probe and version-parser unit tests",
+        "typed engine-operation contract tests",
+        "real headless/editor/browser integration",
+        "permission-denial and unavailable-state tests"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "M3",
+      "title": "Cross-engine asset and workflow orchestration",
+      "status": "planned",
+      "depends_on": [
+        "M2"
+      ],
+      "objective": "Execute verified multi-engine workflows with dependencies, parallelism, cancellation, resume and real artifact evidence.",
+      "outcomes": [
+        "Blender-to-Unity and Blender-to-Babylon pipelines move real assets with reproducible metadata.",
+        "Specialist work is delegated and integrated without conflicting writes.",
+        "Progress, cancellation, resume and evidence use existing ZCode Dynamic Workflow facilities."
+      ],
+      "work_packages": [
+        {
+          "id": "M3.1",
+          "owner": "Worker A",
+          "scope": "Blender-to-Unity export/import and scene integration."
+        },
+        {
+          "id": "M3.2",
+          "owner": "Worker A",
+          "scope": "Blender-to-Babylon export/build/runtime pipeline."
+        },
+        {
+          "id": "M3.3",
+          "owner": "Worker B",
+          "scope": "Engine-aware GamePlan generation, dependencies, parallelism, resume and cancellation."
+        },
+        {
+          "id": "M3.4",
+          "owner": "Worker C",
+          "scope": "Cross-engine artifact manifests, hashes, reproducibility and handoff records."
+        },
+        {
+          "id": "M3.5",
+          "owner": "TL",
+          "scope": "Parallel-write safety, integration and real end-to-end evidence."
+        }
+      ],
+      "acceptance_gates": [
+        {
+          "id": "M3-G1",
+          "name": "Blender to Unity pipeline",
+          "required": true,
+          "verification": "A real Blender asset is exported, validated, imported into Unity, built and verified with hashed source/output evidence."
+        },
+        {
+          "id": "M3-G2",
+          "name": "Blender to Babylon pipeline",
+          "required": true,
+          "verification": "A real Blender asset is consumed by a real Babylon project and verified in the running browser experience."
+        },
+        {
+          "id": "M3-G3",
+          "name": "Workflow dependency and concurrency",
+          "required": true,
+          "verification": "Tests prove independent work can run concurrently, dependent work waits, conflicting writes are prevented and outputs integrate deterministically."
+        },
+        {
+          "id": "M3-G4",
+          "name": "Resume, cancel and failure recovery",
+          "required": true,
+          "verification": "A workflow interruption is resumed from the existing journal; cancellation is observable and no cancelled step is reported successful."
+        },
+        {
+          "id": "M3-G5",
+          "name": "End-to-end multi-engine journey",
+          "required": true,
+          "verification": "A natural-language request completes across Blender and a target engine without manual repetition; build/runtime/artifact evidence is collected."
+        }
+      ],
+      "tdd_focus": [
+        "asset contract and round-trip tests",
+        "dependency ordering and conflict tests",
+        "workflow runtime restart/cancel integration",
+        "real engine pipeline acceptance"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "M4",
+      "title": "Godot and Unreal engine integrations",
+      "status": "planned",
+      "depends_on": [
+        "M2"
+      ],
+      "objective": "Extend the same capability/plugin contract to Godot and Unreal without weakening the first three integrations.",
+      "outcomes": [
+        "Godot uses native CLI/headless workflows plus an editor bridge where needed.",
+        "Unreal uses its Remote Control API over constrained local HTTP/WebSocket with authentication and reversible operations.",
+        "Engine substitution is never silent."
+      ],
+      "work_packages": [
+        {
+          "id": "M4.1",
+          "owner": "Worker A",
+          "scope": "Godot CLI/headless and editor bridge plugin."
+        },
+        {
+          "id": "M4.2",
+          "owner": "Worker A",
+          "scope": "Unreal local Remote Control API plugin with safe binding/authentication and reversible operations."
+        },
+        {
+          "id": "M4.3",
+          "owner": "Worker B",
+          "scope": "Registry/version/availability metadata and intent planning."
+        },
+        {
+          "id": "M4.4",
+          "owner": "TL",
+          "scope": "Process privilege, network exposure, permission review and regression."
+        }
+      ],
+      "acceptance_gates": [
+        {
+          "id": "M4-G1",
+          "name": "Godot real integration",
+          "required": true,
+          "verification": "A real Godot project completes discovery, modification, headless execution/build/test and evidence collection."
+        },
+        {
+          "id": "M4-G2",
+          "name": "Unreal real integration",
+          "required": true,
+          "verification": "A real Unreal project completes authenticated local Remote Control discovery, a typed reversible operation, verification and safe teardown."
+        },
+        {
+          "id": "M4-G3",
+          "name": "Engine selection and availability",
+          "required": true,
+          "verification": "Tests prove engine compatibility and honest conditional/unavailable outcomes for missing versions, auth, display, endpoints and permissions."
+        },
+        {
+          "id": "M4-G4",
+          "name": "Five-engine regression",
+          "required": true,
+          "verification": "Unity, Blender, Babylon, Godot and Unreal suites remain green; inherited ZCode journeys remain operational."
+        }
+      ],
+      "tdd_focus": [
+        "engine-specific version grammar tests",
+        "headless/editor/API contract tests",
+        "network binding/auth negative tests",
+        "real Godot and Unreal journeys"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "M5",
+      "title": "Game QA, visual regression and optimization",
+      "status": "planned",
+      "depends_on": [
+        "M3",
+        "M4"
+      ],
+      "objective": "Make game changes provable through repeatable behavior, visual, performance and asset-quality evidence.",
+      "outcomes": [
+        "Real gameplay/runtime tests execute against actual engine builds.",
+        "Visual regression and performance baselines compare before/after states.",
+        "Assets and releases pass validated checks before publishing."
+      ],
+      "work_packages": [
+        {
+          "id": "M5.1",
+          "owner": "Worker A",
+          "scope": "Runtime test adapters, deterministic capture, profiling and visual evidence."
+        },
+        {
+          "id": "M5.2",
+          "owner": "Worker B",
+          "scope": "QA plan model, assertion catalog, orchestration and acceptance records."
+        },
+        {
+          "id": "M5.3",
+          "owner": "Worker C",
+          "scope": "Artifact/evidence manifests, provenance and reproducible comparisons."
+        },
+        {
+          "id": "M5.4",
+          "owner": "TL",
+          "scope": "Quality gates, flaky-test policy, baseline management and release qualification."
+        }
+      ],
+      "acceptance_gates": [
+        {
+          "id": "M5-G1",
+          "name": "Real runtime behavior tests",
+          "required": true,
+          "verification": "Representative gameplay scenarios run against real engine builds; errors/timeouts propagate as failures."
+        },
+        {
+          "id": "M5-G2",
+          "name": "Visual regression",
+          "required": true,
+          "verification": "Real-runtime before/after captures are compared at documented resolutions/tolerances with artifact hashes."
+        },
+        {
+          "id": "M5-G3",
+          "name": "Performance and benchmark evidence",
+          "required": true,
+          "verification": "Repeatable frame-time/load-time/memory or platform benchmarks record environment, baseline and variance."
+        },
+        {
+          "id": "M5-G4",
+          "name": "Asset validation and release gates",
+          "required": true,
+          "verification": "Asset references, package limits and project consistency checks block release when criteria fail."
+        },
+        {
+          "id": "M5-G5",
+          "name": "Verified modification report",
+          "required": true,
+          "verification": "Review shows changed files/assets, tests, visual diffs, performance, permissions and acceptance status."
+        }
+      ],
+      "tdd_focus": [
+        "runtime assertion tests",
+        "visual comparator calibration tests",
+        "benchmark repeatability/tolerance tests",
+        "artifact validation and failure propagation tests"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "M6",
+      "title": "Durable GameOS, packages and publishing",
+      "status": "planned",
+      "depends_on": [
+        "M5"
+      ],
+      "objective": "Connect game creation to real distribution through durable projects, packages, artifact storage, publishing and player access.",
+      "outcomes": [
+        "World/project and package metadata are durable and production-backed.",
+        "Large binaries use content-addressed object storage, not Git history.",
+        "Real previews and publishing use the user's target-platform authorization.",
+        "A second user can discover and run the published game."
+      ],
+      "work_packages": [
+        {
+          "id": "M6.1",
+          "owner": "Worker C",
+          "scope": "Durable GameOS project/world registry, package graph, versioning, artifact storage and release lifecycle."
+        },
+        {
+          "id": "M6.2",
+          "owner": "Worker C",
+          "scope": "Creator publishing, release manifests, discovery/player access and PlayLiquid delivery alignment."
+        },
+        {
+          "id": "M6.3",
+          "owner": "Worker B",
+          "scope": "Game-domain package identity, acceptance records and agent-facing platform capabilities."
+        },
+        {
+          "id": "M6.4",
+          "owner": "Worker A",
+          "scope": "Engine exporters, reproducible builds, preview/runtime integration and import validation."
+        },
+        {
+          "id": "M6.5",
+          "owner": "TL",
+          "scope": "Storage, tenancy, authorization, trust, abuse and reliability review."
+        }
+      ],
+      "acceptance_gates": [
+        {
+          "id": "M6-G1",
+          "name": "Durable project and package graph",
+          "required": true,
+          "verification": "Projects, worlds, dependencies, versions and releases persist across restart and enforce tenant authorization."
+        },
+        {
+          "id": "M6-G2",
+          "name": "Artifact storage and integrity",
+          "required": true,
+          "verification": "Large artifacts are stored outside Git history, content-addressed and verified on read with reproducible build metadata."
+        },
+        {
+          "id": "M6-G3",
+          "name": "Real preview and publishing",
+          "required": true,
+          "verification": "A real artifact is validated, previewed and published to a configured platform using the user's account scope, never repository governance."
+        },
+        {
+          "id": "M6-G4",
+          "name": "Second-user player journey",
+          "required": true,
+          "verification": "A distinct authorized user discovers, retrieves and launches/plays the release with correct access boundaries."
+        },
+        {
+          "id": "M6-G5",
+          "name": "Release lifecycle and rollback",
+          "required": true,
+          "verification": "Draft, validation, preview, publish, supersede, rollback and revoke are tested against durable storage and real platform responses."
+        }
+      ],
+      "tdd_focus": [
+        "package graph invariants",
+        "storage hash/retrieval and tenant-isolation tests",
+        "authorization denial/expiry tests",
+        "real preview/publish/player acceptance"
+      ],
+      "completion_evidence": null
+    },
+    {
+      "id": "M7",
+      "title": "Platform services, multiplayer and monetization through PaySwap",
+      "status": "planned",
+      "depends_on": [
+        "M6"
+      ],
+      "objective": "Complete platform operations and creator economics while keeping financial authority and payment execution inside PaySwap.",
+      "outcomes": [
+        "Multiplayer, presence, matchmaking, replay, leaderboards, achievements and integrity use real services.",
+        "Community, moderation and creator economics are auditable and abuse-aware.",
+        "PaySwap provides payment intent, route discovery, authorization, ledger, execution and reconciliation."
+      ],
+      "work_packages": [
+        {
+          "id": "M7.1",
+          "owner": "Worker C",
+          "scope": "Multiplayer/presence/matchmaking, replay, leaderboard, achievements, moderation and community services."
+        },
+        {
+          "id": "M7.2",
+          "owner": "Worker B",
+          "scope": "Game-facing capabilities and route discovery (existing, conditional, opportunity)."
+        },
+        {
+          "id": "M7.3",
+          "owner": "Worker C + PaySwap integration owner",
+          "scope": "Creator monetization and revenue-share using PaySwap financial authority and platform entitlements."
+        },
+        {
+          "id": "M7.4",
+          "owner": "Worker A",
+          "scope": "Server-authoritative result/integrity hooks and engine adapters."
+        },
+        {
+          "id": "M7.5",
+          "owner": "TL",
+          "scope": "Sandbox commerce, reconciliation, abuse, security and separately authorized live-provider validation."
+        }
+      ],
+      "acceptance_gates": [
+        {
+          "id": "M7-G1",
+          "name": "Real platform capabilities",
+          "required": true,
+          "verification": "Configured multiplayer, matchmaking/presence, replay, leaderboard and achievement paths execute against real services; competitive outcomes are server-authoritative."
+        },
+        {
+          "id": "M7-G2",
+          "name": "Integrity, moderation and abuse",
+          "required": true,
+          "verification": "Integrity checks, moderation, bot/abuse handling and audit trails pass negative/adversarial tests."
+        },
+        {
+          "id": "M7-G3",
+          "name": "PaySwap route discovery",
+          "required": true,
+          "verification": "Routes distinguish executable, conditional and opportunity-only states and report countries, currencies, limits, fees, settlement and risk constraints."
+        },
+        {
+          "id": "M7-G4",
+          "name": "Sandbox commercial workflow",
+          "required": true,
+          "verification": "A provider sandbox completes consent, idempotency, webhook, ledger/reconciliation and supported refund/dispute tests; money movement remains in PaySwap."
+        },
+        {
+          "id": "M7-G5",
+          "name": "Separately authorized live validation",
+          "required": true,
+          "verification": "Any live-provider validation uses explicit user/provider authorization and PaySwap policy; it is never implied by phase completion."
+        }
+      ],
+      "tdd_focus": [
+        "service contract and authorization tests",
+        "multiplayer/integrity adversarial tests",
+        "route constraint matrix",
+        "sandbox payment lifecycle and reconciliation tests"
+      ],
+      "completion_evidence": null
+    }
+  ]
+}
