@@ -15,12 +15,13 @@
 
 ---
 
-## Overall completion (verified deliverables only)
+## Current phase pointer
 
-| Milestone | Verified completion |
-|---|---|
-| M0 — Fork, baseline & governance | Fork **complete & verified**; governance v2 (Phase A) **complete with CI evidence**; inherited-application verification (Phase B) **executed with real evidence — see requirement ledger** (3 explicit conditional states recorded) |
-| M1–M7 | 0% (not started; frozen until M0 acceptance) |
+The canonical phase states and dependencies are maintained only in
+docs/gamos/ROADMAP.json and validated by scripts/gamos/roadmap-check.mjs.
+This evidence ledger intentionally does not maintain a duplicate milestone
+completion table. At the time this record was established, M0 was active and
+M1-M7 planned; consult ROADMAP.json for the live state.
 
 ## Architect-review phase tracker
 
