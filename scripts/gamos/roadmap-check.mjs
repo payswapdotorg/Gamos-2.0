@@ -200,7 +200,7 @@ export function validateRoadmap(roadmap, options = {}) {
       if (!contract.includes(roadmap.source_anchors.playliquid_gameir_commit)) {
         fail("ANCHOR","GameIR contract does not contain the pinned PlayLiquid commit from ROADMAP.json");
       }
-      if (!contract.includes("no acceptance field")) fail("CONTRACT","GameIR contract must prohibit a Gamos acceptance field");
+      if (!contract.includes("no `acceptance` field")) fail("CONTRACT","GameIR contract must prohibit a Gamos acceptance field");
     }
   }
   return { errors, active:active.map(m=>m.id), ready:ready.map(m=>m.id), blocked:blocked.map(m=>m.id) };
