@@ -160,7 +160,7 @@ describe("Intent resolution — the ten directive scenarios (M1.4)", () => {
     const issue = resolution.issues.find((i) => i.code === "ambiguous-engine");
     expect(issue).toBeDefined();
     expect(issue?.severity).toBe("approval");
-    expect(issue?.candidates?.sort()).toEqual(["godot", "unity"]);
+    expect([...(issue?.candidates ?? [])].sort()).toEqual(["godot", "unity"]);
     // soft preferences only — no required engine until the user disambiguates
     expect(resolution.concept?.platformPreferences.every((p) => p.preference === "acceptable")).toBe(true);
   });
@@ -215,7 +215,7 @@ describe("Intent resolution — the ten directive scenarios (M1.4)", () => {
     cleanup.push(root);
     const detection = detectProjectEngines(root);
     const input = baseInput("Plan the creation of a tower-defense prototype in Unity.", detection, machineDiscovery(UNITY_INSTALLED));
-    input.requestedCapabilities = ["unity/scene.build"];
+    input.requestedCapabilities = [{ id: "unity/scene.build" }];
     const resolution = resolveGamingIntent(input);
     const failed = resolution.capabilityResults.find((c) => c.request.id === "unity/scene.build");
     expect(failed?.ok).toBe(false);
@@ -268,7 +268,7 @@ describe("Intent resolution — the ten directive scenarios (M1.4)", () => {
     const detection = detectProjectEngines(root);
     const discovery = machineDiscovery(UNITY_INSTALLED);
     const input = baseInput("Plan the creation of a tower-defense prototype in Unity.", detection, discovery);
-    input.requestedCapabilities = ["core/project.inspect"];
+    input.requestedCapabilities = [{ id: "core/project.inspect" }];
     const resolution = resolveGamingIntent(input);
     const ctx = resolution.context;
     // project identity + evidence come from the real detection
@@ -326,7 +326,7 @@ describe("buildGamingModelContext — fail-closed provenance (M1.4)", () => {
       projectDetection: detection,
       machineDiscovery: machineDiscovery(UNITY_INSTALLED),
       registry,
-      requestedCapabilities: ["core/project.inspect", "unity/scene.build"],
+      requestedCapabilities: [{ id: "core/project.inspect" }, { id: "unity/scene.build" }],
       now: "2026-11-05T22:00:00Z",
     });
     const failed = resolution.context?.capabilities.find((c) => c.id === "unity/scene.build");

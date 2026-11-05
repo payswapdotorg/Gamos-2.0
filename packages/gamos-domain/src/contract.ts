@@ -85,3 +85,66 @@ export {
   resolveCapability,
   listCapabilities,
 } from "./domain/capability-registry.js";
+
+// 项目发现与引擎版本文法（M1.3，contract 04 §1/§2/§4）。
+// adapters 层的 read-only 文件系统探测 + domain 层的机器本地记录与 JOIN。
+export type { ProjectProbeResult, ProjectEngineDetection } from "./adapters/discovery/project-probes.js";
+export {
+  discoverUnityProject,
+  discoverBlenderProject,
+  discoverGodotProject,
+  discoverUnrealProject,
+  discoverBabylonProject,
+  detectProjectEngines,
+} from "./adapters/discovery/project-probes.js";
+export type {
+  ParsedVersionResult,
+  UnityVersion,
+  BlenderVersion,
+  GodotVersion,
+  UnrealVersion,
+  BabylonToolchainVersion,
+} from "./domain/discovery/engine-versions.js";
+export {
+  parseUnityVersion,
+  compareUnityVersions,
+  parseBlenderVersion,
+  compareBlenderVersions,
+  parseGodotVersion,
+  compareGodotVersions,
+  parseUnrealVersion,
+  compareUnrealVersions,
+  parseBabylonToolchainVersion,
+  compareBabylonToolchainVersions,
+  evaluateVersionPredicate,
+} from "./domain/discovery/engine-versions.js";
+export type {
+  GamosProjectMetadata,
+  DiscoveredEngine,
+  MachineEngineDiscovery,
+  EffectiveEngineState,
+} from "./domain/discovery/discovery-record.js";
+export {
+  buildMachineDiscoveryRecord,
+  isRecordStale,
+  joinEngineState,
+} from "./domain/discovery/discovery-record.js";
+
+// 意图解析与结构化模型上下文（M1.4，directive §11 / contract 05 §3）。
+export type {
+  IntentRequestKind,
+  MentionedEngine,
+  IntentClassification,
+  IntentIssue,
+  CapabilityRequestResult,
+  IntentResolutionInput,
+  IntentResolution,
+  GamingContextObservations,
+  ContextCapabilityEntry,
+  GamingModelContext,
+} from "./domain/intent.js";
+export {
+  classifyIntent,
+  resolveGamingIntent,
+  buildGamingModelContext,
+} from "./domain/intent.js";
