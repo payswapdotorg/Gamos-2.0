@@ -887,15 +887,37 @@ async function stageS2() {
   await screenshot("S2-api-key-entered");
   await pressKey("Tab");
   await new Promise((r) => setTimeout(r, 1200));
-  // Verify the provider persisted on disk with the real key and the template baseURL.
+  // Verify the provider persisted on disk with the real key. The personal overlay
+  // is SPARSE (packages/provider/src/config/rule-data-schema.ts: a template-derived
+  // provider only stores changed leaves — here the API key): the effective base URL
+  // is inherited from the openrouter template in the injected built-in baseline
+  // (config/provider/zcode-builtin.json), so the URL is verified from the overlay
+  // when present and from the template baseline otherwise.
+  const templateBaseURL = (() => {
+    try {
+      const doc = JSON.parse(readFileSync(ZCODE_BUILTIN_PROVIDER_CONFIG_BASELINE, "utf8"));
+      const found = JSON.stringify(doc).match(/"templateId":"openrouter"[\s\S]{0,2000}?"baseUrl":"(https:[^"]+)"/);
+      return found?.[1] ?? null;
+    } catch { return null; }
+  })();
   const saved = await waitFor(() => {
     const rule = readProviderRules().find((r) => r.providerId === providerId);
     if (!rule) return false;
     const key = rule.config?.access?.apiKey ?? null;
-    const baseURL = rule.config?.api?.baseUrl ?? null;
-    if (key === OPENROUTER_KEY && baseURL && /openrouter\.ai/.test(baseURL)) return { key: true, baseURL };
+    if (key !== OPENROUTER_KEY) return false;
+    const overlayBaseURL = rule.config?.api?.baseUrl ?? null;
+    const effectiveBaseURL = overlayBaseURL ?? templateBaseURL;
+    if (effectiveBaseURL && /openrouter\.ai/.test(effectiveBaseURL)) {
+      return { key: true, baseURL: effectiveBaseURL, baseURLSource: overlayBaseURL ? "personal overlay" : "template baseline (sparse overlay inherits it)" };
+    }
     return false;
-  }, { what: "provider saved to provider_config.json (key + baseURL)", timeout: 30000 });
+  }, { what: "provider saved to provider_config.json (real key; effective openrouter base URL)", timeout: 30000 }).catch((e) => {
+    // Key-redacted on-disk state for diagnosis (the real key is never logged).
+    const rule = readProviderRules().find((r) => r.providerId === providerId);
+    const redacted = rule ? JSON.parse(JSON.stringify(rule), (k, v) => (k === "apiKey" && typeof v === "string") ? `<redacted:${v.length} chars>` : v) : null;
+    e.message = `${e.message}; on-disk rule (key redacted): ${JSON.stringify(redacted)?.slice(0, 600)}`;
+    throw e;
+  });
   journey.providerSavedOnDisk = saved;
   await screenshot("S2-provider-saved");
   // Back to the workspace.
@@ -907,6 +929,7 @@ async function stageS2() {
     template: "openrouter",
     persisted_to: PROVIDER_CONFIG_FILE,
     base_url_verified: saved.baseURL,
+    base_url_source: saved.baseURLSource,
     api_key_persisted: true,
     note: "API key entered via CDP Input.insertText into the real model-provider-api-key-input; persistence verified on disk (key never logged)",
   });

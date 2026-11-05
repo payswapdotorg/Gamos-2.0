@@ -200,8 +200,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: phase-b-inherited-e2e-${{ github.sha }}
+          # include-hidden-files: .e2e-artifacts is a dot-directory — hidden paths
+          # are skipped by default (previous runs silently uploaded nothing).
           path: |
             packages/desktop/.e2e-artifacts/
+            packages/desktop/.e2e-network-capture/
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
 
@@ -286,7 +290,7 @@ jobs:
         run: |
           if [ -z "${E2E_PROVIDER_API_KEY}" ]; then echo "no key configured — skip (replay mode uses no real key)"; exit 0; fi
           set +e
-          grep -r -l -F "${E2E_PROVIDER_API_KEY}" packages/desktop/.e2e-artifacts/ packages/desktop/.e2e-home/ > /tmp/key-hits.txt 2>/dev/null
+          grep -r -l -F "${E2E_PROVIDER_API_KEY}" packages/desktop/.e2e-artifacts/ packages/desktop/.e2e-network-capture/ packages/desktop/.e2e-home/ > /tmp/key-hits.txt 2>/dev/null
           set -e
           if [ -s /tmp/key-hits.txt ]; then
             echo "::error::OpenRouter key found in E2E artifacts:"
@@ -300,8 +304,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: phase-b-upstream-provider-replay-${{ github.sha }}
+          # include-hidden-files: the E2E artifact roots are dot-directories
+          # (.e2e-artifacts / .e2e-network-capture / .e2e-home) — upload-artifact
+          # skips hidden paths by default and previous runs silently uploaded
+          # nothing ("No files were found" warnings).
           path: |
             packages/desktop/.e2e-artifacts/
-            packages/desktop/.e2e-home/.zcode/e2e-network-capture/
+            packages/desktop/.e2e-network-capture/
+            packages/desktop/.e2e-home/
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
