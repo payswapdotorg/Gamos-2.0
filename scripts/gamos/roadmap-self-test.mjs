@@ -142,6 +142,10 @@ test("completed milestone requires matching on-disk evidence and real gate artif
     record.gate_results[0].status="failed";
     put(evidenceFile,JSON.stringify(record,null,2));
     assert.ok(codes(validateRoadmap(x,{repoRoot:tempRoot})).includes("EVIDENCE"));
+    record.gate_results[0].status="passed";
+    put(record.gate_results[0].evidence_paths[0],"tampered evidence content");
+    put(evidenceFile,JSON.stringify(record,null,2));
+    assert.ok(codes(validateRoadmap(x,{repoRoot:tempRoot})).includes("EVIDENCE"));
   } finally {
     rmSync(tempRoot,{recursive:true,force:true});
   }
