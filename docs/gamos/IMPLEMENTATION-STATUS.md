@@ -1,5 +1,13 @@
 # Gamos — Implementation Status
 
+> **Phase-status authority:** docs/gamos/ROADMAP.json is the sole source of truth
+> for milestone status, scope, dependencies and acceptance gates. This file is a
+> factual evidence/incident ledger only; it must not independently declare a
+> milestone complete, activate a phase or supersede the roadmap validator.
+>
+> Evidence should be appended with exact commits, CI run URLs, commands, outcomes
+> and artifact paths. Keep all conditional/unavailable states explicit.
+
 > Honest, evidence-based status. No green checkmark implies completion when only
 > a contract or UI exists. Updated at every integration point.
 >
