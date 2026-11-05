@@ -552,6 +552,19 @@ async function probeHttp(url) {
 let _viteChild = null;
 let _electronChild = null;
 
+// Read-only built-in provider baseline injected into the staged app, exactly the
+// upstream E2E pattern (packages/desktop/wdio.conf.ts:246-253, 4592-4593): the
+// staged Electron app only carries main/host/renderer products and no repo-level
+// config/provider; if the Host derives the bundled config from app.getAppPath(),
+// the resolved path lands two levels above the staged dir (outside the repo),
+// every model/provider view then fails with "Bundled 与 Active ZCode Built-in
+// Release 均不可用", and S2+ cascade-fail (CI run 41987983424 evidence). The
+// env override is the upstream-sanctioned way to point the app at the same
+// read-only baseline file the production build embeds.
+const ZCODE_BUILTIN_PROVIDER_CONFIG_BASELINE = join(
+  REPO_ROOT, "config", "provider", "zcode-builtin.json",
+);
+
 // Upstream-isolation env (packages/desktop/wdio.conf.ts): HOME, USERPROFILE,
 // ZCODE_DATA_BASE_DIR and ZCODE_DESKTOP_HOME_DIR all point at PHASEB_HOME.
 function electronEnv(extra = {}) {
@@ -564,6 +577,7 @@ function electronEnv(extra = {}) {
     ZCODE_DESKTOP_APPLICATION_NAME: APP_NAME,
     ZCODE_DESKTOP_USER_DATA_DIR: join(PHASEB_HOME, "user-data"),
     ZCODE_DESKTOP_SESSION_DATA_DIR: join(PHASEB_HOME, "user-data", "session"),
+    ZCODE_BUILTIN_PROVIDER_CONFIG_FILE: ZCODE_BUILTIN_PROVIDER_CONFIG_BASELINE,
     ELECTRON_DISABLE_SECURITY_WARNINGS: "1",
     ...extra,
   };
