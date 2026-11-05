@@ -148,3 +148,8 @@ export {
   resolveGamingIntent,
   buildGamingModelContext,
 } from "./domain/intent.js";
+
+// GamePlan → Dynamic Workflow 脚本产物（M1.5，directive §12 / contract 05 rev 2）。
+// 生成的是既存基础设施要编译/执行/记账的脚本 artifact —— 本包不调度、不记账、不执行。
+export type { GamePlanWorkflowScript } from "./domain/plan-workflow.js";
+export { buildGamePlanWorkflowScript } from "./domain/plan-workflow.js";

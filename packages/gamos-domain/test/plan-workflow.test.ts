@@ -135,10 +135,12 @@ describe("buildGamePlanWorkflowScript — script generation (M1.5)", () => {
     expect(posA).toBeGreaterThanOrEqual(0);
     expect(posB).toBeGreaterThan(posA);
     expect(posC).toBeGreaterThan(posA);
-    // b and c form one parallel level (Promise.all) after awaiting step-a
+    // b and c form one parallel level (Promise.all) strictly after awaiting step-a
     expect(text).toMatch(/Promise\.all\(/);
-    const levelAEnd = text.indexOf("await step-a") >= 0 ? text.indexOf("await step-a") : text.indexOf("await n_step-a");
-    expect(levelAEnd).toBeGreaterThanOrEqual(0);
+    const awaitA = text.indexOf("await n_step_a");
+    const allPos = text.indexOf("Promise.all(");
+    expect(awaitA).toBeGreaterThanOrEqual(0);
+    expect(allPos).toBeGreaterThan(awaitA);
   });
 
   it("emits fail-closed guards for unavailable engines BEFORE any step (never mock success)", () => {

@@ -397,6 +397,7 @@ export interface ContextCapabilityEntry {
   readonly id: string;
   readonly version?: string;
   readonly title?: string;
+  readonly engineFamily?: string;
   readonly provider?: { kind: string; identity: string };
   readonly availability?: { state: string; reason: string; prerequisites: readonly string[] };
   readonly permissions?: readonly { kind: string; scope: string; rationale: string }[];
@@ -494,6 +495,7 @@ export function buildGamingModelContext(observations: GamingContextObservations)
         id: record.id,
         version: record.version,
         title: record.title,
+        ...(record.engineFamily !== undefined ? { engineFamily: record.engineFamily } : {}),
         provider: { kind: record.provider.kind, identity: record.provider.identity },
         availability: {
           state: record.availability.state,
