@@ -728,6 +728,30 @@ function isStaleBanner(state, staleBanner) {
 }
 
 /**
+ * Dismisses the failed turn's chat-error-banner the way a real user does before
+ * retrying. The app keeps control.lastError as a projection fact, but the
+ * dismiss records the error fingerprint so the SAME error no longer renders —
+ * after this, a mounted banner is unambiguously a NEW failure of the
+ * resubmitted turn (run 42114111080: the same-signature rate-limit banner stayed
+ * mounted and made the retry's error state unreadable).
+ */
+async function dismissErrorBanner() {
+  try {
+    const rect = await rectOf(`(() => { const b = document.querySelector('[data-testid="chat-error-banner"]'); if (!b) return null; return b.querySelector('button[aria-label="Dismiss error"]') ?? null; })()`).catch(() => null);
+    if (rect && rect.w > 0) {
+      await cdpClickRect(rect);
+      await new Promise((r) => setTimeout(r, 400));
+      log("dismissed the failed turn's error banner (real-user dismiss before retry)");
+      return true;
+    }
+  } catch {
+    // fall through to the not-found path
+  }
+  log("error banner dismiss button not found — continuing (the stale-banner grace covers it)");
+  return false;
+}
+
+/**
  * Wait for the current agent turn to complete (upstream semantics:
  * sessionId !== "draft", no stop button, rows present) while responding to any
  * permission dialogs that appear. respondKind selects the response used for
@@ -736,20 +760,29 @@ function isStaleBanner(state, staleBanner) {
  * the rejected modification must also be rejected, otherwise the journey
  * itself would apply the rejected change on a retry).
  *
- * staleBanner: the chat-error-banner signature captured BEFORE a resubmission.
- * The app keeps the failed turn's banner mounted while the resubmitted turn is
- * still starting up (run 42109892985: the retry verdict fired 96ms after
- * sendConversationCommandV4 OK — before the new turn's stop button could
- * render, the OLD banner was read as a second failure and the retry was never
- * actually waited on). A banner matching the pre-resubmission signature is
- * therefore ignored: the wait continues until the turn completes, times out, or
- * a DIFFERENT banner (a genuine new failure) appears.
+ * staleBanner: the chat-error-banner signature captured BEFORE a resubmission
+ * (run 42109892985: the retry verdict fired 96ms after sendConversationCommandV4
+ * OK — before the new turn's stop button could render, the OLD banner was read
+ * as a second failure and the retry was never actually waited on). A banner
+ * matching the pre-resubmission signature is treated as a stale remnant for a
+ * STARTUP GRACE window only: if the same-signature banner stays mounted with no
+ * running turn for longer than the grace, the resubmitted turn has failed with
+ * the SAME error (run 42114111080: free-models-per-day quota exhausted — the
+ * retry failed identically) and the wait reports turnFailed.
+ *
+ * A mounted banner (any signature) also BLOCKS the completion verdict: an
+ * error banner + no stop button is an error state, never a completed turn
+ * (run 42114111080's completion branch fired 6s after the rate-limited retry
+ * died with its banner still mounted — completed=true, artifact=false).
  */
+const STALE_BANNER_GRACE_MS = 15000;
+
 async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, respondKind = "allowOnce", approvals = [], staleBanner = null } = {}) {
   const start = Date.now();
   let sawToolUse = false;
   let last = null;
   let idleSince = null;
+  let bannerSince = null;
   let staleBannerLogged = false;
   while (Date.now() - start < timeout) {
     last = await timelineState().catch(() => null);
@@ -765,19 +798,30 @@ async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, r
       }
     }
     const running = last.canStop;
+    const sessionLive = last.rows > 0 && last.paneSessionId && last.paneSessionId !== "draft";
+    const inErrorState = !running && last.errorBanner && sessionLive;
     const bannerIsStale = isStaleBanner(last, staleBanner);
-    if (bannerIsStale && !staleBannerLogged) {
-      staleBannerLogged = true;
-      log(`stale error banner from the previously failed turn still mounted (code=${JSON.stringify(staleBanner.code)}) — ignoring it while the resubmitted turn runs`);
-    }
-    if (!running && last.errorBanner && !bannerIsStale && last.rows > 0 && last.paneSessionId && last.paneSessionId !== "draft") {
-      // The turn FAILED (chat-error-banner present, no stop button): report it
-      // so callers can resubmit exactly like a real user instead of idling to
-      // the full timeout (run 42104260632: free-tier model request failed,
-      // banner surfaced, 5 minutes of dead waiting).
+    if (inErrorState && !bannerIsStale) {
+      // The turn FAILED (a banner the caller has not seen before, no stop button):
+      // report it so callers can resubmit exactly like a real user instead of
+      // idling to the full timeout (run 42104260632: free-tier model request
+      // failed, banner surfaced, 5 minutes of dead waiting).
       return { completed: false, turnFailed: true, ...last, sawToolUse, approvals };
     }
-    if (!running && last.rows > 0 && last.paneSessionId && last.paneSessionId !== "draft") {
+    if (inErrorState && bannerIsStale) {
+      if (bannerSince === null) bannerSince = Date.now();
+      if (!staleBannerLogged) {
+        staleBannerLogged = true;
+        log(`stale error banner from the previously failed turn still mounted (code=${JSON.stringify(staleBanner.code)}) — allowing a ${STALE_BANNER_GRACE_MS}ms startup grace before reading it as the resubmitted turn's own failure`);
+      }
+      if (Date.now() - bannerSince > STALE_BANNER_GRACE_MS) {
+        log(`same-signature error banner persisted ${Date.now() - bannerSince}ms with no running turn — the resubmitted turn failed with the SAME error`);
+        return { completed: false, turnFailed: true, bannerSameSignature: true, ...last, sawToolUse, approvals };
+      }
+      idleSince = null;
+    } else if (!running && !last.errorBanner && sessionLive) {
+      // Completion requires NO mounted banner: not-running + banner is an error
+      // state (see docblock — run 42114111080).
       if (idleSince === null) idleSince = Date.now();
       // require ~6s of stability so a between-tools gap isn't read as completion
       if (Date.now() - idleSince > 6000) {
@@ -785,6 +829,7 @@ async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, r
       }
     } else {
       idleSince = null;
+      bannerSince = null;
     }
     await new Promise((r) => setTimeout(r, 2000));
   }
@@ -1320,9 +1365,10 @@ async function stageS3() {
   if (result.turnFailed) {
     log("S3: model turn failed (chat-error-banner) — resubmitting the task once (real-user retry)");
     await screenshot("S3-turn-failed");
-    // Snapshot the banner BEFORE resubmitting: the failed turn's banner stays
-    // mounted while the new turn starts, and must not be read as a new failure.
+    // Snapshot the banner BEFORE dismissing/resubmitting: the signature is the
+    // stale-banner fallback for the retry wait.
     const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
+    await dismissErrorBanner();
     await submitComposerTask(taskText, "S3-retry");
     result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals, staleBanner });
     result = { ...result, retriedAfterTurnFailure: true };
@@ -1470,6 +1516,7 @@ async function stageS6() {
   if (approveResult.turnFailed) {
     log("S6 approve: model turn failed (chat-error-banner) — resubmitting once (real-user retry)");
     const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
+    await dismissErrorBanner();
     await submitComposerTask(approveTask, "S6-approve-retry");
     approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals, staleBanner });
     approveResult = { ...approveResult, retriedAfterTurnFailure: true };
@@ -1498,6 +1545,7 @@ async function stageS6() {
   if (rejectResult.turnFailed) {
     log("S6 reject: model turn failed (chat-error-banner) — resubmitting once (real-user retry)");
     const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
+    await dismissErrorBanner();
     await submitComposerTask(rejectTask, "S6-reject-retry");
     // The retried turn must again be REJECTED when it asks permission.
     rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals, staleBanner });
