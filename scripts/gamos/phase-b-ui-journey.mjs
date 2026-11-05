@@ -723,7 +723,12 @@ async function stageS0() {
     if (!state) return false;
     const sidebar = await hasTid("sidebar");
     const onboarding = await hasTid("onboarding-page");
-    if (sidebar || onboarding || (state.bodyLen > 500 && state.ready === "complete")) return true;
+    // A fresh HOME with a healthy provider registry opens the first-run LOGIN
+    // entry (Root's provider-availability guard) instead of the workspace — that
+    // is a fully-rendered app surface too (handled by S1's login-entry walk),
+    // not a launch failure.
+    const loginEntry = await hasTid("login-use-api-key-button");
+    if (sidebar || onboarding || loginEntry || (state.bodyLen > 500 && state.ready === "complete")) return true;
     if (state.ready === "complete" && state.bodyLen === 0 && reloads < maxReloads) {
       reloads++;
       log(`S0: renderer blank (tidCount=0) — reloading page (attempt ${reloads}/${maxReloads})`);
@@ -731,20 +736,62 @@ async function stageS0() {
       await new Promise((r) => setTimeout(r, 15000));
     }
     return false;
-  }, { what: "workspace DOM (sidebar/onboarding)", timeout: MAX_WAIT, interval: 5000 });
+  }, { what: "workspace DOM (sidebar/onboarding/first-run login entry)", timeout: MAX_WAIT, interval: 5000 });
   await screenshot("S0-app-up");
   await dumpDom("S0-app-up");
   const launchUrl = target.url;
+  const s0Surface = (await hasTid("login-use-api-key-button")) ? "first-run login entry (WelcomeScreen — walked by S1)"
+    : (await hasTid("onboarding-page")) ? "first-run onboarding wizard"
+    : "workspace";
   recordStage("S0", "pass", {
     window: "main BrowserWindow over CDP",
     launch_url: launchUrl.slice(0, 220),
     app_title: target.title,
     renderer: MODE === "prod" ? "production bundle (out/renderer)" : "vite dev server",
+    surface: s0Surface,
     diag: lastDiag,
   });
 }
 
+/**
+ * First-run login entry (the app's REAL fresh-HOME flow, only reachable once the
+ * provider registry initializes): Root's provider-availability login guard opens
+ * the WelcomeScreen when there is no logged-in user AND no usable provider
+ * (packages/ui/src/root/useProviderAvailabilityLoginEntryGuard.ts
+ * "未登录且没有可用模型配置时必须引导用户连接账号或填写 API Key"). The journey's
+ * user configures OpenRouter later through Settings (S2), so the faithful action
+ * here is the login screen's own "Use API key" → "Skip" path
+ * (WelcomeScreen loginMode="apiKey" → LoginApiKeyForm skip → onComplete("skip")
+ * — "跳过只表示用户确认当前 provider family 运行域"， no empty API key is written).
+ * Skipping the login screen itself (as opposed to skipping onboarding steps) is
+ * recorded explicitly in the stage evidence.
+ */
+async function handleFirstRunLoginEntryIfPresent() {
+  const loginEntry = await waitFor(async () => {
+    if (await hasTid("login-use-api-key-button")) return "login";
+    if (await hasTid("onboarding-page")) return "onboarding";
+    if (await hasTid("sidebar")) return "workspace";
+    return false;
+  }, { what: "first-run surface (login entry / onboarding / workspace)", timeout: 90000 });
+  if (loginEntry !== "login") return { shown: false, surface: loginEntry };
+  await screenshot("S1-login-entry");
+  await dumpDom("S1-login-entry");
+  await clickTid("login-use-api-key-button", { timeout: 20000 });
+  await waitForTid("login-api-key-skip-button", { timeout: 20000 });
+  await screenshot("S1-login-api-key-form");
+  await clickTid("login-api-key-skip-button", { timeout: 20000 });
+  // The skip records the provider-family choice and completes the welcome
+  // screen; the first-run onboarding wizard then appears.
+  await waitFor(async () => Boolean(await hasTid("onboarding-page")) || Boolean(await hasTid("sidebar")), { what: "onboarding (or workspace) after login skip", timeout: 45000 });
+  return { shown: true, action: "login-use-api-key-button → login-api-key-skip-button (Skip: no credential written; OpenRouter configured in S2)", skipped_at: new Date().toISOString() };
+}
+
 async function stageS1() {
+  // 0. First-run login entry (only present on a fresh HOME with no user and no
+  // usable provider — the app's real first screen once the provider registry
+  // is healthy). Walked with real CDP clicks; the Skip there is the login
+  // screen's own sanctioned action, distinct from onboarding step skipping.
+  const loginEntry = await handleFirstRunLoginEntryIfPresent();
   const present = await waitFor(async () => {
     if (await hasTid("onboarding-page")) return true;
     if (await hasTid("sidebar")) return "workspace";
@@ -781,10 +828,11 @@ async function stageS1() {
   await dumpDom("S1-onboarding-done");
   if (!finished) throw new Error("onboarding finished click did not reach the workspace sidebar");
   recordStage("S1", "pass", {
+    first_run_login_entry: loginEntry,
     steps,
     skip_used: false,
     back_used: false,
-    note: "wizard walked step-by-step via real CDP clicks; no Skip/Back used; defaults kept on the preferences step",
+    note: "first-run login entry (Use API key → Skip) walked when present (the app's real fresh-HOME screen; no credential written there — OpenRouter is configured in S2); wizard then walked step-by-step via real CDP clicks; no Skip/Back used inside the wizard; defaults kept on the preferences step",
   });
 }
 
@@ -1363,6 +1411,10 @@ async function stageS9() {
   if (MODE === "dev") await launchDev();
   else if (MODE === "prod") await launchProd();
   await attachCdp();
+  // Defensive: with the same HOME the login entry should not reappear (the skip
+  // record + S2's OpenRouter provider make the state usable), but if a login
+  // surface does show, walk the same sanctioned Use API key → Skip path.
+  await handleFirstRunLoginEntryIfPresent().catch(() => {});
   await waitForTid("sidebar", { timeout: 90000 });
   await new Promise((r) => setTimeout(r, 1500));
   await screenshot("S9-app-restarted");

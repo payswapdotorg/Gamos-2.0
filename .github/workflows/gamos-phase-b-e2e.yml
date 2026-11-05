@@ -265,11 +265,18 @@ jobs:
         # pnpm --filter @zcode/desktop test:e2e), executed directly on the runner
         # per docs/testing/upstream-provider-e2e.md. wdio only auto-starts Xvfb
         # inside the E2E container (wdio.conf.ts autoXvfb is containerE2E-gated),
-        # so Xvfb is started explicitly here; wdio's electron service resolves
-        # the matching chromedriver per ELECTRON_VERSION.
+        # so Xvfb is started explicitly; the chromedriver build matching the
+        # pinned Electron version is prefetched with the same
+        # chromedriver-preflight.mjs prepare/path preflight the container script
+        # runs, and passed via CHROMEDRIVER_PATH (outside the container, wdio's
+        # beforeSession only computes the executable path — it does not install
+        # it; first attempt failed with spawn ENOENT at /tmp/chromedriver/...).
         run: |
           Xvfb :99 -screen 0 1920x1080x24 -ac +extension RANDR > /tmp/xvfb.log 2>&1 &
           sleep 3
+          node packages/desktop/scripts/chromedriver-preflight.mjs prepare /tmp/chromedriver-e2e
+          export CHROMEDRIVER_PATH="$(node packages/desktop/scripts/chromedriver-preflight.mjs path /tmp/chromedriver-e2e)"
+          echo "CHROMEDRIVER_PATH=${CHROMEDRIVER_PATH}"
           dbus-run-session -- pnpm --filter @zcode/desktop test:e2e
 
       - name: Scan artifacts for accidental key exposure
