@@ -518,50 +518,76 @@ async function stageS1() {
     return;
   }
   await screenshot("S1-onboarding-start");
-  // The wizard: occupation cards → continue → UI mode (Coding) → continue → preferences → Get started
-  const stepBudget = 8;
-  for (let step = 1; step <= stepBudget; step++) {
-    const info = await dumpDom(`S1-step-${step}`);
-    // 1) occupation selection: click the first selectable occupation card/button
-    const clickedCard = await evalJs(`(async () => {
-      const page0 = document.querySelector('[data-testid="onboarding-page"]');
-      const scope = page0 ?? document;
-      const cards = Array.from(scope.querySelectorAll('button[role="button"], button, [role="radio"], [role="option"]'))
-        .filter(b => !b.disabled && (b.innerText || '').trim().length > 0);
-      const first = cards[0];
-      if (!first) return null;
-      first.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
-      return (first.innerText || '').trim().slice(0, 60);
-    })()`, { awaitPromise: true }).catch(() => null);
-    await new Promise((r) => setTimeout(r, 400));
-    // 2) advance: prefer explicit continue/next/get-started buttons
-    const advanced = await evalJs(`(async () => {
-      const candidates = ['Continue', 'Next', 'Get started', '开始使用', '继续', '下一步'];
-      const els = Array.from(document.querySelectorAll('button'));
-      for (const label of candidates) {
-        const el = els.find(b => !b.disabled && (b.innerText || '').trim().toLowerCase() === label.toLowerCase());
-        if (el) { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true })); return label; }
-      }
-      return null;
-    })()`, { awaitPromise: true }).catch(() => null);
-    log(`onboarding step ${step}: card="${clickedCard ?? "-"}" advance="${advanced ?? "-"}"`);
+  // Explicit wizard walk (labels verified from the real UI dom-dumps):
+  //   step 1 occupation cards ("Software / Data / AI", …) — selection advances
+  //   step 2 UI mode ("Coding mode" / "Office mode") + Next
+  //   later steps: Next/Continue/Get started. Never click Back/Skip/Retry.
+  const STEP_JS = `(async () => {
+    const page0 = document.querySelector('[data-testid="onboarding-page"]');
+    if (!page0) return { done: true };
+    const btns = Array.from(document.querySelectorAll('button'))
+      .filter(b => b.offsetParent !== null && !b.disabled && (b.innerText || '').trim().length > 0);
+    const pick = (re) => btns.find(b => re.test((b.innerText || '').trim()));
+    const occupation = pick(/software\\s*\\/\\s*data\\s*\\/\\s*ai/i);
+    const codingMode = pick(/^coding mode/i);
+    const advance = pick(/^(next|continue|get started|下一步|继续|开始使用)$/i);
+    const el = occupation ?? codingMode ?? advance;
+    if (!el) return { done: false, have: btns.map(b => (b.innerText || '').trim().slice(0, 30)).slice(0, 10) };
+    el.scrollIntoView({ block: 'center' });
+    await new Promise(r => setTimeout(r, 80));
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
+    return { done: false, clicked: (el.innerText || '').trim().split('\\n')[0].slice(0, 40) };
+  })`;
+  let lastClicked = null;
+  let repeated = 0;
+  for (let step = 1; step <= 14; step++) {
+    const r = await evalJs(STEP_JS, { awaitPromise: true }).catch((e) => ({ done: false, error: e.message }));
+    if (r?.done) break;
+    if (r?.clicked && r.clicked === lastClicked) {
+      repeated++;
+    } else {
+      repeated = 0;
+      lastClicked = r?.clicked ?? null;
+    }
+    log(`onboarding step ${step}: clicked="${r?.clicked ?? "(none)"}"${r?.have ? ` options=${JSON.stringify(r.have).slice(0, 160)}` : ""}${repeated >= 2 ? " (repeated — escalating)" : ""}`);
+    await new Promise((r2) => setTimeout(r2, 1200));
     await screenshot(`S1-onboarding-step-${step}`);
-    await new Promise((r) => setTimeout(r, 800));
-    const done = !(await hasTid("onboarding-page")) && (await hasTid("sidebar"));
-    if (done) break;
+    if (!(await hasTid("onboarding-page"))) break;
+    if (repeated >= 2) {
+      // Same target clicked 3× without advancing: try the remaining priority buttons explicitly.
+      const alt = await evalJs(`(async () => {
+        const btns = Array.from(document.querySelectorAll('button'))
+          .filter(b => b.offsetParent !== null && !b.disabled && (b.innerText || '').trim().length > 0);
+        const pick = (re) => btns.find(b => re.test((b.innerText || '').trim()));
+        const el = pick(/^coding mode/i) ?? pick(/^(next|continue|get started|下一步|继续|开始使用)$/i) ?? pick(/^(skip|跳过)$/i);
+        if (!el) return null;
+        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
+        return (el.innerText || '').trim().slice(0, 30);
+      })()`, { awaitPromise: true }).catch(() => null);
+      log(`onboarding escalation at step ${step}: clicked="${alt ?? "(none)"}"`);
+      await new Promise((r2) => setTimeout(r2, 1200));
+      repeated = 0;
+    }
   }
-  const finished = await hasTid("sidebar");
+  const finished = await waitForTid("sidebar", { timeout: 45000 }).catch(() => false);
   await screenshot("S1-onboarding-done");
+  await dumpDom("S1-onboarding-done");
   recordStage("S1", finished ? "pass" : "partial", finished
-    ? "onboarding wizard completed; main workspace visible"
+    ? "onboarding wizard completed (occupation → Coding mode → preferences); main workspace visible"
     : "onboarding advanced but workspace not reached — check dom-dumps");
 }
 
 async function stageS2() {
   if (!OPENROUTER_KEY) throw new Error("OPENROUTER_API_KEY missing — cannot configure the real model provider");
-  // Settings → Model settings
+  // Settings → Model settings. Entry: the sidebar footer settings button (icon button,
+  // testid task-settings-button); fall back to text matching.
   await waitForTid("sidebar");
-  await clickButtonByText("Settings", { timeout: 20000 });
+  const settingsEntry = await hasTid("task-settings-button");
+  if (settingsEntry) {
+    await clickSel(byTid("task-settings-button"));
+  } else {
+    await clickButtonByText("Settings", { timeout: 20000 });
+  }
   await waitForTid("settings-page", { timeout: 20000 });
   await screenshot("S2-settings-open");
   // Model settings section in the settings nav
@@ -881,6 +907,10 @@ async function stageS9() {
   await stopApp();
   page = null;
   await new Promise((r) => setTimeout(r, 2000));
+  // stopApp killed the Xvfb child along with the app; the display must exist again
+  // before the relaunch or Electron cannot create its window.
+  await ensureDisplay();
+  stageDesktopOut();
   if (MODE === "dev") await launchDev();
   else if (MODE === "prod") await launchProd();
   await attachCdp();
