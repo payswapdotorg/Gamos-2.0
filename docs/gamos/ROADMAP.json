@@ -155,7 +155,7 @@
       "failed",
       "blocked"
     ],
-    "requirement": "A completed milestone evidence file contains one passed result for every required gate and no missing gate; tested_commit is a full SHA. CI on the roadmap completion commit must also pass."
+    "requirement": "A completed milestone evidence file contains one passed result for every required gate and no missing gate; tested_commit is a full SHA. CI on the roadmap completion commit must also pass. Each gate result must have one committed evidence path per SHA-256 entry (equal nonzero array lengths); the roadmap checker recomputes each hash against the committed file bytes."
   },
   "milestones": [
     {
