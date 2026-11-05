@@ -1506,6 +1506,8 @@ async function stageS7() {
     const addTrigger = document.querySelector('[data-side-pane-add-trigger]');
     const addressInput = document.querySelector('[data-testid="browser-address-input"]');
     const paneHost = document.querySelector('.side-pane-open-tab-shell');
+    const browserTabTrigger = document.querySelector('[data-side-pane-tab-id^="browser:"]');
+    const activeTab = document.querySelector('[data-side-pane-tab-id][data-state="active"]');
     const launcherRows = Array.from(document.querySelectorAll('[data-side-pane-open-tab-item]')).map(e => e.getAttribute('data-side-pane-open-tab-item'));
     const visibleRect = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; };
     return {
@@ -1516,6 +1518,9 @@ async function stageS7() {
       addTriggerPresent: Boolean(addTrigger),
       addTriggerRect: visibleRect(addTrigger),
       addressInputPresent: Boolean(addressInput),
+      browserTabTriggerPresent: Boolean(browserTabTrigger),
+      browserTabTriggerId: browserTabTrigger?.getAttribute('data-side-pane-tab-id') ?? null,
+      activeTabId: activeTab?.getAttribute('data-side-pane-tab-id') ?? null,
       launcherShellRect: visibleRect(paneHost),
     };
   })()`);
@@ -1595,7 +1600,56 @@ async function stageS7() {
     return null;
   })();
   if (!opened) throw new Error("no browser entry found to open the embedded browser pane (launcher row, side-pane-toggle, ⌥⌘B shortcut, add-trigger fallbacks all exhausted — see pane-state logs)");
-  await waitForTid("browser-address-input", { timeout: 30000 });
+  // Instrumentation gap fix (run 42098005816 evidence): the success paths above
+  // return silently — log the descriptor so every failure is attributable to a
+  // specific opening path.
+  log(`S7 browser pane opened via: ${opened}`);
+  // Run 42098005816 root cause (5th S7 incident, distinct from all prior ones):
+  // the launcher-row click DID create the browser tab (tab trigger
+  // [data-testid="browser"] present in the failure DOM dump; launcher rows gone)
+  // but the pane content never switched to the browser surface — the SESSION pane
+  // stayed active and browser-address-input never mounted within 30s, on a
+  // byte-identical journey + application tree (git diff vs the tested commit
+  // bef775cd is empty for scripts/ and packages/apps). A real user recovers by
+  // clicking the browser TAB TRIGGER again; the journey does exactly that
+  // (real CDP click, no DOM-event shortcut) before giving up.
+  let addressInputOk = false;
+  let tabRetry = 0;
+  for (let attempt = 0; attempt < 3 && !addressInputOk; attempt++) {
+    if (attempt > 0) {
+      await logPane(`address-input retry ${attempt} (pre)`);
+      // Recovery mirrors a real user in both possible pane states:
+      // (a) the browser TAB exists ([data-side-pane-tab-id^="browser:"], the
+      //     upstream E2E tab locator) but its content did not surface — clicking
+      //     the tab trigger routes to handleActivateSidePaneTab, which calls
+      //     platform.browserViewEnsureResident to RESUME a suspended guest
+      //     (useAppPanels.ts) and then activates the tab;
+      // (b) the pane fell back to the OPEN-TAB launcher state (no tabs) —
+      //     clicking the browser launcher row opens a browser tab again.
+      const tabTrigger = await rectOf(`document.querySelector('[data-side-pane-tab-id^="browser:"]')`).catch(() => null);
+      if (tabTrigger && tabTrigger.w > 0) {
+        tabRetry = attempt;
+        await cdpClickRect(tabTrigger);
+      } else {
+        const launcherRow = await rectOf(`document.querySelector('[data-side-pane-open-tab-item="browser"]')`).catch(() => null);
+        if (!launcherRow || !(launcherRow.w > 0)) {
+          log(`address-input retry ${attempt}: neither a browser tab trigger nor the open-tab launcher row is present`);
+          break;
+        }
+        tabRetry = attempt;
+        await cdpClickRect(launcherRow);
+      }
+      await new Promise((r) => setTimeout(r, 600));
+    }
+    addressInputOk = await waitForTid("browser-address-input", { timeout: attempt === 0 ? 30000 : 20000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!addressInputOk) await logPane(`address-input not mounted after attempt ${attempt}`);
+  }
+  if (!addressInputOk) {
+    throw new Error(`S7 browser pane opened ("${opened}") but browser-address-input never mounted (tab-trigger retry ${tabRetry} applied; pane-state logged per attempt)`);
+  }
+  if (tabRetry > 0) log(`S7 address input mounted after tab-trigger retry ${tabRetry} (real-user recovery click)`);
   await screenshot("S7-browser-open");
   // Navigate FIRST — then wait for the webview. The <webview> guest only mounts
   // after a navigation is confirmed (BrowserViewportSurface: "只在确认导航后创建
