@@ -300,6 +300,23 @@ async function evalJs(expression, { awaitPromise = false } = {}) {
   return r.result?.value;
 }
 
+/**
+ * Integrity guard for embedded page-JS (run 42056174710 lesson): a finder string
+ * with a SYNTAX error throws inside evalJs on every poll, and caller-side
+ * `.catch(() => null)` then silently maps that to "element not found" — the
+ * stage reads as a missing surface while the real UI sits open (screenshot
+ * proof in that run's S2). Every non-trivial finder is therefore validated at
+ * DEFINITION time: a malformed finder must fail LOUDLY, before any stage runs.
+ */
+function assertPageJs(name, js) {
+  try {
+    new Function(`return (${js});`);
+    return js;
+  } catch (e) {
+    throw new Error(`embedded page-JS "${name}" does not parse — refusing to run (silent not-found corruption): ${e.message}`);
+  }
+}
+
 async function screenshot(name) {
   const r = await page.send("Page.captureScreenshot", { format: "png" });
   const path = join(SCREEN_DIR, `${name}.png`);
@@ -329,6 +346,13 @@ async function dumpDom(name) {
 /* ------------------------------------------------------------------ */
 async function pressKey(key, { code, keyCode } = {}) {
   const common = { key, code: code ?? key, windowsVirtualKeyCode: keyCode ?? keyCodeFor(key), nativeVirtualKeyCode: keyCode ?? keyCodeFor(key) };
+  // Enter MUST carry text:"\r" so Chromium performs the keypress/char DEFAULT
+  // action — implicit FORM SUBMISSION (the browser pane's address bar) depends
+  // on it; a bare keyDown only reaches keydown listeners (xterm intercepts those
+  // directly, so S5's terminal is unaffected). Run 42056174710 S7 evidence: the
+  // address showed https://example.com but navigation never committed and the
+  // webview never mounted (empty-state placeholder in the failure screenshot).
+  if (key === "Enter") common.text = "\r";
   await page.send("Input.dispatchKeyEvent", { type: "keyDown", ...common });
   await page.send("Input.dispatchKeyEvent", { type: "keyUp", ...common });
 }
@@ -437,7 +461,7 @@ async function clickAndType(tid, text, { timeout = 20000, clearFirst = false } =
 /* aria-label "Permission required"/"需要权限", role=option buttons    */
 /* carrying data-permission-option-kind, and a Confirm button.         */
 /* ------------------------------------------------------------------ */
-const PERMISSION_DIALOG_JS = `(() => {
+const PERMISSION_DIALOG_JS = assertPageJs("permission dialog reader", `(() => {
   const normalize = (v) => (v ?? '').replace(/\\s+/g, ' ').trim();
   const listbox = Array.from(document.querySelectorAll('[role="listbox"]')).find(el => {
     const label = normalize(el.getAttribute('aria-label'));
@@ -452,7 +476,7 @@ const PERMISSION_DIALOG_JS = `(() => {
   const confirmRect = confirm ? (() => { const r = confirm.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; })() : null;
   const text = (listbox.closest('[role="dialog"], .fixed, body')?.innerText ?? listbox.innerText ?? '').slice(0, 900);
   return { options, confirmDisabled: confirm ? confirm.disabled : null, confirmRect, text };
-})()`;
+})()`);
 
 async function readPermissionDialog() {
   return evalJs(PERMISSION_DIALOG_JS).catch(() => null);
@@ -973,13 +997,29 @@ async function stageS2() {
   const inlineRowsBefore = await evalJs(`Array.from(document.querySelectorAll('[data-testid^="model-provider-model-input-"]')).map(e => e.dataset.testid)`);
   const nextInlineIndex = inlineRowsBefore.length;
   await clickTid("model-provider-add-model-button", { timeout: 20000 });
-  const DIALOG_INPUT_JS = `(() => {
-    const dialog = document.querySelector('[role="dialog"]');
-    if (!dialog) return null;
-    const inputs = Array.from(dialog.querySelectorAll('input'));
-    const byLabel = inputs.find(i => /^(模型\\s*id|model\\s*id)$/i.test(((i.closest('label')?.textContent) ?? (i.parentElement?.querySelector('label')?.textContent) ?? i.getAttribute('placeholder') ?? '')).trim()));
-    return byLabel ?? inputs.find(i => i.getAttribute('inputmode') !== 'numeric' && !i.readOnly && i.type !== 'checkbox' && i.type !== 'radio') ?? null;
-  })()`;
+  // The finder below once carried a paren imbalance (''…)).trim()) that made the
+  // page-eval throw on EVERY poll while .catch(()=>null) silently mapped the
+  // syntax error to "dialog not found" — the add-model surface then fell through
+  // to a bogus path and the free-tier model never persisted (runs 42049966765 /
+  // 42056174710 evidence: the dialog sat OPEN while the poll reported nothing;
+  // screenshot proof). Two hardening changes: (1) strategy 1 targets the metadata
+  // dialog's OWN identity row (data-model-identity-row is rendered exclusively
+  // by ProviderModelMetadataDialog) before any [role=dialog] scanning; (2) the
+  // finder is syntax-checked at startup via assertPageJs (below) so this class of
+  // silent failure can never masquerade as a missing element again.
+  const DIALOG_INPUT_JS = assertPageJs("add-model dialog input finder", `(() => {
+    const identity = document.querySelector('[data-model-identity-row] input');
+    if (identity) return identity;
+    const dialogs = Array.from(document.querySelectorAll('[role="dialog"], [role="alertdialog"]'));
+    for (const dialog of dialogs) {
+      const inputs = Array.from(dialog.querySelectorAll('input'));
+      const byLabel = inputs.find(i => /^(模型\\s*id|model\\s*id)$/i.test(((i.closest('label')?.textContent) ?? (i.parentElement?.querySelector('label')?.textContent) ?? i.getAttribute('placeholder') ?? '').trim()));
+      if (byLabel) return byLabel;
+      const fallback = inputs.find(i => i.getAttribute('inputmode') !== 'numeric' && !i.readOnly && i.type !== 'checkbox' && i.type !== 'radio');
+      if (fallback) return fallback;
+    }
+    return null;
+  })()`);
   const NEW_INLINE_JS = `document.querySelector('[data-testid="model-provider-model-input-${nextInlineIndex}"]')`;
   let which = null;
   for (let addAttempt = 1; addAttempt <= 2 && !which; addAttempt++) {
@@ -1005,13 +1045,14 @@ async function stageS2() {
     await new Promise((r) => setTimeout(r, 200));
     await typeIntoFocused(MODEL_ID);
     await new Promise((r) => setTimeout(r, 600));
-    const saveBtn = await waitFor(async () => {
-      const r = await rectOf(`(() => {
+    const SAVE_BTN_JS = assertPageJs("add-model Save button finder", `(() => {
         const dialog = document.querySelector('[role="dialog"]');
         if (!dialog) return null;
         const btn = Array.from(dialog.querySelectorAll('button')).find(b => /^(保存|save).*/i.test((b.innerText ?? '').replace(/\\s+/g, ' ').trim()));
         return btn && !btn.disabled && !dialog.querySelector('[role="status"]') ? btn : null;
-      })()`).catch(() => null);
+      })()`);
+    const saveBtn = await waitFor(async () => {
+      const r = await rectOf(SAVE_BTN_JS).catch(() => null);
       return r && r.w > 0 ? r : false;
     }, { what: "model metadata dialog Save button (enabled after the catalog query)", timeout: 45000 });
     await cdpClickRect(saveBtn);
@@ -1147,8 +1188,7 @@ async function selectModelInComposer() {
   // model is therefore REQUIRED: prefer the configured PHASEB_MODEL, then any
   // ":free" item from the provider's live catalog.
   const modelFragment = MODEL_ID.split("/").pop() ?? MODEL_ID;
-  const item = await waitFor(async () => {
-    const r = await rectOf(`(() => {
+  const MODEL_ITEM_JS = assertPageJs("composer model item finder", `(() => {
       const items = Array.from(document.querySelectorAll('[data-testid^="chat-model-select-item-"]'));
       const visible = items.filter(i => (i.innerText || '').trim());
       // Match the model id in the DISPLAYED name OR in the item testid: personal
@@ -1169,7 +1209,9 @@ async function selectModelInComposer() {
           || tid.includes(encoded);
       };
       return visible.find(matches) ?? null;
-    })()`).catch(() => null);
+    })()`);
+  const item = await waitFor(async () => {
+    const r = await rectOf(MODEL_ITEM_JS).catch(() => null);
     return r && r.w > 0 ? r : false;
   }, { what: `model item containing "${modelFragment}" (or a :free catalog model)`, timeout: 60000 });
   await cdpClickRect(item);
