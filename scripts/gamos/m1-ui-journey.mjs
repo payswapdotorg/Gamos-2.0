@@ -1620,6 +1620,34 @@ async function stageMJ2() {
   journey.m1Context = ctx;
 }
 
+/** The dwf_* journal is the authoritative run-id record. The timeline text is
+ * capped (timelineState slices to 2500 chars) and virtualized, so the raw
+ * dwfrun-* ids are NOT reliably visible there (run 42299529575: MJ4 scraped
+ * zero ids from the timeline while the journal held the launched run — MJ9's
+ * pre-restart continuity check then failed against an empty set). Union every
+ * journal-observed run id into the pre-restart evidence set. Best-effort: MJ5's
+ * own journal polling remains the authoritative gate. */
+async function captureDwfRunIdsFromJournal() {
+  try {
+    const dbPath = journey.m1DbPath ?? findSessionStoreDb();
+    if (!dbPath) return;
+    const { DatabaseSync } = await import("node:sqlite");
+    const db = new DatabaseSync(dbPath, { readOnly: true });
+    let ids = [];
+    try {
+      ids = db.prepare("SELECT id FROM dwf_run").all().map((r) => String(r.id));
+    } catch { /* table absent — nothing launched yet */ }
+    db.close();
+    const before = M1_EVIDENCE.dwfRunIds.length;
+    for (const id of ids) {
+      if (!M1_EVIDENCE.dwfRunIds.includes(id)) M1_EVIDENCE.dwfRunIds.push(id);
+    }
+    if (M1_EVIDENCE.dwfRunIds.length > before) {
+      log(`captured dwf run ids from the authoritative journal (${M1_EVIDENCE.dwfRunIds.length} total: ${M1_EVIDENCE.dwfRunIds.join(", ")})`);
+    }
+  } catch { /* best-effort — MJ5/MJ6 carry the authoritative record */ }
+}
+
 async function stageMJ3() {
   // Structured, provenance-backed context reaches the SELECTED model through
   // the existing composer; the model authors the GamePlan workflow script and
@@ -1676,6 +1704,9 @@ async function stageMJ3() {
   const timeline = result.timeline ?? "";
   const runIds = [...new Set((timeline.match(/dwfrun-[0-9a-f-]{8,}/g) ?? []))];
   M1_EVIDENCE.dwfRunIds = runIds;
+  // The timeline scrape alone is unreliable (see captureDwfRunIdsFromJournal) —
+  // the just-launched run is already in the authoritative journal.
+  await captureDwfRunIdsFromJournal();
   const createWorkflowApproved = approvals.some((a) => a.result !== "dismissed") || /CreateWorkflow|workflow/i.test(timeline);
   await screenshot("MJ3-turn-result");
   const pass = createWorkflowApproved && result.completed;
@@ -1689,6 +1720,7 @@ async function stageMJ3() {
     permission_approvals: approvals.map((a) => ({ kind: a.kind, result: a.result })),
     create_workflow_evidence_seen: createWorkflowApproved,
     dwf_run_ids_in_timeline: runIds,
+    dwf_run_ids_evidence: [...M1_EVIDENCE.dwfRunIds],
     session_id: result.paneSessionId,
     timeline_excerpt: timeline.slice(0, 600),
   });
@@ -1831,6 +1863,7 @@ async function stageMJ4() {
     await new Promise((r) => setTimeout(r, 3000));
   }
   db.close();
+  await captureDwfRunIdsFromJournal();
   await screenshot("MJ4-run-terminal");
   const pass = terminal !== null && /complet|finish|succeed|done/i.test(terminal);
   recordStage("MJ4", pass ? "pass" : "fail", {
@@ -1915,6 +1948,7 @@ async function stageMJ6() {
     } catch { /* honest absence */ }
   }
   await screenshot("MJ6-after-stop");
+  await captureDwfRunIdsFromJournal();
   const pass = stopClicked || Boolean(journalState?.latest_status);
   recordStage("MJ6", pass ? "pass" : "fail", {
     task: "cancellation through the existing stop control",
@@ -1964,6 +1998,7 @@ async function stageMJ7() {
     } catch { /* honest absence */ }
   }
   const resumeAccepted = /resume|dwf|run/i.test(timeline) && result.completed;
+  await captureDwfRunIdsFromJournal();
   const pass = resumeAccepted;
   recordStage("MJ7", pass ? "pass" : "fail", {
     task: "resume through the existing /dwf resume command",
