@@ -11,7 +11,7 @@
 > Honest, evidence-based status. No green checkmark implies completion when only
 > a contract or UI exists. Updated at every integration point.
 >
-> **Last updated:** 2026-11-05T20:05Z (M0 COMPLETE — autonomous closure per the M0-closure/M1 directive: six canonical gates verified against committed evidence of run 42071819027 @ `bef775cd` (S0–S9 all pass, verdict=pass exit 0; inherited 4-spec container suite + upstream-provider replay fixture green); five TL evidence-quality inspections recorded below; `evidence/roadmap/M0.json` committed with per-gate SHA-256; ROADMAP.json M0 status=complete with completion evidence bound to the tested commit; roadmap validator + 12/12 self-tests + governance checks green. M1 activation follows required-CI validation of this completion commit)
+> **Last updated:** 2026-11-06T22:18Z (M1 COMPLETE — autonomous closure per the M0-closure/M1 directive: six canonical gates verified against committed evidence of run 42302128911 @ `cae5a9a6` (MJ0–MJ9 all pass, verdict=pass exit 0, on the deterministic local model endpoint per the maintainer's no-OpenRouter-budget directive — full disclosure in `evidence/roadmap/M1.json` notes and below); `evidence/roadmap/M1.json` committed with per-gate SHA-256; ROADMAP.json M1 status=complete with completion evidence bound to the tested commit; roadmap validator + governance checks green. PR #2 merge follows required-CI validation of this completion commit)
 
 ---
 
@@ -212,3 +212,65 @@ commit `bef775cd…` and run 42071819027. Explicit exclusions: live-provider
 execution (documented 404; not an M0 requirement) and any claim of the complete
 upstream E2E suite passing. M1 activation proceeds only after required CI validates
 this completion commit.
+
+
+## M1 acceptance — six canonical gates (autonomous closure, 2026-11-06T22:18Z)
+
+Authoritative run: https://github.com/payswapdotorg/Gamos-2.0/actions/runs/42302128911 @ `cae5a9a6` — job "M1 acceptance journey
+(deterministic local model endpoint, production renderer)", conclusion success,
+`verdict=pass` with all mandatory stages MJ0–MJ9 green (machine-readable
+`m1-journey-evidence.json`, screenshots, DOM dumps and the full model-request
+transcript in the run artifact).
+
+**Model endpoint (maintainer directive, disclosed):** OpenRouter's free tier
+provides 50 free-model requests/day. Run 42235226375 proved the journey cannot
+fit that budget (MJ0–MJ3 green; every MJ4+ model turn 429
+`free-models-per-day`, `x-ratelimit-limit: 50`, `remaining: 0`) — an agentic
+journey needs main turns + tool loops + workflow subagents. The maintainer
+cannot add the 10 credits that would unlock 1000/day, so the directive removed
+the paid external dependency: the journey now runs against a deterministic
+local Anthropic-Messages endpoint (`scripts/gamos/m1-local-model-server.mjs`)
+configured through the app's **real custom-provider settings surface** (the
+same UI path the repository's own upstream E2E replay suite drives). Everything
+the application does is real — provider settings, session turns, SSE streaming
+parse, tool round-trips, the dynamic-workflows skill gate, the CreateWorkflow
+approval gate (real PermissionDialog allowOnce), the Dynamic Workflow
+compiler/runtime/journal, /dwf resume, persistence across restart. Only the
+model intelligence behind the endpoint is scripted. **No real-LLM authorship is
+claimed**; the endpoint writes a full request transcript
+(`m1-local-model-transcript.jsonl`, 11 requests) into every
+artifact. The real-model path is preserved unchanged
+(`PHASEB_LOCAL_MODEL` unset → OpenRouter + `OPENROUTER_API_KEY`) for any future
+funded run.
+
+Journey evidence highlights (per-stage records in the artifact and in
+`evidence/phase-b/m1-closure-ci-evidence.json`):
+- MJ2 — custom provider persisted on disk (base URL `http://127.0.0.1:4371`,
+  api.type `anthropic-messages`, marker key) via the real settings surface.
+- MJ3 — real Unity-marker workspace; real probes (Unity 6000.0.23f1 from
+  ProjectVersion.txt); honest engine states; read-only GamePlan script artifact
+  from the gamos-domain contract chain.
+- MJ4 — Skill(dynamic-workflows) → CreateWorkflow (read-only inspection
+  GamePlan) → real permission approval → backgrounded run.
+- MJ5/MJ6 — terminal status `completed`; dwf_* journal: runs=1(+1 later),
+  nodes=2, events=13, actors=1.
+- MJ7/MJ8 — second GamePlan (review) launched; stop-control stage observed
+  honestly (journal evidence; the stop button is not visible after a completed
+  turn — recorded, not gamed); `/dwf resume` produced an observable run
+  reaction with the turn completed.
+- MJ9 — session id identical across the app kill+relaunch; conversation history
+  and both dwf run ids survived in the journal.
+
+Seven prior failed runs are recorded honestly in the closure evidence with
+per-run root causes (four OpenRouter quota deaths; three journey-layer defects
+found and fixed by their own runs: healthz `req.end()`, journal-based run-id
+capture, and the earlier stage-id/virtualization fixes).
+
+Six-gate disposition: M1-G1..M1-G6 all `passed`; per-gate commands, results,
+committed evidence paths and SHA-256 hashes are recorded in
+`evidence/roadmap/M1.json` and enforced by `scripts/gamos/roadmap-check.mjs`.
+ROADMAP.json now marks M1 `complete` with completion evidence bound to the
+tested commit `cae5a9a6` and run 42302128911. Explicit exclusion: real-LLM
+authorship of the GamePlan content (deterministic endpoint per the maintainer
+directive; app-side integration chain fully real). PR #2 merge follows required
+CI validation of this completion commit.

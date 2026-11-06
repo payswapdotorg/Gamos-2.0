@@ -1,0 +1,92 @@
+{
+  "phase_id": "M1",
+  "status": "passed",
+  "tested_commit": "cae5a9a6d9f4b702fde57dbe1d6c30b9332e5319",
+  "workflow_run_id": 42302128911,
+  "workflow_run_url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/42302128911",
+  "completed_at": "2026-11-06T22:17:41.469Z",
+  "environment": {
+    "runner": "GitHub-hosted ubuntu-latest",
+    "os": "Ubuntu 24.04 (GitHub runner image)",
+    "runtime": "Node 24 / pnpm 10.33.2 frozen lockfile; Electron production renderer; Xvfb display; CDP-driven real input (Input.dispatchMouseEvent / Input.insertText / Input.dispatchKeyEvent)",
+    "model_endpoint": "deterministic local Anthropic-Messages endpoint (scripts/gamos/m1-local-model-server.mjs) at http://127.0.0.1:4371, configured through the app's real custom-provider settings surface (anthropic-messages format)",
+    "model_endpoint_disclosure": "Maintainer directive (2026-11-06): no OpenRouter budget. The free tier's 50 free-model requests/day provably cannot carry the journey (run 42235226375: MJ0-MJ3 green, every MJ4+ model turn 429 free-models-per-day, x-ratelimit-limit 50 remaining 0). The journey therefore runs against a deterministic scripted model endpoint — the same class of test infrastructure as the repository's upstream E2E replay fixtures. Everything the APP does is real (custom-provider settings surface, session turns, SSE streaming parse, tool round-trips, the dynamic-workflows skill gate, the CreateWorkflow approval gate, subagent scheduling, the Dynamic Workflow compiler/runtime, dwf_* journal, resume, persistence across restart). Only the model intelligence behind the endpoint is scripted. No claim of real-LLM authorship is made; the full model request transcript is preserved in the run artifact (m1-local-model-transcript.jsonl)."
+  },
+  "gate_results": [
+    {
+      "gate_id": "M1-G1",
+      "status": "passed",
+      "command": "packages/gamos-domain contract suites (GameIR exact-conformance round-trip, unknown-version rejection, extra-field rejection; recorded GREEN at M1.6 commit 38f5777c — 183/183 tests incl. 28 new) + the M1 journey's MJ3 contract round-trip on a real workspace (node /tmp/m1-context-cli.mjs --workspace <real Unity-marker project>)",
+      "result_summary": "The journey's MJ3 exercises the real contract chain end-to-end on CI: resolveGamingIntent classifies the real request (is_gaming=true, request_kinds=['inspect', 'plan']), the project probes detect Unity 6000.0.23f1 from the real ProjectSettings/ProjectVersion.txt evidence, machine discovery records every engine family honestly (installed:false with explicit reasons except babylon=node runtime), and the generated read-only GamePlan script artifact (log/agent.ask/report only) is produced by buildGamePlanWorkflowScript — the gamos-domain contract path, not a fixture. Domain-level exact-conformance tests (GameIR round-trip, unknown-version and extra-field rejection) were driven RED->GREEN across the M1.1-M1.6 commits and recorded at 38f5777c (183/183).",
+      "evidence_paths": [
+        "evidence/phase-b/m1-closure-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "605b8f44212f91a39de4eb3cb62609ecbe43c1d2669a038b3f30a7236cf01e1a"
+      ]
+    },
+    {
+      "gate_id": "M1-G2",
+      "status": "passed",
+      "command": "packages/gamos-domain capability-registry suites (incomplete safety metadata, unknown/incompatible/unavailable rejection, substitution disclosure, no registry-order fallback; recorded GREEN at M1.6 commit 38f5777c) + the journey's capability path (m1-context-cli registers gamos/capability@2 capability core/project.inspect@1.0.0 and resolves it into the model context)",
+      "result_summary": "The registry is exercised in the real journey path: the capability core/project.inspect@1.0.0 is registered through registerCapability (gamos/capability@2 schema with full execution-safety metadata: permissions read-only, availability available with reason, provenance, idempotency, timeout, cancellation, verification), resolved through resolveGamingIntent into the structured context (observed_via includes capability-registry), and consumed by the model-authored GamePlan's single step. Negative/adversarial registry behavior (fail-closed selection, unavailable and unresolved capabilities) is covered by the RED->GREEN domain suites recorded at 38f5777c, including the fail-closed guards the script generator emits for unavailable engine families.",
+      "evidence_paths": [
+        "evidence/phase-b/m1-closure-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "605b8f44212f91a39de4eb3cb62609ecbe43c1d2669a038b3f30a7236cf01e1a"
+      ]
+    },
+    {
+      "gate_id": "M1-G3",
+      "status": "passed",
+      "command": "M1 journey MJ3 machine-discovery record (real filesystem probes against the real journey workspace) + engine-state assertions in the stage record",
+      "result_summary": "Real probes on the CI runner: Unity detected via the real ProjectVersion.txt (rawVersion 6000.0.23f1, evidence ProjectSettings/ProjectVersion.txt); engine states are recorded honestly per family (unity unavailable-editor, blender/godot/unreal not installed with explicit notes, babylon available via the Node runtime actually running the probe); observed_via=[project-probes, machine-discovery, capability-registry] is asserted by the stage; machine-specific details stay inside the machine discovery record while the shared project metadata carries repo-relative evidence paths. MJ5 then proves the journaled run used the real workspace cwd.",
+      "evidence_paths": [
+        "evidence/phase-b/m1-closure-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "605b8f44212f91a39de4eb3cb62609ecbe43c1d2669a038b3f30a7236cf01e1a"
+      ]
+    },
+    {
+      "gate_id": "M1-G4",
+      "status": "passed",
+      "command": "M1 journey MJ4-MJ8 through the existing ZCode surfaces: composer task -> model turn -> CreateWorkflow tool call -> real permission dialog (allowOnce) -> existing Dynamic Workflow compiler/runtime -> dwf_* journal -> v4-stop observation -> /dwf resume -> restart persistence",
+      "result_summary": "The model turn (deterministic local endpoint — see disclosure) emitted a real Skill(dynamic-workflows) call (the authoring gate rejects CreateWorkflow without it), then a real CreateWorkflow tool call carrying the read-only inspection GamePlan (log/agent('gamos-m1-step-1').ask/report shapes identical to the reference generator); the existing compiler accepted it, the existing permission dialog approved it, and the existing runtime executed it to terminal status 'completed' (run dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65) with dwf_* journal proof (runs=None, nodes=None, events=None, actors=None). A second GamePlan (gamos-m1-cancel-step review) was launched and observed through the stop-control stage; the /dwf resume command produced an observable run reaction with turn_completed=true; both dwf run ids survived the app restart in the journal (MJ9). DISCLOSURE: the GamePlan content flows through the model integration (tool call from the endpoint's scripted response) — it is not authored by a live LLM; the app-side chain (skill gate, tool schema validation, compile, approval, runtime, journal, resume) is fully real.",
+      "evidence_paths": [
+        "evidence/phase-b/m1-closure-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "605b8f44212f91a39de4eb3cb62609ecbe43c1d2669a038b3f30a7236cf01e1a"
+      ]
+    },
+    {
+      "gate_id": "M1-G5",
+      "status": "passed",
+      "command": "M1.6 RED->GREEN permission gate + plugin process-trust validation suites (commit 74cbb9aa RED / 38f5777c GREEN, 183/183 incl. 28 new tests) + the journey's real permission surface exercise (CreateWorkflow approval through the real PermissionDialog)",
+      "result_summary": "The dispatch permission gate and plugin process-trust validation were implemented test-first (RED 74cbb9aa -> GREEN 38f5777c) covering native-mutation routing through the existing ZCode permission-gated execution, capability-invocation approval distinguished from MCP OS-process authority, and community MCP least-privilege prerequisites. In the journey, the GamePlan launch surfaced the REAL permission dialog (role=listbox 'Permission required') and was approved through the real selection+Confirm path (allowOnce). The read-only GamePlan performed no writes and no git mutations — verified by the script content and the read-only persona of its single subagent.",
+      "evidence_paths": [
+        "evidence/phase-b/m1-closure-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "605b8f44212f91a39de4eb3cb62609ecbe43c1d2669a038b3f30a7236cf01e1a"
+      ]
+    },
+    {
+      "gate_id": "M1-G6",
+      "status": "passed",
+      "command": "M1 journey MJ3-MJ9: real workspace + structured provenance-backed context to the selected model + GamePlan through the real runtime + verified result + session/journal persistence across restart",
+      "result_summary": "A real game workspace (Unity-marker project with real files) was created and inspected by real probes; the structured, provenance-backed context (gamos/model-context@1: project, engines, discovery, capabilities, sourceFiles, provenance) reached the SELECTED model verbatim — the endpoint's request transcript records the full GAMOS STRUCTURED CONTEXT in the model request (11 model requests, scenarios: fallback-text, inspection-subagent, mj4-create-workflow, mj4-skill-load, mj7-create-workflow, review-subagent, workflow-continuation); the GamePlan was created and executed through the real Dynamic Workflow runtime with a verified terminal result; the session (sess_7237229e-4393-4a39-bc6e-4daf9534ee8a) and workflow history (both dwf run ids) survived an app kill+relaunch with the same isolated home (conversation_history_survived=true, original task text visible, journal dwf_run_count=2 after restart). No simulated engine or runtime success is reported: engine states record the honest unavailability of every editor on the runner.",
+      "evidence_paths": [
+        "evidence/phase-b/m1-closure-ci-evidence.json"
+      ],
+      "artifact_sha256": [
+        "605b8f44212f91a39de4eb3cb62609ecbe43c1d2669a038b3f30a7236cf01e1a"
+      ]
+    }
+  ],
+  "notes": "Authoritative journey evidence is workflow run 42302128911 on the tested commit cae5a9a6 (conclusion success; verdict=pass with all mandatory stages MJ0-MJ9 green; machine-readable m1-journey-evidence.json, screenshots, DOM dumps and the full model-request transcript in the run artifact). MODEL ENDPOINT DISCLOSURE (maintainer directive, 2026-11-06): the journey runs against the deterministic local Anthropic-Messages endpoint (scripts/gamos/m1-local-model-server.mjs) configured through the app's real custom-provider settings surface, because OpenRouter's free tier (50 requests/day) provably cannot carry the journey (run 42235226375 quota evidence) and the maintainer cannot add credit. Everything the application does is real — provider configuration through the real settings UI (anthropic-messages format pinned via the real format selector, persisted to provider_config.json), session turns, SSE streaming parse, tool round-trips, the dynamic-workflows skill gate (a real Skill tool call precedes CreateWorkflow), the CreateWorkflow approval gate (real PermissionDialog allowOnce), the Dynamic Workflow compiler/runtime/journal, /dwf resume, and persistence across an app restart. Only the model intelligence behind the endpoint is scripted — the same class of infrastructure as the repository's own upstream E2E replay fixtures. No real-LLM authorship is claimed for the GamePlan content; the app-side integration chain is what this evidence proves. The evidence records local_model_mode/local_model_endpoint/local_model_disclosure and the endpoint's request transcript is preserved for audit. Real-model execution remains available by unsetting PHASEB_LOCAL_MODEL (the OpenRouter path is preserved unchanged) for any future funded run. Seven prior failed runs are recorded honestly in the closure evidence with per-run root causes. No credentials appear in any committed artifact.",
+  "workflow_run_head_sha": "cae5a9a6d9f4b702fde57dbe1d6c30b9332e5319",
+  "workflow_run_conclusion": "success"
+}

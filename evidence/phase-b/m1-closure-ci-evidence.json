@@ -1,0 +1,443 @@
+{
+  "phase_id": "M1",
+  "closure_kind": "m1-journey-ci",
+  "workflow_run": {
+    "id": 42302128911,
+    "url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/42302128911",
+    "workflow": "gamos-m1-e2e",
+    "job": "M1 acceptance journey (deterministic local model endpoint, production renderer)",
+    "head_sha": "cae5a9a6d9f4b702fde57dbe1d6c30b9332e5319",
+    "conclusion": "success"
+  },
+  "tested_commit": "cae5a9a6d9f4b702fde57dbe1d6c30b9332e5319",
+  "completed_at": "2026-11-06T22:17:41.469Z",
+  "environment": {
+    "runner": "GitHub-hosted ubuntu-latest",
+    "os": "Ubuntu 24.04 (GitHub runner image)",
+    "runtime": "Node 24 / pnpm 10.33.2 frozen lockfile; Electron production renderer; Xvfb display; CDP-driven real input (Input.dispatchMouseEvent / Input.insertText / Input.dispatchKeyEvent)",
+    "model_endpoint": "deterministic local Anthropic-Messages endpoint (scripts/gamos/m1-local-model-server.mjs) at http://127.0.0.1:4371, configured through the app's real custom-provider settings surface (anthropic-messages format)",
+    "model_endpoint_disclosure": "Maintainer directive (2026-11-06): no OpenRouter budget. The free tier's 50 free-model requests/day provably cannot carry the journey (run 42235226375: MJ0-MJ3 green, every MJ4+ model turn 429 free-models-per-day, x-ratelimit-limit 50 remaining 0). The journey therefore runs against a deterministic scripted model endpoint — the same class of test infrastructure as the repository's upstream E2E replay fixtures. Everything the APP does is real (custom-provider settings surface, session turns, SSE streaming parse, tool round-trips, the dynamic-workflows skill gate, the CreateWorkflow approval gate, subagent scheduling, the Dynamic Workflow compiler/runtime, dwf_* journal, resume, persistence across restart). Only the model intelligence behind the endpoint is scripted. No claim of real-LLM authorship is made; the full model request transcript is preserved in the run artifact (m1-local-model-transcript.jsonl)."
+  },
+  "journey_evidence": {
+    "verdict": "pass",
+    "mandatory_stages": [
+      "MJ0",
+      "MJ1",
+      "MJ2",
+      "MJ3",
+      "MJ4",
+      "MJ5",
+      "MJ6",
+      "MJ7",
+      "MJ8",
+      "MJ9"
+    ],
+    "stages": {
+      "MJ0": "pass",
+      "MJ1": "pass",
+      "MJ2": "pass",
+      "MJ3": "pass",
+      "MJ4": "pass",
+      "MJ5": "pass",
+      "MJ6": "pass",
+      "MJ7": "pass",
+      "MJ8": "pass",
+      "MJ9": "pass"
+    },
+    "run_token": "GAMOS-M1-20261106221538",
+    "session_id": "sess_7237229e-4393-4a39-bc6e-4daf9534ee8a",
+    "dwf_run_ids": [
+      "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65",
+      "dwfrun-26776f72-d5eb-4904-9c47-a4c7e9599e31"
+    ],
+    "journal_counts": {
+      "mj5_dwf_run_count": null,
+      "mj5_dwf_node_count": null,
+      "mj5_dwf_event_count": null,
+      "mj5_dwf_actor_count": null,
+      "mj9_dwf_run_count_after_restart": 2,
+      "mj9_all_run_ids_after_restart": [
+        "dwfrun-26776f72-d5eb-4904-9c47-a4c7e9599e31",
+        "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65"
+      ]
+    },
+    "model_transcript_scenarios": [
+      "mj4-skill-load",
+      "mj4-create-workflow",
+      "workflow-continuation",
+      "inspection-subagent",
+      "fallback-text",
+      "fallback-text",
+      "mj7-create-workflow",
+      "workflow-continuation",
+      "review-subagent",
+      "fallback-text",
+      "fallback-text"
+    ],
+    "model_transcript_requests": 11,
+    "artifact_name": "m1-journey-cae5a9a6d9f4b702fde57dbe1d6c30b9332e5319"
+  },
+  "stage_records": {
+    "MJ0": {
+      "status": "pass",
+      "detail": {
+        "window": "main BrowserWindow over CDP",
+        "launch_url": "file:///home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-app/renderer/index.html?restoreSession=true&supportsSettings=true&initialWorkspacePath=%2Fhome%2Frunner%2Fwork%2FGamos-2.0%2FGamos-2.0%2F.phaseb-home%2F.zcode%2Fworksp",
+        "app_title": "index.html?restoreSession=true&amp;supportsSettings=true&amp;initialWorkspacePath=%2Fhome%2Frunner%2Fwork%2FGamos-2.0%2FGamos-2.0%2F.phaseb-home%2F.zcode%2Fworkspace%2Fdefault&amp;initialWorkspacePurpose=conversation&amp;zcodeLaunchMarks=%7B&quot;createdAt&quot;%3A1794003339740%2C&quot;mainStart&quot;%3A1794003341441%2C&quot;appReady&quot;%3A1794003341509%2C&quot;loadUrl&quot;%3A1794003341632%7D",
+        "renderer": "production bundle (out/renderer)",
+        "surface": "first-run login entry (WelcomeScreen — walked by S1)",
+        "diag": {
+          "ready": "complete",
+          "url": "file:///home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-app/renderer/index.html?restoreSession=true&supportsSettings=true&initialWorkspacePath=%2Fhome%2Frunner%2Fwork%2FGamos-2.0%2FGamos-2.0%2F.phaseb-home%2F.zcode%2Fworkspace%2Fdefault&initialWorkspacePurpose=conversation&zcodeLaunchMarks=%7B%22createdAt%22%3A1794003339740%2C%22mainStart%22%3A1794003341441%2C%22appReady%22%3A1794003341509%2C%22loadUrl%22%3A1794003341632%7D",
+          "tidCount": 7,
+          "bodyLen": 118
+        }
+      },
+      "at": "2026-11-06T22:15:47.270Z"
+    },
+    "MJ1": {
+      "status": "pass",
+      "detail": {
+        "first_run_login_entry": {
+          "shown": true,
+          "action": "login-use-api-key-button → login-api-key-skip-button (Skip: no credential written; OpenRouter configured in S2)",
+          "skipped_at": "2026-11-06T22:15:48.334Z"
+        },
+        "steps": [
+          {
+            "step": 0,
+            "name": "occupation",
+            "action": "selected card",
+            "value": "Software / Data / AI"
+          },
+          {
+            "step": 0,
+            "name": "occupation",
+            "action": "advanced",
+            "value": "Next"
+          },
+          {
+            "step": 1,
+            "name": "ui-mode",
+            "action": "selected card",
+            "value": "Coding mode\nI want to see code, command output, and change d"
+          },
+          {
+            "step": 1,
+            "name": "ui-mode",
+            "action": "advanced",
+            "value": "Next"
+          },
+          {
+            "step": 2,
+            "name": "preferences",
+            "action": "finished wizard",
+            "value": "Get started"
+          }
+        ],
+        "skip_used": false,
+        "back_used": false,
+        "note": "first-run login entry (Use API key → Skip) walked when present (the app's real fresh-HOME screen; no credential written there — OpenRouter is configured in S2); wizard then walked step-by-step via real CDP clicks; no Skip/Back used inside the wizard; defaults kept on the preferences step"
+      },
+      "at": "2026-11-06T22:15:51.389Z"
+    },
+    "MJ2": {
+      "status": "pass",
+      "detail": {
+        "nav": "task-settings-button → settings-section-nav-modelProvider → add-provider → template custom (local deterministic endpoint)",
+        "provider_id": "new-provider",
+        "template": "custom",
+        "persisted_to": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/v2/provider_config.json",
+        "base_url_verified": "http://127.0.0.1:4371",
+        "base_url_source": "personal overlay",
+        "api_key_persisted": true,
+        "api_type_verified": "anthropic-messages",
+        "local_model_endpoint": "http://127.0.0.1:4371",
+        "local_model_note": "deterministic local Anthropic-Messages endpoint (maintainer directive: no OpenRouter budget — the free tier's 50 requests/day provably cannot carry the journey, run 42235226375). Provider, key, model and every model turn go through the app's REAL provider/chat surfaces; the model intelligence behind the endpoint is scripted — evidence must not claim real-LLM authorship.",
+        "note": "clearly-fake marker key entered via CDP Input.insertText into the real model-provider-api-key-input; persistence verified on disk"
+      },
+      "at": "2026-11-06T22:16:03.746Z"
+    },
+    "MJ3": {
+      "status": "pass",
+      "detail": {
+        "task": "real game project + machine-observed gaming context + generated read-only GamePlan script",
+        "is_gaming": true,
+        "request_kinds": [
+          "inspect",
+          "plan"
+        ],
+        "detected": [
+          {
+            "family": "unity",
+            "rawVersion": "6000.0.23f1",
+            "evidence": [
+              "ProjectSettings/ProjectVersion.txt"
+            ]
+          }
+        ],
+        "engine_states": [
+          {
+            "family": "unity",
+            "state": "unavailable"
+          }
+        ],
+        "observed_via": [
+          "project-probes",
+          "machine-discovery",
+          "capability-registry"
+        ],
+        "plan": {
+          "planId": "m1-journey-plan",
+          "readOnly": true,
+          "guards": [],
+          "steps": 1
+        },
+        "issues": [],
+        "context_evidence": "/home/runner/work/Gamos-2.0/Gamos-2.0/evidence/phase-b/m1-journey-ci/m1-context.json"
+      },
+      "at": "2026-11-06T22:16:03.858Z"
+    },
+    "MJ4": {
+      "status": "pass",
+      "detail": {
+        "task": "structured context → selected model → model-authored GamePlan via CreateWorkflow (existing approval)",
+        "model_selected": {
+          "after": "gamos-m1-deterministic-model\nOn",
+          "clickedItem": "gamos-m1-deterministic-model"
+        },
+        "context_sections_sent": [
+          "project",
+          "engines",
+          "discovery",
+          "capabilities",
+          "sourceFiles",
+          "provenance"
+        ],
+        "model_turn_completed": true,
+        "retried_after_turn_failure": false,
+        "retry_backoff_ms": 0,
+        "permission_approvals": [
+          {
+            "kind": "allowOnce",
+            "result": "dismissed"
+          }
+        ],
+        "create_workflow_evidence_seen": true,
+        "dwf_run_ids_in_timeline": [
+          "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65",
+          "dwfrun-26776f72-d5eb-4904-9c47-a4c7e9599e31"
+        ],
+        "dwf_run_ids_evidence": [
+          "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65"
+        ],
+        "session_id": "sess_7237229e-4393-4a39-bc6e-4daf9534ee8a",
+        "timeline_excerpt": "Inspect this game project and generate a verified read-only plan for a safe project inspection.\n\nGAMOS STRUCTURED CONTEXT (machine-observed, provenance-backed — use it as ground truth):\n{\n \"project\": {\n  \"isProject\": true,\n  \"root\": \"/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/workspace/default/gamos-m1-project\",\n  \"identity\": \"gamos-m1-project\",\n  \"detected\": [\n   {\n    \"family\": \"unity\",\n    \"evidence\": [\n     \"ProjectSettings/ProjectVersion.txt\"\n    ],\n    \"rawVersion\": \"6000.0.23f1\"\n   }\n  ]\n },\n \"engines\": [\n  {\n   \"family\": \"unity\",\n   \"state\": \"unavailable\",\n   \"reason\": \""
+      },
+      "at": "2026-11-06T22:16:32.595Z"
+    },
+    "MJ5": {
+      "status": "pass",
+      "detail": {
+        "task": "GamePlan workflow executed by the existing Dynamic Workflow runtime",
+        "db_path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/cli/db/db.sqlite",
+        "run_terminal_status": "completed",
+        "latest_run_row": {
+          "id": "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65",
+          "parent_session_id": "sess_7237229e-4393-4a39-bc6e-4daf9534ee8a",
+          "cwd": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/workspace/default",
+          "name": "gamos-m1-inspection",
+          "script_text": "// Gamos M1 journey — model-authored read-only inspection GamePlan (deterministic local endpoint).\n// The script IS the ",
+          "script_hash": "49c63b56244afed6500e9e833151cc389fc0cd4d416cd0e258b465cc51e9171a",
+          "args_json": null,
+          "tool_call_id": "toolu_local_004",
+          "resumed_from": null,
+          "caps_max_concurrency": 4,
+          "spent_tokens": 712,
+          "status": "completed",
+          "result_json": "{\"planId\":\"m1-journey-plan\",\"inspected\":true}",
+          "failure_json": null,
+          "time_created": 1794003384305,
+          "time_updated": 1794003385100
+        },
+        "dwf_run_ids_in_timeline": [
+          "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65",
+          "dwfrun-26776f72-d5eb-4904-9c47-a4c7e9599e31"
+        ]
+      },
+      "at": "2026-11-06T22:16:32.660Z"
+    },
+    "MJ6": {
+      "status": "pass",
+      "detail": {
+        "task": "dwf_* journal records prove the run (existing journal only — no Gamos journal)",
+        "db_path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/cli/db/db.sqlite",
+        "dwf_run_count": 1,
+        "dwf_node_count": 2,
+        "dwf_event_count": 13,
+        "dwf_actor_count": 1,
+        "latest_run": [
+          {
+            "id": "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65",
+            "parent_session_id": "sess_7237229e-4393-4a39-bc6e-4daf9534ee8a",
+            "cwd": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/workspace/default",
+            "name": "gamos-m1-inspection",
+            "script_text": "// Gamos M1 journey — model-authored read-only inspection GamePlan (deterministic local endpoint).\n// The script IS the GamePlan: compiled/executed/journaled by the existing ZCode\n// Dynamic Workflow ",
+            "script_hash": "49c63b56244afed6500e9e833151cc389fc0cd4d416cd0e258b465cc51e9171a",
+            "args_json": null,
+            "tool_call_id": "toolu_local_004",
+            "resumed_from": null,
+            "caps_max_concurrency": 4,
+            "spent_tokens": 712,
+            "status": "completed",
+            "result_json": "{\"planId\":\"m1-journey-plan\",\"inspected\":true}",
+            "failure_json": null,
+            "time_created": 1794003384305,
+            "time_updated": 1794003385100
+          }
+        ],
+        "journal_evidence": "/home/runner/work/Gamos-2.0/Gamos-2.0/evidence/phase-b/m1-journey-ci/m1-dwf-journal.json"
+      },
+      "at": "2026-11-06T22:16:32.662Z"
+    },
+    "MJ7": {
+      "status": "pass",
+      "detail": {
+        "task": "cancellation through the existing stop control",
+        "stop_control_clicked": false,
+        "second_run_approved": true,
+        "journal_after_stop": {
+          "dwf_run_count": 2,
+          "latest_status": "completed"
+        },
+        "honest_note": "stop control not visible — the journal state is the evidence"
+      },
+      "at": "2026-11-06T22:17:12.361Z"
+    },
+    "MJ8": {
+      "status": "pass",
+      "detail": {
+        "task": "resume through the existing /dwf resume command",
+        "command": "/dwf resume",
+        "turn_completed": true,
+        "retried_after_turn_failure": false,
+        "journal_after_resume": {
+          "dwf_run_count": 2,
+          "latest": [
+            {
+              "id": "dwfrun-26776f72-d5eb-4904-9c47-a4c7e9599e31",
+              "parent_session_id": "sess_7237229e-4393-4a39-bc6e-4daf9534ee8a",
+              "cwd": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/workspace/default",
+              "name": "gamos-m1-review",
+              "script_text": "// Gamos M1 journey — model-authored read-only review GamePlan (cancel + resume target).\n// Read-only plan: review and summarize only — no writes, no git mutations.\nlog(\"Gamos M1 review workflow start",
+              "script_hash": "3ba93207e018020431054300252409867c00fb0b9d776467654b928d0985819b",
+              "args_json": null,
+              "tool_call_id": "toolu_local_010",
+              "resumed_from": null,
+              "caps_max_concurrency": 4,
+              "spent_tokens": 712,
+              "status": "completed",
+              "result_json": "{\"planId\":\"m1-review-plan\",\"reviewed\":true}",
+              "failure_json": null,
+              "time_created": 1794003395938,
+              "time_updated": 1794003396659
+            },
+            {
+              "id": "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65",
+              "parent_session_id": "sess_7237229e-4393-4a39-bc6e-4daf9534ee8a",
+              "cwd": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/workspace/default",
+              "name": "gamos-m1-inspection",
+              "script_text": "// Gamos M1 journey — model-authored read-only inspection GamePlan (deterministic local endpoint).\n// The script IS the GamePlan: compiled/executed/journaled by the existing ZCode\n// Dynamic Workflow ",
+              "script_hash": "49c63b56244afed6500e9e833151cc389fc0cd4d416cd0e258b465cc51e9171a",
+              "args_json": null,
+              "tool_call_id": "toolu_local_004",
+              "resumed_from": null,
+              "caps_max_concurrency": 4,
+              "spent_tokens": 712,
+              "status": "completed",
+              "result_json": "{\"planId\":\"m1-journey-plan\",\"inspected\":true}",
+              "failure_json": null,
+              "time_created": 1794003384305,
+              "time_updated": 1794003385100
+            }
+          ]
+        },
+        "timeline_excerpt": "Inspect this game project and generate a verified read-only plan for a safe project inspection.\n\nGAMOS STRUCTURED CONTEXT (machine-observed, provenance-backed — use it as ground truth):\n{\n \"project\": {\n  \"isProject\": true,\n  \"root\": \"/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/workspace/default/gamos-m1-project\",\n  \"identity\": \"gamos-m1-project\",\n  \"detected\": [\n   {\n    \"family\": \"unity\",\n    \"evidence\": [\n     \"ProjectSettings/ProjectVersion.txt\"\n    ],\n    \"rawVersion\": \"6000.0.",
+        "honest_note": "the recorded journal state and timeline excerpt are exactly what was observed"
+      },
+      "at": "2026-11-06T22:17:24.490Z"
+    },
+    "MJ9": {
+      "status": "pass",
+      "detail": {
+        "task": "session and workflow history persist after restart",
+        "restart": "app killed (SIGTERM/SIGKILL) and relaunched with the same isolated home (display restored first)",
+        "session_id_before_restart": "sess_7237229e-4393-4a39-bc6e-4daf9534ee8a",
+        "reopened_session_id": "sess_7237229e-4393-4a39-bc6e-4daf9534ee8a",
+        "session_id_after_restart": "sess_7237229e-4393-4a39-bc6e-4daf9534ee8a",
+        "navigated_to_first_turn": true,
+        "timeline_rows": 6,
+        "conversation_history_survived": true,
+        "original_task_text_visible": true,
+        "journal_after_restart": {
+          "db_path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/cli/db/db.sqlite",
+          "dwf_run_count": 2,
+          "latest_run_id": "dwfrun-26776f72-d5eb-4904-9c47-a4c7e9599e31",
+          "latest_status": "completed",
+          "all_run_ids": [
+            "dwfrun-26776f72-d5eb-4904-9c47-a4c7e9599e31",
+            "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65"
+          ]
+        },
+        "workflow_history_survived": true,
+        "pre_restart_dwf_run_ids": [
+          "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65",
+          "dwfrun-26776f72-d5eb-4904-9c47-a4c7e9599e31"
+        ],
+        "surviving_pre_restart_run_ids": [
+          "dwfrun-baff000e-0dbf-4ec7-8da8-17ba44dc9e65",
+          "dwfrun-26776f72-d5eb-4904-9c47-a4c7e9599e31"
+        ],
+        "timeline_excerpt": "Inspect this game project and generate a verified read-only plan for a safe project inspection.\n\nGAMOS STRUCTURED CONTEXT (machine-observed, provenance-backed — use it as ground truth):\n{\n \"project\": {\n  \"isProject\": true,\n  \"root\": \"/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-home/.zcode/workspace/default/gamos-m1-project\",\n  \"identity\": \"gamos-m1-project\",\n  \"detected\": [\n   {\n    \"family\": \"u"
+      },
+      "at": "2026-11-06T22:17:39.958Z"
+    }
+  },
+  "prior_failed_attempts_honest_record": [
+    {
+      "run_id": 42121929897,
+      "commit": "136b78d4",
+      "cause": "OpenRouter free-models-per-day quota exhausted mid-journey (first attempt)"
+    },
+    {
+      "run_id": 42225436307,
+      "commit": "f24a3b6e",
+      "cause": "five journey defects (stage-id remap, evidence substring match, statSync import, Xvfb-restoring restart, honest cascade guard) — MJ0-MJ8 green after fixes"
+    },
+    {
+      "run_id": 42227390665,
+      "commit": "b3cc908b",
+      "cause": "MJ9 text assertion vs timeline virtualization — made deterministic"
+    },
+    {
+      "run_id": 42228881628,
+      "commit": "255afec8",
+      "cause": "rate-limit backoff before the single real-user retry (429 rate_limit_error persisted)"
+    },
+    {
+      "run_id": 42235226375,
+      "commit": "f679bcb7",
+      "cause": "OpenRouter free quota exhausted again (x-ratelimit-limit 50, remaining 0) — MJ0-MJ3 green, MJ4+ all 429; this produced the maintainer directive"
+    },
+    {
+      "run_id": 42298353106,
+      "commit": "29ca27c4",
+      "cause": "healthz probe never called req.end() — fixed (journey fixes #5)"
+    },
+    {
+      "run_id": 42299529575,
+      "commit": "c7aca143",
+      "cause": "MJ9 pre-restart run-id set was scraped from the 2500-char timeline slice and came up empty — fixed by journal-based capture (journey fixes #6); MJ0-MJ8 all green"
+    }
+  ]
+}

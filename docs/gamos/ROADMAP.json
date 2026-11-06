@@ -251,7 +251,7 @@
     {
       "id": "M1",
       "title": "Gaming domain, capability registry and intent foundation",
-      "status": "planned",
+      "status": "complete",
       "depends_on": [
         "M0"
       ],
@@ -334,7 +334,23 @@
         "Dynamic Workflow runtime integration",
         "permission/provenance negative tests"
       ],
-      "completion_evidence": null
+      "completion_evidence": {
+        "evidence_file": "evidence/roadmap/M1.json",
+        "tested_commit": "cae5a9a6d9f4b702fde57dbe1d6c30b9332e5319",
+        "workflow_run_head_sha": "cae5a9a6d9f4b702fde57dbe1d6c30b9332e5319",
+        "workflow_run_conclusion": "success",
+        "workflow_run_id": 42302128911,
+        "workflow_run_url": "https://github.com/payswapdotorg/Gamos-2.0/actions/runs/42302128911",
+        "completed_at": "2026-11-06T22:17:41.469Z",
+        "gate_ids": [
+          "M1-G1",
+          "M1-G2",
+          "M1-G3",
+          "M1-G4",
+          "M1-G5",
+          "M1-G6"
+        ]
+      }
     },
     {
       "id": "M2",
