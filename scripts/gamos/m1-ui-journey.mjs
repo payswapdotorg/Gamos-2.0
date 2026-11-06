@@ -1079,6 +1079,10 @@ async function startLocalModelServer() {
     });
     req.on("error", () => resolve(false));
     req.on("timeout", () => { req.destroy(); resolve(false); });
+    // http.request does not send anything until end() — without this the probe
+    // hangs until the socket timeout on every attempt (run 42298353106: the
+    // endpoint was listening but every healthz probe timed out).
+    req.end();
   }), { what: `local deterministic model endpoint healthz (${LOCAL_MODEL_URL})`, timeout: 30000 });
   log(`local deterministic model endpoint ready: ${LOCAL_MODEL_URL} (transcript: ${transcriptPath})`);
   journey.localModelEndpoint = { url: LOCAL_MODEL_URL, transcript: transcriptPath, pid: localModelServerChild.pid };
