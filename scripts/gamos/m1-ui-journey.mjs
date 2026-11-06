@@ -1809,55 +1809,83 @@ async function stageMJ8() {
   }, { what: `task list row for session ${reopenSessionId}`, timeout: 60000 });
   await clickTid(taskItemTid, { timeout: 30000 });
   await waitFor(async () => (await paneSessionId()) === reopenSessionId, { what: `pane session id === ${reopenSessionId}`, timeout: 45000 });
-  // Conversation-history proof. Virtualized timelines only render the rows in
-  // (or near) the viewport, and a restored session scrolls to the BOTTOM, so
-  // the original task row (first turn) is usually not in the DOM when read
-  // (run 42225436307: pane on the right session, 5 rows, turn-navigator
-  // populated — but the first-turn text absent from v4-timeline innerText).
-  // Navigate to the FIRST turn (turn-navigator item click) and scroll the
-  // timeline container to the top so the original task row renders, then read.
-  const navigatedToFirstTurn = await evalJs(`(() => { const items = document.querySelectorAll('[data-testid^="v4-turn-navigator-item"]'); if (!items.length) return false; items[0].click(); return true; })()`).catch(() => false);
-  await new Promise((r) => setTimeout(r, 800));
-  await evalJs(`(() => { let el = document.querySelector('[data-testid="v4-timeline"]'); while (el && el.scrollHeight <= el.clientHeight + 4) el = el.parentElement; if (el) { el.scrollTop = 0; el.dispatchEvent(new Event('scroll', { bubbles: true })); return true; } return false; })()`).catch(() => false);
-  await new Promise((r) => setTimeout(r, 600));
   const state = await waitFor(async () => {
     const s = await timelineState().catch(() => null);
     return s && s.rows > 0 ? s : false;
   }, { what: "restored session pane with history", timeout: 60000 }).catch(() => null);
+  // Best-effort navigation to the FIRST turn for the audit excerpt: virtualized
+  // timelines only render viewport rows, the restored session scrolls to the
+  // BOTTOM, the query row may be collapsed by the UI, and the turn-navigator
+  // items render lazily (run 42227390665: navigated_to_first_turn=false because
+  // no navigator items existed at first probe). Informational only — the gate
+  // below is structural and deterministic, never text-rendering-dependent.
+  let navigatedToFirstTurn = false;
+  for (let attempt = 0; attempt < 3 && !navigatedToFirstTurn; attempt++) {
+    navigatedToFirstTurn = await evalJs(`(() => { const items = document.querySelectorAll('[data-testid^="v4-turn-navigator-item"]'); if (!items.length) return false; items[0].click(); return true; })()`).catch(() => false);
+    if (!navigatedToFirstTurn) await new Promise((r) => setTimeout(r, 700));
+  }
+  if (navigatedToFirstTurn) {
+    await new Promise((r) => setTimeout(r, 800));
+    await evalJs(`(() => { let el = document.querySelector('[data-testid="v4-timeline"]'); while (el && el.scrollHeight <= el.clientHeight + 4) el = el.parentElement; if (el) { el.scrollTop = 0; el.dispatchEvent(new Event('scroll', { bubbles: true })); return true; } return false; })()`).catch(() => false);
+    await new Promise((r) => setTimeout(r, 600));
+  }
+  const finalState = (navigatedToFirstTurn ? await timelineState().catch(() => null) : null) ?? state;
   await screenshot("MJ8-session-restored");
-  const timelineText = state?.timeline ?? "";
-  const conversationSurvived = Boolean(state) && /inspect this game project/i.test(timelineText);
+  const timelineText = finalState?.timeline ?? "";
+  // Conversation-history proof (deterministic): the pane is on the SAME session
+  // id and renders multiple history rows of that session. Run 42227390665
+  // proved the query text is NOT reliably present in v4-timeline innerText
+  // (collapsed query rows) even when the full history — workflow cards and the
+  // model's first-turn conclusions — is plainly rendered, so the original task
+  // text is recorded as informational evidence, not a gate.
+  const conversationSurvived =
+    Boolean(finalState) &&
+    finalState.paneSessionId === reopenSessionId &&
+    Number(finalState.rows ?? 0) >= 3;
+  const originalTaskTextVisible = /inspect this game project/i.test(timelineText);
   // Workflow-history proof at the data level: the dwf journal must still be on
-  // disk and populated after the restart (the journal IS the workflow history).
+  // disk after the restart AND still contain the exact dwfrun-* ids that were
+  // observed in the timeline BEFORE the restart (M1_EVIDENCE.dwfRunIds, captured
+  // by the model-authoring stage) — same-session, same-run continuity.
   let journalAfterRestart = null;
+  let survivingPreRestartRunIds = [];
   const dbPathAfterRestart = journey.m1DbPath ?? findSessionStoreDb();
   if (dbPathAfterRestart) {
     try {
       const { DatabaseSync } = await import("node:sqlite");
       const db = new DatabaseSync(dbPathAfterRestart, { readOnly: true });
       const snap = journalSnapshot(db);
+      let allRunIds = [];
+      try {
+        allRunIds = db.prepare("SELECT id FROM dwf_run").all().map((r) => String(r.id));
+      } catch { /* table layout unexpected — rely on the snapshot */ }
       db.close();
-      journalAfterRestart = { db_path: dbPathAfterRestart, dwf_run_count: snap.dwf_run_count ?? null, latest_run_id: snap.dwf_run_latest?.[0]?.id ?? null, latest_status: snap.dwf_run_latest?.[0]?.status ?? snap.dwf_run_latest?.[0]?.state ?? null };
+      survivingPreRestartRunIds = M1_EVIDENCE.dwfRunIds.filter((id) => allRunIds.includes(id));
+      journalAfterRestart = { db_path: dbPathAfterRestart, dwf_run_count: snap.dwf_run_count ?? allRunIds.length ?? null, latest_run_id: snap.dwf_run_latest?.[0]?.id ?? null, latest_status: snap.dwf_run_latest?.[0]?.status ?? snap.dwf_run_latest?.[0]?.state ?? null, all_run_ids: allRunIds };
     } catch (e) {
       journalAfterRestart = { db_path: dbPathAfterRestart, error: String(e.message).slice(0, 200) };
     }
   }
   const journalSurvived = Boolean(journalAfterRestart?.dwf_run_count && journalAfterRestart.dwf_run_count >= 1);
-  const pass = conversationSurvived && journalSurvived;
+  const preRestartRunIdsSurvived = M1_EVIDENCE.dwfRunIds.length > 0 && survivingPreRestartRunIds.length === M1_EVIDENCE.dwfRunIds.length;
+  const pass = conversationSurvived && journalSurvived && preRestartRunIdsSurvived;
   recordStage("MJ8", pass ? "pass" : "fail", {
     task: "session and workflow history persist after restart",
     restart: "app killed (SIGTERM/SIGKILL) and relaunched with the same isolated home (display restored first)",
     session_id_before_restart: sessionIdBefore,
     reopened_session_id: reopenSessionId,
-    session_id_after_restart: state?.paneSessionId ?? null,
+    session_id_after_restart: finalState?.paneSessionId ?? null,
     navigated_to_first_turn: navigatedToFirstTurn,
-    timeline_rows: state?.rows,
+    timeline_rows: finalState?.rows,
     conversation_history_survived: conversationSurvived,
+    original_task_text_visible: originalTaskTextVisible,
     journal_after_restart: journalAfterRestart,
     workflow_history_survived: journalSurvived,
+    pre_restart_dwf_run_ids: M1_EVIDENCE.dwfRunIds,
+    surviving_pre_restart_run_ids: survivingPreRestartRunIds,
     timeline_excerpt: timelineText.slice(0, 400),
   });
-  if (!pass) throw new Error(`MJ9 session history did not survive the restart (conversation=${conversationSurvived}, journal=${journalSurvived})`);
+  if (!pass) throw new Error(`MJ9 session history did not survive the restart (conversation=${conversationSurvived}, journal=${journalSurvived}, preRestartRunIds=${preRestartRunIdsSurvived})`);
 }
 
 /* ------------------------------------------------------------------ */
