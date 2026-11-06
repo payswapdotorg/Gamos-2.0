@@ -1,37 +1,40 @@
-# Gamos Documentation — `docs/gamos/`
+# Gamos Documentation
 
 Governance and architecture documentation for the Gamos fork of ZCode
-(`payswapdotorg/Gamos-2.0`, upstream `zai-org/ZCode` @
-`a9fe401eede6e6e5e01be9048679c206fe6f02d9`, v3.17.2).
+(payswapdotorg/Gamos-2.0), based on zai-org/ZCode v3.17.2 at
+a9fe401eede6e6e5e01be9048679c206fe6f02d9.
 
-**Rule:** documents describe the *actual implemented* architecture. Anything not
-yet implemented is explicitly marked as planned/pending.
+## Normative roadmap and execution rules
 
-## Status of the required document set (handoff §4)
+- **ROADMAP.json** — sole normative source of product scope, M0–M7 milestones,
+  dependencies, statuses, owners, acceptance gates and completion evidence.
+- ROADMAP.md — human-readable index and explanation of how the canonical file works.
+- TDD-EXECUTION-PLAYBOOK.md — binding RED/GREEN/HARDEN/INTEGRATE/REGRESSION/EVIDENCE process.
+- IMPLEMENTATION-STATUS.md — factual evidence and incident ledger only. It does not
+  define or independently advance milestone status.
+- MILESTONES-AND-ACCEPTANCE.md — historical handoff, superseded for normative
+  milestone definitions by ROADMAP.json.
 
-| Document | Status |
+Any change to milestone scope, dependencies, owner, acceptance gate or status must
+update ROADMAP.json. Other documents may explain it but must not create a competing
+milestone table. The roadmap validator and its self-tests run in the required
+Upstream architecture gate on every governed push/PR.
+
+## Supporting documents
+
+| Document | Purpose |
 |---|---|
-| `PRODUCT-NORTH-STAR.md` | ✅ present (binding product definition) |
-| `ARCHITECTURE.md` | ✅ present (verified upstream topology + planned additions marked) |
-| `UPSTREAM-BASELINE.md` | ✅ present (verified fork/baseline record) |
-| `FEATURE-PRESERVATION-MATRIX.md` | ✅ present (32 features, verified anchors) |
-| `MILESTONES-AND-ACCEPTANCE.md` | ✅ present (M0–M7 + journeys) |
-| `IMPLEMENTATION-STATUS.md` | ✅ present (honest ledger — updated every integration point) |
-| `ADR/README.md` (+ ADR-0001…0003) | ✅ present |
-| `PLUGIN-CAPABILITY-CONTRACT.md` | ⏳ pending — authored with M1 (capability registry work package) |
-| `CAPABILITY-REGISTRY.md` | ⏳ pending — M1 |
-| `GAME-DOMAIN-MODEL.md` | ⏳ pending — M1 |
-| `INTENT-AND-WORKFLOW-ORCHESTRATION.md` | ⏳ pending — M1 |
-| `ENGINE-PLUGIN-ARCHITECTURE.md` | ⏳ pending — M2 |
-| `ENGINE-INTEGRATION-SPECIFICATIONS.md` | ⏳ pending — M2/M4 |
-| `GAME-ASSET-PIPELINE.md` | ⏳ pending — M3 |
-| `GAME-TESTING-AND-EVIDENCE.md` | ⏳ pending — M5 |
-| `WORLD-PACKAGE-AND-PUBLISHING.md` | ⏳ pending — M6 |
-| `PAYSWAP-PSP-INTEGRATION.md` | ⏳ pending — M7 |
-| `PLUGIN-SECURITY-AND-APPROVALS.md` | ⏳ pending — M1/M2 |
-| `REMOTE-AND-LOCAL-CAPABILITIES.md` | ⏳ pending — M2+ |
+| PRODUCT-NORTH-STAR.md | Product definition and non-negotiable principles |
+| ARCHITECTURE.md | Source-verified ZCode topology and planned Gamos additions |
+| UPSTREAM-BASELINE.md | Fork provenance and pinned baseline |
+| FEATURE-PRESERVATION-MATRIX.md | Inherited-feature preservation inventory |
+| contracts/ | Frozen technical contracts and authority boundaries |
+| workers/ | Worker briefs and TL integration procedure |
+| ADR/ | Architecture decision records |
+| evidence/roadmap/ | Committed milestone gate evidence |
+| evidence/phase-a/, evidence/phase-b/ | M0 governance and original-application evidence |
 
-Machine-readable governance artifacts live at the repository root:
-`.gamos-architecture-baseline.json`, `.gamos-protected-surfaces.json`,
-`.gamos-authorized-modifications.json`, enforced by
-`scripts/gamos/governance-check.mjs` (CI: `.github/workflows/gamos-governance.yml`).
+Machine-enforced preservation artifacts live at the repository root:
+.gamos-architecture-baseline.json, .gamos-protected-surfaces.json and
+.gamos-authorized-modifications.json. The original governance gate remains
+scripts/gamos/governance-check.mjs.

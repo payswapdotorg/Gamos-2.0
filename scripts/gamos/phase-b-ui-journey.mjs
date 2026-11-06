@@ -711,8 +711,44 @@ async function timelineState() {
     const rows = Array.from(document.querySelectorAll('[data-testid^="v4-row"]'));
     const stop = Array.from(document.querySelectorAll('[data-testid="v4-stop"]')).some(e => e.offsetParent !== null);
     const timeline = (document.querySelector('[data-testid="v4-timeline"]')?.innerText ?? '').slice(0, 2500);
-    return { rows: rows.length, canStop: stop, timeline, paneSessionId: pane?.dataset?.sessionId ?? null };
+    const errorBanner = document.querySelector('[data-testid="chat-error-banner"]');
+    const bannerSignature = errorBanner
+      ? { code: errorBanner.getAttribute('data-error-code') ?? '', text: (errorBanner.innerText ?? '').slice(0, 200) }
+      : null;
+    return { rows: rows.length, canStop: stop, timeline, paneSessionId: pane?.dataset?.sessionId ?? null, errorBanner: Boolean(errorBanner), bannerSignature };
   })()`);
+}
+
+/** True when the mounted banner is the SAME one that was already present before
+ *  a resubmission (same data-error-code + text) — i.e. a stale remnant of the
+ *  turn that already failed, not evidence about the resubmitted turn. */
+function isStaleBanner(state, staleBanner) {
+  if (!staleBanner || !state?.bannerSignature) return false;
+  return state.bannerSignature.code === staleBanner.code && state.bannerSignature.text === staleBanner.text;
+}
+
+/**
+ * Dismisses the failed turn's chat-error-banner the way a real user does before
+ * retrying. The app keeps control.lastError as a projection fact, but the
+ * dismiss records the error fingerprint so the SAME error no longer renders —
+ * after this, a mounted banner is unambiguously a NEW failure of the
+ * resubmitted turn (run 42114111080: the same-signature rate-limit banner stayed
+ * mounted and made the retry's error state unreadable).
+ */
+async function dismissErrorBanner() {
+  try {
+    const rect = await rectOf(`(() => { const b = document.querySelector('[data-testid="chat-error-banner"]'); if (!b) return null; return b.querySelector('button[aria-label="Dismiss error"]') ?? null; })()`).catch(() => null);
+    if (rect && rect.w > 0) {
+      await cdpClickRect(rect);
+      await new Promise((r) => setTimeout(r, 400));
+      log("dismissed the failed turn's error banner (real-user dismiss before retry)");
+      return true;
+    }
+  } catch {
+    // fall through to the not-found path
+  }
+  log("error banner dismiss button not found — continuing (the stale-banner grace covers it)");
+  return false;
 }
 
 /**
@@ -723,12 +759,31 @@ async function timelineState() {
  * approving, "rejectOnce" for the reject verification (subsequent retries of
  * the rejected modification must also be rejected, otherwise the journey
  * itself would apply the rejected change on a retry).
+ *
+ * staleBanner: the chat-error-banner signature captured BEFORE a resubmission
+ * (run 42109892985: the retry verdict fired 96ms after sendConversationCommandV4
+ * OK — before the new turn's stop button could render, the OLD banner was read
+ * as a second failure and the retry was never actually waited on). A banner
+ * matching the pre-resubmission signature is treated as a stale remnant for a
+ * STARTUP GRACE window only: if the same-signature banner stays mounted with no
+ * running turn for longer than the grace, the resubmitted turn has failed with
+ * the SAME error (run 42114111080: free-models-per-day quota exhausted — the
+ * retry failed identically) and the wait reports turnFailed.
+ *
+ * A mounted banner (any signature) also BLOCKS the completion verdict: an
+ * error banner + no stop button is an error state, never a completed turn
+ * (run 42114111080's completion branch fired 6s after the rate-limited retry
+ * died with its banner still mounted — completed=true, artifact=false).
  */
-async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, respondKind = "allowOnce", approvals = [] } = {}) {
+const STALE_BANNER_GRACE_MS = 15000;
+
+async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, respondKind = "allowOnce", approvals = [], staleBanner = null } = {}) {
   const start = Date.now();
   let sawToolUse = false;
   let last = null;
   let idleSince = null;
+  let bannerSince = null;
+  let staleBannerLogged = false;
   while (Date.now() - start < timeout) {
     last = await timelineState().catch(() => null);
     if (!last) { await new Promise((r) => setTimeout(r, 1500)); continue; }
@@ -743,7 +798,30 @@ async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, r
       }
     }
     const running = last.canStop;
-    if (!running && last.rows > 0 && last.paneSessionId && last.paneSessionId !== "draft") {
+    const sessionLive = last.rows > 0 && last.paneSessionId && last.paneSessionId !== "draft";
+    const inErrorState = !running && last.errorBanner && sessionLive;
+    const bannerIsStale = isStaleBanner(last, staleBanner);
+    if (inErrorState && !bannerIsStale) {
+      // The turn FAILED (a banner the caller has not seen before, no stop button):
+      // report it so callers can resubmit exactly like a real user instead of
+      // idling to the full timeout (run 42104260632: free-tier model request
+      // failed, banner surfaced, 5 minutes of dead waiting).
+      return { completed: false, turnFailed: true, ...last, sawToolUse, approvals };
+    }
+    if (inErrorState && bannerIsStale) {
+      if (bannerSince === null) bannerSince = Date.now();
+      if (!staleBannerLogged) {
+        staleBannerLogged = true;
+        log(`stale error banner from the previously failed turn still mounted (code=${JSON.stringify(staleBanner.code)}) — allowing a ${STALE_BANNER_GRACE_MS}ms startup grace before reading it as the resubmitted turn's own failure`);
+      }
+      if (Date.now() - bannerSince > STALE_BANNER_GRACE_MS) {
+        log(`same-signature error banner persisted ${Date.now() - bannerSince}ms with no running turn — the resubmitted turn failed with the SAME error`);
+        return { completed: false, turnFailed: true, bannerSameSignature: true, ...last, sawToolUse, approvals };
+      }
+      idleSince = null;
+    } else if (!running && !last.errorBanner && sessionLive) {
+      // Completion requires NO mounted banner: not-running + banner is an error
+      // state (see docblock — run 42114111080).
       if (idleSince === null) idleSince = Date.now();
       // require ~6s of stability so a between-tools gap isn't read as completion
       if (Date.now() - idleSince > 6000) {
@@ -751,6 +829,7 @@ async function waitForTurnCompletion({ timeout = MAX_WAIT, autoApprove = true, r
       }
     } else {
       idleSince = null;
+      bannerSince = null;
     }
     await new Promise((r) => setTimeout(r, 2000));
   }
@@ -1278,7 +1357,22 @@ async function stageS3() {
   await submitComposerTask(taskText, "S3");
   await screenshot("S3-task-submitted");
   const approvals = [];
-  const result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals });
+  let result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals });
+  // Real-user retry (run 42104260632 root cause): when the model TURN itself
+  // fails (chat-error-banner; free-tier rate/credit flakiness), a user resubmits
+  // the task. One retry keeps the verification exact — the artifact must still
+  // exist with exactly the expected content.
+  if (result.turnFailed) {
+    log("S3: model turn failed (chat-error-banner) — resubmitting the task once (real-user retry)");
+    await screenshot("S3-turn-failed");
+    // Snapshot the banner BEFORE dismissing/resubmitting: the signature is the
+    // stale-banner fallback for the retry wait.
+    const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
+    await dismissErrorBanner();
+    await submitComposerTask(taskText, "S3-retry");
+    result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals, staleBanner });
+    result = { ...result, retriedAfterTurnFailure: true };
+  }
   const sessionId = result.paneSessionId ?? await paneSessionId();
   if (sessionId && sessionId !== "draft") journey.sessionIds.push(sessionId);
   await screenshot("S3-task-result");
@@ -1418,7 +1512,15 @@ async function stageS6() {
   const approve = await respondPermission("allowOnce");
   await screenshot("S6-approve-confirmed");
   const approveApprovals = [];
-  const approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals });
+  let approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals });
+  if (approveResult.turnFailed) {
+    log("S6 approve: model turn failed (chat-error-banner) — resubmitting once (real-user retry)");
+    const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
+    await dismissErrorBanner();
+    await submitComposerTask(approveTask, "S6-approve-retry");
+    approveResult = await waitForTurnCompletion({ timeout: MAX_WAIT, autoApprove: true, approvals: approveApprovals, staleBanner });
+    approveResult = { ...approveResult, retriedAfterTurnFailure: true };
+  }
   // Exact modification verification.
   const afterApprove = existsSync(file) ? readFileSync(file, "utf8") : "";
   const approvedApplied = afterApprove.includes(journey.approvedLine);
@@ -1439,7 +1541,16 @@ async function stageS6() {
   // Any FURTHER permission dialog during this turn is also rejected: the user has
   // rejected this modification, and a model retry must not be approved by the
   // journey itself (that would apply the very change we are verifying as rejected).
-  const rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals });
+  let rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals });
+  if (rejectResult.turnFailed) {
+    log("S6 reject: model turn failed (chat-error-banner) — resubmitting once (real-user retry)");
+    const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
+    await dismissErrorBanner();
+    await submitComposerTask(rejectTask, "S6-reject-retry");
+    // The retried turn must again be REJECTED when it asks permission.
+    rejectResult = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 180000), autoApprove: true, respondKind: "rejectOnce", approvals: rejectApprovals, staleBanner });
+    rejectResult = { ...rejectResult, retriedAfterTurnFailure: true };
+  }
   // The rejected modification must NOT be applied; grace-recheck for late writes.
   let afterReject = existsSync(file) ? readFileSync(file, "utf8") : "";
   for (let i = 0; i < 2 && !afterReject.includes(journey.rejectedLine); i++) {
@@ -1506,6 +1617,8 @@ async function stageS7() {
     const addTrigger = document.querySelector('[data-side-pane-add-trigger]');
     const addressInput = document.querySelector('[data-testid="browser-address-input"]');
     const paneHost = document.querySelector('.side-pane-open-tab-shell');
+    const browserTabTrigger = document.querySelector('[data-side-pane-tab-id^="browser:"]');
+    const activeTab = document.querySelector('[data-side-pane-tab-id][data-state="active"]');
     const launcherRows = Array.from(document.querySelectorAll('[data-side-pane-open-tab-item]')).map(e => e.getAttribute('data-side-pane-open-tab-item'));
     const visibleRect = (el) => { if (!el) return null; const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; };
     return {
@@ -1516,6 +1629,9 @@ async function stageS7() {
       addTriggerPresent: Boolean(addTrigger),
       addTriggerRect: visibleRect(addTrigger),
       addressInputPresent: Boolean(addressInput),
+      browserTabTriggerPresent: Boolean(browserTabTrigger),
+      browserTabTriggerId: browserTabTrigger?.getAttribute('data-side-pane-tab-id') ?? null,
+      activeTabId: activeTab?.getAttribute('data-side-pane-tab-id') ?? null,
       launcherShellRect: visibleRect(paneHost),
     };
   })()`);
@@ -1595,7 +1711,56 @@ async function stageS7() {
     return null;
   })();
   if (!opened) throw new Error("no browser entry found to open the embedded browser pane (launcher row, side-pane-toggle, ⌥⌘B shortcut, add-trigger fallbacks all exhausted — see pane-state logs)");
-  await waitForTid("browser-address-input", { timeout: 30000 });
+  // Instrumentation gap fix (run 42098005816 evidence): the success paths above
+  // return silently — log the descriptor so every failure is attributable to a
+  // specific opening path.
+  log(`S7 browser pane opened via: ${opened}`);
+  // Run 42098005816 root cause (5th S7 incident, distinct from all prior ones):
+  // the launcher-row click DID create the browser tab (tab trigger
+  // [data-testid="browser"] present in the failure DOM dump; launcher rows gone)
+  // but the pane content never switched to the browser surface — the SESSION pane
+  // stayed active and browser-address-input never mounted within 30s, on a
+  // byte-identical journey + application tree (git diff vs the tested commit
+  // bef775cd is empty for scripts/ and packages/apps). A real user recovers by
+  // clicking the browser TAB TRIGGER again; the journey does exactly that
+  // (real CDP click, no DOM-event shortcut) before giving up.
+  let addressInputOk = false;
+  let tabRetry = 0;
+  for (let attempt = 0; attempt < 3 && !addressInputOk; attempt++) {
+    if (attempt > 0) {
+      await logPane(`address-input retry ${attempt} (pre)`);
+      // Recovery mirrors a real user in both possible pane states:
+      // (a) the browser TAB exists ([data-side-pane-tab-id^="browser:"], the
+      //     upstream E2E tab locator) but its content did not surface — clicking
+      //     the tab trigger routes to handleActivateSidePaneTab, which calls
+      //     platform.browserViewEnsureResident to RESUME a suspended guest
+      //     (useAppPanels.ts) and then activates the tab;
+      // (b) the pane fell back to the OPEN-TAB launcher state (no tabs) —
+      //     clicking the browser launcher row opens a browser tab again.
+      const tabTrigger = await rectOf(`document.querySelector('[data-side-pane-tab-id^="browser:"]')`).catch(() => null);
+      if (tabTrigger && tabTrigger.w > 0) {
+        tabRetry = attempt;
+        await cdpClickRect(tabTrigger);
+      } else {
+        const launcherRow = await rectOf(`document.querySelector('[data-side-pane-open-tab-item="browser"]')`).catch(() => null);
+        if (!launcherRow || !(launcherRow.w > 0)) {
+          log(`address-input retry ${attempt}: neither a browser tab trigger nor the open-tab launcher row is present`);
+          break;
+        }
+        tabRetry = attempt;
+        await cdpClickRect(launcherRow);
+      }
+      await new Promise((r) => setTimeout(r, 600));
+    }
+    addressInputOk = await waitForTid("browser-address-input", { timeout: attempt === 0 ? 30000 : 20000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!addressInputOk) await logPane(`address-input not mounted after attempt ${attempt}`);
+  }
+  if (!addressInputOk) {
+    throw new Error(`S7 browser pane opened ("${opened}") but browser-address-input never mounted (tab-trigger retry ${tabRetry} applied; pane-state logged per attempt)`);
+  }
+  if (tabRetry > 0) log(`S7 address input mounted after tab-trigger retry ${tabRetry} (real-user recovery click)`);
   await screenshot("S7-browser-open");
   // Navigate FIRST — then wait for the webview. The <webview> guest only mounts
   // after a navigation is confirmed (BrowserViewportSurface: "只在确认导航后创建

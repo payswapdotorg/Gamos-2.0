@@ -1,0 +1,181 @@
+name: gamos-m1-e2e
+
+# Gamos M1 — end-to-end acceptance journey (directive §17 / Part VII).
+#
+# MODEL ENDPOINT (maintainer directive, 2026-11-06): the journey runs against a
+# DETERMINISTIC LOCAL Anthropic-Messages endpoint (scripts/gamos/
+# m1-local-model-server.mjs) configured through the app's real custom-provider
+# settings surface. Rationale: OpenRouter's free tier provides 50 free-model
+# requests/day — provably insufficient for a full agentic journey (run
+# 42235226375: MJ0–MJ3 green, every MJ4+ model turn 429 "free-models-per-day",
+# x-ratelimit-limit 50, remaining 0) — and the maintainer cannot add the 10
+# credits that would unlock 1000/day. The directive therefore removed the paid
+# dependency: everything the APP does is real (settings surface, session turns,
+# streaming parse, tool loops, dynamic-workflows skill gate, CreateWorkflow
+# approval gate, runtime, dwf_* journal, resume/cancel, persistence); only the
+# model intelligence behind the endpoint is scripted — the same class of test
+# infrastructure as the repository's upstream E2E replay fixtures. Evidence from
+# this workflow must not claim real-LLM authorship; the endpoint writes a full
+# request transcript (m1-local-model-transcript.jsonl) into the artifact.
+#
+# Drives the REAL M1 acceptance journey through the existing ZCode interface:
+#   - MJ0 app-up          — complete application launch incl. desktop renderer (phase-b S0 walk)
+#   - MJ1 onboarding      — first-run login entry + wizard walk (phase-b S1 walk)
+#   - MJ2 provider         — custom provider bound to the local deterministic endpoint
+#                           (base URL + anthropic-messages + marker key) via the real settings
+#                           surface (phase-b S2 walk; the upstream E2E replay-provider path)
+#   - MJ3 game context    — a REAL game workspace is created and inspected; machine-observed
+#                           gaming context (intent + GameConcept + gamos/model-context@1 +
+#                           generated read-only GamePlan workflow script) via the bundled
+#                           m1-context-cli (esbuild bundle of scripts/gamos/m1-context-cli.ts)
+#   - MJ4 model authoring — structured provenance-backed context reaches the SELECTED model;
+#                           the model authors + launches the GamePlan through CreateWorkflow
+#                           + the existing permission surface; dwf_* run ids observed in the timeline
+#   - MJ5 runtime          — the GamePlan executes on the EXISTING Dynamic Workflow runtime to a
+#                           terminal state (dwf_* journal polled directly from the session-store SQLite DB)
+#   - MJ6 journal         — dwf_* journal records prove execution (runs/nodes/events)
+#   - MJ7 cancel           — cancellation through the EXISTING stop control (v4-stop)
+#   - MJ8 resume           — resume through the EXISTING /dwf resume command
+#   - MJ9 persistence      — session + workflow history survive an app restart
+#
+# Strict verdict integrity (same as phase-b rev 2): exit 0 only when every mandatory stage
+# records pass; partial/skipped/fail/missing stages all fail the job.
+#
+# The journey is read-only for M1 — no native game-engine mutation is performed (M2 scope).
+on:
+  push:
+    branches: ["gamos/**"]
+    paths:
+      - "scripts/gamos/m1-ui-journey.mjs"
+      - "scripts/gamos/m1-local-model-server.mjs"
+      - "scripts/gamos/m1-context-cli.ts"
+      - ".github/workflows/gamos-m1-e2e.yml"
+      - "packages/gamos-domain/**"
+      - "packages/desktop/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PNPM_VERSION: "10.33.2"
+
+jobs:
+  m1-journey:
+    name: M1 acceptance journey (deterministic local model endpoint, production renderer)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      PHASEB_MODE: prod
+      PHASEB_EVIDENCE_DIR: evidence/phase-b/m1-journey-ci
+      PHASEB_HOME: ${{ github.workspace }}/.phaseb-home
+      PHASEB_STAGED_APP_DIR: ${{ github.workspace }}/.phaseb-app
+      PHASEB_MAX_WAIT_MS: "600000"
+      PHASEB_LOCAL_MODEL: "1"
+      PHASEB_MODEL: gamos-m1-deterministic-model
+      M1_CONTEXT_CLI: /tmp/m1-context-cli.mjs
+      DISPLAY: ":99"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.14.0"
+
+      - name: Activate pnpm
+        run: |
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+          pnpm --version
+
+      - name: Install display + electron runtime dependencies
+        run: |
+          sudo apt-get update -qq
+          # ubuntu-24.04 t64 transition: libasound2 is virtual, provided by libasound2t64.
+          sudo apt-get install -y --no-install-recommends \
+            xvfb xauth dbus dbus-x11 \
+            libasound2t64 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 libcairo2 \
+            libcups2 libdbus-1-3 libdrm2 libgbm1 libglib2.0-0 libgtk-3-0 \
+            libnspr4 libnss3 libpango-1.0-0 libpangocairo-1.0 libsecret-1-0 \
+            libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxdamage1 libxext6 \
+            libxfixes3 libxkbcommon0 libxrandr2 libxrender1 libxshmfence1 \
+            libxss1 libxtst6 fonts-noto-cjk fonts-noto-color-emoji
+
+      - name: Frozen-lockfile install
+        run: pnpm install --frozen-lockfile || (echo "::warning::retrying install after known pnpm@10.33.2 hoisted-linker ENOENT race (react-scan/esbuild rename)" && pnpm install --frozen-lockfile)
+
+      - name: Bundle the M1 context CLI (gamos-domain -> single-file ESM)
+        run: pnpm exec esbuild scripts/gamos/m1-context-cli.ts --bundle --platform=node --format=esm --outfile=/tmp/m1-context-cli.mjs
+
+      - name: Build desktop agent CLI chain (runtime agent bundle)
+        run: node scripts/build-desktop-agent-cli.mjs
+
+      - name: Prepare desktop runtime assets (agent bundle + native search tools)
+        run: pnpm --filter @zcode/desktop prepare:runtime-assets
+
+      - name: Build the complete application (all packages + desktop production renderer)
+        run: pnpm build:bootstrap
+
+      - name: Verify production renderer output
+        run: ls -la packages/desktop/out/renderer/ | head -12
+
+      - name: Run the M1 acceptance journey (deterministic local model endpoint, strict verdict)
+        env:
+          M1_LOCAL_MODEL_PORT: "4371"
+        run: |
+          ulimit -n 65535 || true
+          # Fresh isolated home per run: the journey requires the first-run
+          # onboarding wizard (MJ1) and verifies provider/workspace state on disk.
+          # No external provider credentials are used in this mode — the journey
+          # spawns the deterministic local endpoint itself (scripts/gamos/
+          # m1-local-model-server.mjs) and configures a custom provider against it.
+          rm -rf "${PHASEB_HOME}"
+          node scripts/gamos/m1-ui-journey.mjs
+
+      - name: Verify M1 journey evidence verdict (machine-readable summary)
+        if: always()
+        run: |
+          if [ ! -f evidence/phase-b/m1-journey-ci/m1-journey-evidence.json ]; then
+            echo "::error::m1 journey evidence file missing — journey did not produce evidence"
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json, sys
+          d = json.load(open("evidence/phase-b/m1-journey-ci/m1-journey-evidence.json"))
+          s = d.get("summary", {})
+          print("verdict:", s.get("verdict"))
+          print("non_pass_stages:", json.dumps(s.get("non_pass_stages", []), indent=1))
+          print("missing_stages:", json.dumps(s.get("missing_stages", []), indent=1))
+          for sid, st in sorted(d.get("stages", {}).items()):
+              print(f"  {sid}: {st.get('status')}")
+          sys.exit(0 if s.get("verdict") == "pass" else 1)
+          PY
+
+      - name: Scan M1 evidence artifacts for accidental key exposure
+        if: always()
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.PHASEB_OPENROUTER_API_KEY }}
+        run: |
+          # Defense-in-depth: the local-endpoint journey uses no external provider
+          # credential, but the scan stays so any future re-introduction of a real
+          # key cannot leak through evidence artifacts unnoticed.
+          if [ -z "${OPENROUTER_API_KEY}" ]; then echo "no key configured — skip"; exit 0; fi
+          set +e
+          grep -r -l -F "${OPENROUTER_API_KEY}" evidence/phase-b/m1-journey-ci/ > /tmp/m1-key-hits.txt 2>/dev/null; rc=$?
+          set -e
+          if [ -s /tmp/m1-key-hits.txt ]; then
+            echo "::error::OpenRouter key found in evidence artifacts:"
+            cat /tmp/m1-key-hits.txt
+            exit 1
+          fi
+          echo "key-exposure scan clean: no evidence artifact contains the OpenRouter key"
+
+      - name: Upload M1 journey evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m1-journey-${{ github.sha }}
+          path: |
+            evidence/phase-b/m1-journey-ci/
+          if-no-files-found: warn
+          retention-days: 30

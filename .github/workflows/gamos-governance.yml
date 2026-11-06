@@ -6,9 +6,10 @@ name: gamos-governance
 #     schema v2 with content binding, protected-file existence, unauthorized
 #     deletions/modifications of baseline-tracked files, history-rewrite guard).
 #   Job 2 "self-test": tamper-rejection suite proving unauthorized changes to
-#     governance controls are rejected (13 scenarios, synthetic fixtures).
-#   Job 3 "architecture": upstream's own module/layering gate
-#     (pnpm run architecture:check), so upstream governance semantics keep applying.
+#     governance controls are rejected (14 scenarios, synthetic fixtures).
+#   Job 3 "architecture": upstream's module/layering gate plus the Gamos roadmap
+#     structural/dependency/evidence gate and its self-tests. It remains the
+#     same required status check, so a roadmap violation blocks integration.
 #
 # Trust anchor: GAMOS_BASELINE_SHA256 below is sha256 of
 # .gamos-architecture-baseline.json. Rotated only via
@@ -24,7 +25,7 @@ on:
   workflow_dispatch:
 
 env:
-  GAMOS_BASELINE_SHA256: "933714335911ae07a4bfa5e74c42306b5931fdbb3a03bfb86dfc358b58eeb4d2"
+  GAMOS_BASELINE_SHA256: "da3fbbd9a2dc16e59f50ef45d9a28d6cf5a9051178f33882b1df9d972d8e663b"
 
 permissions:
   contents: read
@@ -71,3 +72,7 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - name: Architecture check
         run: pnpm run architecture:check
+      - name: Roadmap validator self-tests
+        run: node scripts/gamos/roadmap-self-test.mjs
+      - name: Canonical roadmap integrity and dependency gate
+        run: node scripts/gamos/roadmap-check.mjs

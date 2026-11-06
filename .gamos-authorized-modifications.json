@@ -279,6 +279,59 @@
         "date": "2026-11-05T03:30:00Z",
         "decision_ref": "Architect re-review 'Gamos-2.0 - Phase B Test Integrity and M0 Closure' section 1 (Correct the remaining contract issues: GameIR exact compatibility; plugin execution security; use the existing GAMOS-AUTH-0003-compatible governance process for changes to protected contracts); recorded as ADR-0006"
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0005",
+      "phase": "M1",
+      "date": "2026-11-05T20:50:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "Roadmap M1.1/M1.2 (directive 'Autonomous M0 Closure and M1 Implementation' Part III/§8-§9, TDD RED commit 70c6352f): create the additive pure gaming-domain package packages/gamos-domain with the vendored pinned PlayLiquid GameIR kernel. Two baseline-tracked files require a minimal additive modification: (1) architecture-policy.yaml — register the new managed module gamos-domain (layer domain, owner gamos-tl, requires []) through the sanctioned 'pnpm architecture:adopt' tool, which is the only mechanical guarantee that new source files fall under the architecture rules (newFilesRequireManagedModule); the registration adds one module block (layered domain/vendor/adapters per the repo layering rules: pure domain logic, byte-exact upstream vendor kernel, node:crypto-backed hashing adapters) plus the test/ root registration (module tests), a vitest.config.ts unmanaged-new-file exception following the zcode-cua precedent, and one disable-count exception documenting that the vendored upstream file packages/gamos-domain/src/vendor/playliquid-gameos/src/game-contracts/git.ts carries an upstream eslint-disable comment that must not be edited (byte-exact pin, PROVENANCE.md); (2b) pnpm-lock.yaml — register the new package's single devDependency (typescript@^6.0.2, same range the workspace root pins) via 'pnpm install --lockfile-only' so the frozen-lockfile CI install can resolve the new workspace project; (2) vitest.config.ts — append 'packages/gamos-domain/vitest.config.ts' to the root test projects so the new package's tests are discovered by the existing engineering test entry, mirroring the existing zcode-cua project registration. Per directive Part I §3 (mandatory autonomy), the TL owns implementation details within the frozen contracts; the TL is the repository decision authority for M1 (architect-approval checkpoints are explicitly removed between M0 and M1).",
+      "risk": "low",
+      "affected_functionality": "None at runtime. architecture-policy.yaml governs the static architecture gate: the added module registration only brings the NEW package under the managed-module rules (public entrypoints, layer order, contract docs). vitest.config.ts discovers tests: the added project runs packages/gamos-domain/test (pure data/validation tests; no app surface, no process spawning, no network). No ZCode application surface, no runtime code path, no IPC/RPC channel is touched.",
+      "new_functionality": "packages/gamos-domain — pure gaming-domain package: GameConcept, GameSpec (= PlayLiquid GameIRDocument exact compatibility, contract 01 rev 2), GamePlan, AcceptanceRecord, GameArtifact, gamos/capability@2 registry with fail-closed resolution (contract 02 rev 1), vendored GameIR kernel pinned at 196b305e75decfeaa162d3da479dc125cff1521a with PROVENANCE.md. Pure data/validation/deterministic resolution only: no process spawning, no sockets, no engines, no second UI/task/session runtime/workflow engine (contract 01 package boundary, M1.1 acceptance).",
+      "regression_tests": [
+        "npx vitest run --project gamos-domain (93/93)",
+        "npx tsc --noEmit -p packages/gamos-domain/tsconfig.json",
+        "node scripts/gamos/governance-check.mjs (after rebaseline)",
+        "node scripts/gamos/governance-self-test.mjs (14/14)",
+        "pnpm run architecture:check",
+        "node scripts/gamos/roadmap-check.mjs"
+      ],
+      "evidence": {
+        "summary": "TDD RED commit 70c6352f proves the behavior was missing (34 failing tests); this GREEN commit implements the smallest change that passes (93/93 incl. 23 HARDEN adversarial cases). The vendored GameIR is byte-exact against the pinned upstream commit, enforced by a 21-entry sha256 manifest test that fails closed on drift (contract 01 §2 rule 4).",
+        "links": [
+          "packages/gamos-domain/",
+          "packages/gamos-domain/src/vendor/playliquid-gameos/PROVENANCE.md",
+          "docs/gamos/contracts/01-gaming-domain-and-gameir.md",
+          "docs/gamos/contracts/02-capability-registry.md"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "architecture-policy.yaml",
+          "content_sha256": "fc9c17d9e30208976d01e30ed3ea4c5becaaff460826ad5a555e182f701bfdb0"
+        },
+        {
+          "action": "modify",
+          "path": "vitest.config.ts",
+          "content_sha256": "9a0f7dbc2053cc5d49e22f35aa357ca35a8825bc7af1a67aeccca32c597b6bba"
+        },
+        {
+          "action": "modify",
+          "path": "pnpm-lock.yaml",
+          "content_sha256": "6263a8490f45600f9aab1add61e5bab1b5fa71a84fa431380534d806eaa69ca9"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-05T20:50:00Z",
+        "decision_ref": "M1 directive Part I §3 (TL autonomy for M1 implementation within frozen contracts) + TDD RED evidence 70c6352f; reviewed on gamos/roadmap-integration"
+      }
     }
   ]
 }
