@@ -1809,24 +1809,55 @@ async function stageMJ8() {
   }, { what: `task list row for session ${reopenSessionId}`, timeout: 60000 });
   await clickTid(taskItemTid, { timeout: 30000 });
   await waitFor(async () => (await paneSessionId()) === reopenSessionId, { what: `pane session id === ${reopenSessionId}`, timeout: 45000 });
+  // Conversation-history proof. Virtualized timelines only render the rows in
+  // (or near) the viewport, and a restored session scrolls to the BOTTOM, so
+  // the original task row (first turn) is usually not in the DOM when read
+  // (run 42225436307: pane on the right session, 5 rows, turn-navigator
+  // populated — but the first-turn text absent from v4-timeline innerText).
+  // Navigate to the FIRST turn (turn-navigator item click) and scroll the
+  // timeline container to the top so the original task row renders, then read.
+  const navigatedToFirstTurn = await evalJs(`(() => { const items = document.querySelectorAll('[data-testid^="v4-turn-navigator-item"]'); if (!items.length) return false; items[0].click(); return true; })()`).catch(() => false);
+  await new Promise((r) => setTimeout(r, 800));
+  await evalJs(`(() => { let el = document.querySelector('[data-testid="v4-timeline"]'); while (el && el.scrollHeight <= el.clientHeight + 4) el = el.parentElement; if (el) { el.scrollTop = 0; el.dispatchEvent(new Event('scroll', { bubbles: true })); return true; } return false; })()`).catch(() => false);
+  await new Promise((r) => setTimeout(r, 600));
   const state = await waitFor(async () => {
     const s = await timelineState().catch(() => null);
     return s && s.rows > 0 ? s : false;
   }, { what: "restored session pane with history", timeout: 60000 }).catch(() => null);
   await screenshot("MJ8-session-restored");
-  const historySurvived = Boolean(state) && /inspect this game project/i.test((state?.timeline ?? ""));
-  const pass = historySurvived;
+  const timelineText = state?.timeline ?? "";
+  const conversationSurvived = Boolean(state) && /inspect this game project/i.test(timelineText);
+  // Workflow-history proof at the data level: the dwf journal must still be on
+  // disk and populated after the restart (the journal IS the workflow history).
+  let journalAfterRestart = null;
+  const dbPathAfterRestart = journey.m1DbPath ?? findSessionStoreDb();
+  if (dbPathAfterRestart) {
+    try {
+      const { DatabaseSync } = await import("node:sqlite");
+      const db = new DatabaseSync(dbPathAfterRestart, { readOnly: true });
+      const snap = journalSnapshot(db);
+      db.close();
+      journalAfterRestart = { db_path: dbPathAfterRestart, dwf_run_count: snap.dwf_run_count ?? null, latest_run_id: snap.dwf_run_latest?.[0]?.id ?? null, latest_status: snap.dwf_run_latest?.[0]?.status ?? snap.dwf_run_latest?.[0]?.state ?? null };
+    } catch (e) {
+      journalAfterRestart = { db_path: dbPathAfterRestart, error: String(e.message).slice(0, 200) };
+    }
+  }
+  const journalSurvived = Boolean(journalAfterRestart?.dwf_run_count && journalAfterRestart.dwf_run_count >= 1);
+  const pass = conversationSurvived && journalSurvived;
   recordStage("MJ8", pass ? "pass" : "fail", {
     task: "session and workflow history persist after restart",
     restart: "app killed (SIGTERM/SIGKILL) and relaunched with the same isolated home (display restored first)",
     session_id_before_restart: sessionIdBefore,
     reopened_session_id: reopenSessionId,
     session_id_after_restart: state?.paneSessionId ?? null,
+    navigated_to_first_turn: navigatedToFirstTurn,
     timeline_rows: state?.rows,
-    conversation_history_survived: historySurvived,
-    timeline_excerpt: (state?.timeline ?? "").slice(0, 400),
+    conversation_history_survived: conversationSurvived,
+    journal_after_restart: journalAfterRestart,
+    workflow_history_survived: journalSurvived,
+    timeline_excerpt: timelineText.slice(0, 400),
   });
-  if (!pass) throw new Error("MJ9 session history did not survive the restart");
+  if (!pass) throw new Error(`MJ9 session history did not survive the restart (conversation=${conversationSurvived}, journal=${journalSurvived})`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1862,7 +1893,10 @@ async function main() {
       try {
         await fn();
       } catch (e) {
-        recordStage(stage, "fail", e.message);
+        // A stage that already recorded its own (rich) failure detail keeps it —
+        // the runner must not overwrite it with the bare error message (run
+        // 42225436307: MJ9's detailed record was clobbered by the catch).
+        if (!evidence.stages[stage]) recordStage(stage, "fail", e.message);
         evidence.failures.push({ stage, error: e.message });
         await screenshot(`${stage}-failure`).catch(() => {});
         await dumpDom(`${stage}-failure`).catch(() => {});
