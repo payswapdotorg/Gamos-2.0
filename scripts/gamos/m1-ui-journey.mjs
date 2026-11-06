@@ -49,8 +49,19 @@
  *   and the default conversation workspace at $PHASEB_HOME/.zcode/workspace/default.
  *
  * Env:
- *   OPENROUTER_API_KEY   — real model provider key (required for S2/S3/S4/S6)
- *   PHASEB_MODEL         — model id (default nvidia/nemotron-3-ultra-550b-a55b:free)
+ *   OPENROUTER_API_KEY   — real model provider key (required in real-model mode)
+ *   PHASEB_LOCAL_MODEL   — "1" runs the journey against the local deterministic
+ *                          Anthropic-Messages endpoint (scripts/gamos/
+ *                          m1-local-model-server.mjs) through a custom provider —
+ *                          maintainer directive: no OpenRouter budget (the free
+ *                          tier's 50 requests/day provably cannot carry the
+ *                          journey; run 42235226375 quota evidence). The endpoint
+ *                          is scripted model traffic driving the REAL app — the
+ *                          same class of infrastructure as the upstream E2E
+ *                          replay fixtures. Evidence produced in this mode must
+ *                          not claim real-LLM authorship.
+ *   PHASEB_MODEL         — model id (default nvidia/nemotron-3-ultra-550b-a55b:free;
+ *                          gamos-m1-deterministic-model in local mode)
  *   PHASEB_HOME          — isolated home/data base dir (default .phaseb-home under repo;
  *                          MUST be fresh for S1 to see the first-run wizard)
  *   PHASEB_STAGES        — comma list of stages to run (default all; the verdict still
@@ -87,7 +98,15 @@ const TASK_WORKSPACE = resolve(
 const ZCODE_DATA_ROOT = join(PHASEB_HOME, ".zcode");
 const PROVIDER_CONFIG_FILE = join(ZCODE_DATA_ROOT, "v2", "provider_config.json");
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY ?? "";
-const MODEL_ID = process.env.PHASEB_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b:free";
+// Local deterministic endpoint mode (see the header Env docs + the server's own
+// honesty header). The journey spawns the endpoint itself and configures a
+// CUSTOM provider against it through the real settings surface.
+const LOCAL_MODEL = /^(1|true|yes)$/i.test(process.env.PHASEB_LOCAL_MODEL ?? "");
+const LOCAL_MODEL_PORT = Number(process.env.M1_LOCAL_MODEL_PORT ?? 4371);
+const LOCAL_MODEL_URL = `http://127.0.0.1:${LOCAL_MODEL_PORT}`;
+// Clearly-fake marker key: the endpoint performs no authentication.
+const LOCAL_MODEL_KEY = "gamos-local-deterministic-endpoint";
+const MODEL_ID = process.env.PHASEB_MODEL ?? (LOCAL_MODEL ? "gamos-m1-deterministic-model" : "nvidia/nemotron-3-ultra-550b-a55b:free");
 const MAX_WAIT = Number(process.env.PHASEB_MAX_WAIT_MS ?? 240000);
 const STAGES = (process.env.PHASEB_STAGES ?? "MJ0,MJ1,MJ2,MJ3,MJ4,MJ5,MJ6,MJ7,MJ8,MJ9").split(",").map((s) => s.trim());
 const MANDATORY_STAGES = ["MJ0", "MJ1", "MJ2", "MJ3", "MJ4", "MJ5", "MJ6", "MJ7", "MJ8", "MJ9"];
@@ -148,8 +167,20 @@ const evidence = {
     platform: process.platform,
     cdp_port: CDP_PORT,
     model: MODEL_ID,
-    provider: "openrouter",
+    provider: LOCAL_MODEL ? "custom (local deterministic anthropic-messages endpoint)" : "openrouter",
     real_model_key_present: Boolean(OPENROUTER_KEY),
+    // Local-endpoint mode (maintainer directive: no OpenRouter budget — the free
+    // tier's 50 requests/day provably cannot carry the journey, run 42235226375).
+    // Everything the APP does is real (provider settings surface, session turns,
+    // streaming parse, tool loops, permissions, runtime, journal); only the model
+    // intelligence behind the endpoint is deterministic scripts. See
+    // scripts/gamos/m1-local-model-server.mjs for the honesty model.
+    ...(LOCAL_MODEL ? {
+      local_model_mode: true,
+      local_model_endpoint: LOCAL_MODEL_URL,
+      local_model_transcript: "m1-local-model-transcript.jsonl (in the evidence dir)",
+      local_model_disclosure: "deterministic scripted endpoint standing in for the external LLM — evidence must not claim real-LLM authorship",
+    } : {}),
     app_home: PHASEB_HOME,
     task_workspace: TASK_WORKSPACE,
     provider_config_file: PROVIDER_CONFIG_FILE,
@@ -1019,7 +1050,137 @@ function findModelOnDisk(providerId, modelId) {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Local deterministic model endpoint mode (maintainer directive)     */
+/* ------------------------------------------------------------------ */
+
+let localModelServerChild = null;
+
+async function startLocalModelServer() {
+  const serverPath = join(REPO_ROOT, "scripts", "gamos", "m1-local-model-server.mjs");
+  if (!existsSync(serverPath)) throw new Error(`local model server script missing: ${serverPath}`);
+  const transcriptPath = join(EVIDENCE_DIR, "m1-local-model-transcript.jsonl");
+  localModelServerChild = spawn(process.execPath, [serverPath], {
+    env: { ...process.env, M1_LOCAL_MODEL_PORT: String(LOCAL_MODEL_PORT), M1_LOCAL_MODEL_TRANSCRIPT: transcriptPath },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  // Deliberately NOT pushed onto `children`: MJ9 restarts the app via stopApp()
+  // and the endpoint must survive that restart (post-restart sidecar calls and
+  // any resumed turns still need a live model endpoint). It is terminated in
+  // main()'s finally and in the fatal handler instead.
+  localModelServerChild.stdout.on("data", (d) => { for (const line of String(d).split("\n")) if (line.trim()) log(`[local-model] ${line.trim()}`); });
+  localModelServerChild.stderr.on("data", (d) => { for (const line of String(d).split("\n")) if (line.trim()) log(`[local-model:err] ${line.trim()}`); });
+  localModelServerChild.on("exit", (code, signal) => log(`[local-model] endpoint exited (code=${code} signal=${signal})`));
+  await waitFor(() => new Promise((resolve) => {
+    const req = httpRequest({ host: "127.0.0.1", port: LOCAL_MODEL_PORT, path: "/healthz", method: "GET", timeout: 2000 }, (res) => {
+      let body = "";
+      res.on("data", (c) => { body += c; });
+      res.on("end", () => resolve(body.includes('"ok":true')));
+    });
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => { req.destroy(); resolve(false); });
+  }), { what: `local deterministic model endpoint healthz (${LOCAL_MODEL_URL})`, timeout: 30000 });
+  log(`local deterministic model endpoint ready: ${LOCAL_MODEL_URL} (transcript: ${transcriptPath})`);
+  journey.localModelEndpoint = { url: LOCAL_MODEL_URL, transcript: transcriptPath, pid: localModelServerChild.pid };
+}
+
+function stopLocalModelServer() {
+  if (!localModelServerChild) return;
+  try { localModelServerChild.kill("SIGTERM"); } catch { /* already gone */ }
+  localModelServerChild = null;
+}
+
+/** Pin the custom provider's API format to anthropic-messages through the real
+ * format selector (trigger → item), mirroring the upstream helper's read-then-click
+ * semantics (personal-provider-settings.ts): a custom provider left on a wrong
+ * protocol default would send requests the local endpoint never answers. */
+async function ensureAnthropicMessagesApiFormat() {
+  const triggerTid = "model-provider-api-format-trigger";
+  const itemTid = "model-provider-api-format-item-anthropic-messages";
+  await clickTid(triggerTid, { timeout: 20000 });
+  await waitForTid(itemTid, { timeout: 20000 });
+  const state = await evalJs(`document.querySelector('[data-testid="${itemTid}"]')?.getAttribute('data-state') ?? null`).catch(() => null);
+  if (state === "checked") {
+    log("api format already anthropic-messages — closing the menu without changes");
+    await pressKey("Escape").catch(() => {});
+  } else {
+    await clickTid(itemTid, { timeout: 20000 });
+    await new Promise((r) => setTimeout(r, 800));
+    await pressKey("Escape").catch(() => {});
+  }
+  await new Promise((r) => setTimeout(r, 400));
+}
+
+/** Local mode: custom provider bound to the deterministic endpoint through the
+ * app's REAL provider settings surface — the exact UI path the repository's
+ * upstream E2E suite drives for its replay provider (personal-provider-settings.ts:
+ * add-provider → custom template → base URL + API key + anthropic-messages). */
+async function stageS2LocalProvider() {
+  await waitForTid("sidebar");
+  await clickTid("task-settings-button", { timeout: 30000 });
+  await waitForTid("settings-page", { timeout: 30000 });
+  await screenshot("S2-local-settings-open");
+  await clickTid("settings-section-nav-modelProvider", { timeout: 30000 });
+  await waitForTid("model-provider-add-provider-button", { timeout: 30000 });
+  await screenshot("S2-local-model-settings");
+  const idsBefore = new Set(readProviderRules().map((r) => r.providerId).filter(Boolean));
+  await clickTid("model-provider-add-provider-button", { timeout: 30000 });
+  await waitForTid("model-provider-template-picker", { timeout: 20000 });
+  await screenshot("S2-local-add-provider");
+  // The template picker's CUSTOM entry (ProviderTemplatePicker.tsx renders it
+  // natively — testid model-provider-template-item-custom).
+  await waitForTid("model-provider-template-item-custom", { timeout: 20000 });
+  await clickTid("model-provider-template-item-custom", { timeout: 20000 });
+  const providerId = await waitFor(() => {
+    const appeared = readProviderRules().map((r) => r.providerId).find((id) => id && !idsBefore.has(id));
+    return appeared ?? false;
+  }, { what: "new custom provider in provider_config.json", timeout: 30000 });
+  journey.openRouterProviderId = providerId;
+  await new Promise((r) => setTimeout(r, 800));
+  await clickTid(`model-provider-nav-item-custom:${providerId}`, { timeout: 30000 });
+  await waitForTid("model-provider-base-url-input", { timeout: 30000 });
+  await screenshot("S2-local-provider-detail");
+  // Base URL: the deterministic local endpoint. Per-field blur commits (the
+  // upstream helper semantics). clearFirst guards against any prefilled value.
+  await clickAndType("model-provider-base-url-input", LOCAL_MODEL_URL, { timeout: 20000, clearFirst: true });
+  await pressKey("Tab");
+  await new Promise((r) => setTimeout(r, 600));
+  // API key: a clearly-fake local marker (the endpoint performs no auth). The
+  // blur submits the connection draft.
+  await clickAndType("model-provider-api-key-input", LOCAL_MODEL_KEY, { timeout: 20000, clearFirst: true });
+  await pressKey("Tab");
+  await new Promise((r) => setTimeout(r, 1200));
+  // API format: the endpoint speaks the Anthropic Messages protocol.
+  await ensureAnthropicMessagesApiFormat();
+  // Verify the persisted provider ON DISK (the same standard as the openrouter
+  // path): base URL + anthropic-messages + the marker key.
+  const saved = await waitFor(() => {
+    const rule = readProviderRules().find((r) => r.providerId === providerId);
+    if (!rule) return false;
+    const api = rule.config?.api ?? {};
+    const key = rule.config?.access?.apiKey ?? null;
+    if (api.baseUrl !== LOCAL_MODEL_URL || api.type !== "anthropic-messages" || key !== LOCAL_MODEL_KEY) return false;
+    return { baseUrl: api.baseUrl, apiType: api.type, key: true, keySource: "personal overlay" };
+  }, { what: "custom provider saved (local endpoint base URL + anthropic-messages + key)", timeout: 30000 }).catch((e) => {
+    const rule = readProviderRules().find((r) => r.providerId === providerId);
+    e.message = `${e.message}; on-disk rule: ${JSON.stringify(rule ? { api: rule.config?.api, access: { apiKeyPresent: Boolean(rule.config?.access?.apiKey) } } : null)?.slice(0, 600)}`;
+    throw e;
+  });
+  journey.providerSavedOnDisk = saved;
+  await screenshot("S2-local-provider-saved");
+}
+
 async function stageS2() {
+  if (LOCAL_MODEL) {
+    await stageS2LocalProvider();
+  } else {
+    await stageS2OpenRouterProvider();
+  }
+  await stageS2SharedAddModel();
+}
+
+/** Real-model mode (unchanged flow): OpenRouter provider via the real settings surface. */
+async function stageS2OpenRouterProvider() {
   if (!OPENROUTER_KEY) throw new Error("OPENROUTER_API_KEY missing — cannot configure the real model provider");
   // Settings → Model settings (authoritative nav: settings-section-nav-modelProvider —
   // same path the upstream E2E provider specs use).
@@ -1089,6 +1250,13 @@ async function stageS2() {
   });
   journey.providerSavedOnDisk = saved;
   await screenshot("S2-provider-saved");
+}
+
+/** Shared (both modes): add the journey model to the provider through the
+ * settings page's own add-model flow, verify persistence on disk, and record S2. */
+async function stageS2SharedAddModel() {
+  const providerId = journey.openRouterProviderId;
+  if (!providerId) throw new Error("S2 internal error: no provider id recorded by the provider-configuration step");
   // Add the FREE-tier model to the provider through the settings page's own
   // "Add model" flow (the upstream E2E path —
   // packages/desktop/test/e2e/helpers/upstream-provider.ts addUpstreamProviderModel):
@@ -1201,15 +1369,25 @@ async function stageS2() {
   await clickTid("settings-back-button", { timeout: 20000 });
   await waitForTid("v4-composer-input", { timeout: 30000 });
   recordStage("S2", "pass", {
-    nav: "task-settings-button → settings-section-nav-modelProvider → add-provider → template openrouter",
+    nav: LOCAL_MODEL
+      ? "task-settings-button → settings-section-nav-modelProvider → add-provider → template custom (local deterministic endpoint)"
+      : "task-settings-button → settings-section-nav-modelProvider → add-provider → template openrouter",
     provider_id: providerId,
-    template: "openrouter",
+    template: LOCAL_MODEL ? "custom" : "openrouter",
     persisted_to: PROVIDER_CONFIG_FILE,
-    base_url_verified: saved.baseURL,
-    base_url_source: saved.baseURLSource,
+    base_url_verified: journey.providerSavedOnDisk?.baseUrl ?? journey.providerSavedOnDisk?.baseURL ?? null,
+    base_url_source: journey.providerSavedOnDisk?.baseURLSource ?? journey.providerSavedOnDisk?.keySource ?? null,
     api_key_persisted: true,
-    free_tier_model_added: { model: MODEL_ID, via: addedModelVia, reason: "template catalog is paid-tier; the key's ~10 credits cannot afford paid models (402 evidence) — the free-tier model is required for real tasks", on_disk_verified: journey.freeModelOnDisk },
-    note: "API key entered via CDP Input.insertText into the real model-provider-api-key-input; persistence verified on disk (key never logged)",
+    ...(LOCAL_MODEL ? {
+      api_type_verified: journey.providerSavedOnDisk?.apiType ?? null,
+      local_model_endpoint: LOCAL_MODEL_URL,
+      local_model_note: "deterministic local Anthropic-Messages endpoint (maintainer directive: no OpenRouter budget — the free tier's 50 requests/day provably cannot carry the journey, run 42235226375). Provider, key, model and every model turn go through the app's REAL provider/chat surfaces; the model intelligence behind the endpoint is scripted — evidence must not claim real-LLM authorship.",
+    } : {
+      free_tier_model_added: { model: MODEL_ID, via: addedModelVia, reason: "template catalog is paid-tier; the key's ~10 credits cannot afford paid models (402 evidence) — the free-tier model is required for real tasks", on_disk_verified: journey.freeModelOnDisk },
+    }),
+    note: LOCAL_MODEL
+      ? "clearly-fake marker key entered via CDP Input.insertText into the real model-provider-api-key-input; persistence verified on disk"
+      : "API key entered via CDP Input.insertText into the real model-provider-api-key-input; persistence verified on disk (key never logged)",
   });
 }
 
@@ -1942,6 +2120,7 @@ async function main() {
   log(`evidence dir: ${EVIDENCE_DIR}`);
   await ensureDisplay();
   stageDesktopOut();
+  if (LOCAL_MODEL) await startLocalModelServer();
   try {
     if (MODE === "dev") await launchDev();
     else if (MODE === "prod") await launchProd();
@@ -1966,6 +2145,7 @@ async function main() {
     }
   } finally {
     await stopApp();
+    stopLocalModelServer();
   }
   evidence.finished_at = new Date().toISOString();
   const nonPass = MANDATORY_STAGES
@@ -2000,5 +2180,6 @@ main().catch(async (e) => {
   writeFileSync(join(EVIDENCE_DIR, "m1-journey-evidence.json"), JSON.stringify(evidence, null, 2));
   log(`FATAL: ${e.message}`);
   await stopApp();
+  stopLocalModelServer();
   process.exit(2);
 });
