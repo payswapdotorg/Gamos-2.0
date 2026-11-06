@@ -63,9 +63,9 @@
  */
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, appendFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, appendFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -160,9 +160,23 @@ const evidence = {
   failures: [],
 };
 
+// The canonical stage id (MJ0–MJ9) the runner is currently executing. Stage
+// functions keep recording under their historical internal ids (S0/S1/S2 and
+// MJ2–MJ8); remapping every record onto the canonical id keeps the
+// machine-readable verdict aligned with MANDATORY_STAGES. Without this a
+// fully-green journey can never reach verdict=pass: the internal ids collide
+// across stages and MJ0/MJ1/MJ8 end up missing while S0/S1/S2 carry the same
+// results (run 42121929897 attempt 2 evidence: missing=[MJ0,MJ1,MJ8]).
+let activeCanonicalStageId = null;
+
 function recordStage(id, status, detail) {
-  evidence.stages[id] = { status, detail, at: new Date().toISOString() };
-  log(`STAGE ${id}: ${status} — ${typeof detail === "string" ? detail : JSON.stringify(detail).slice(0, 400)}`);
+  const key = activeCanonicalStageId ?? id;
+  evidence.stages[key] = { status, detail, at: new Date().toISOString() };
+  log(
+    `STAGE ${key}${key === id ? "" : ` (via internal id ${id})`}: ${status} — ${
+      typeof detail === "string" ? detail : JSON.stringify(detail).slice(0, 400)
+    }`,
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -1386,11 +1400,23 @@ async function stageMJ2() {
 
   const detected = ctx.context?.project?.detected ?? [];
   const unity = detected.find((d) => d.family === "unity");
+  // Substring match, not exact element equality: the probe reports the
+  // repo-relative path ("ProjectSettings/ProjectVersion.txt") and the assertion
+  // is phrased against the file name. Array.includes("ProjectVersion.txt")
+  // rejected a fully valid context in run 42121929897 attempt 2.
+  const unityEvidence = Array.isArray(unity?.evidence)
+    ? unity.evidence
+    : typeof unity?.evidence === "string"
+      ? [unity.evidence]
+      : [];
+  const unityVersionEvidenceSeen = unityEvidence.some(
+    (e) => typeof e === "string" && e.includes("ProjectVersion.txt"),
+  );
   const observedVia = ctx.context?.provenance?.observedVia ?? [];
   const pass =
     ctx.isGaming === true &&
     Boolean(unity) &&
-    unity?.evidence?.includes("ProjectVersion.txt") &&
+    unityVersionEvidenceSeen &&
     unity?.rawVersion === "6000.0.23f1" &&
     ["project-probes", "machine-discovery", "capability-registry"].every((s) => observedVia.includes(s)) &&
     typeof ctx.plan?.scriptText === "string" &&
@@ -1408,7 +1434,7 @@ async function stageMJ2() {
     issues: (ctx.issues ?? []).map((i) => ({ code: i.code, severity: i.severity })),
     context_evidence: M1_EVIDENCE.contextPath,
   });
-  if (!pass) throw new Error("MJ2 gaming context assertions failed (see stage detail)");
+  if (!pass) throw new Error("MJ3 gaming context assertions failed (see stage detail)");
   journey.m1Context = ctx;
 }
 
@@ -1420,6 +1446,14 @@ async function stageMJ3() {
   await screenshot("MJ3-model-selected");
   journey.m1ModelSelection = selection;
   const ctx = journey.m1Context;
+  if (!ctx) {
+    // Honest cascade guard: without the gaming context captured by the preceding
+    // stage, model authoring must not run against missing data — the previous
+    // stage's own record carries the real failure detail.
+    throw new Error(
+      "MJ4 requires the gaming context captured by the preceding stage — that stage failed (see its stage detail); refusing to author a GamePlan against missing context",
+    );
+  }
   const contextSections = {
     project: ctx.context.project,
     engines: ctx.context.engines,
@@ -1469,31 +1503,87 @@ async function stageMJ3() {
     timeline_excerpt: timeline.slice(0, 600),
   });
   if (result.paneSessionId && result.paneSessionId !== "draft") journey.sessionIds.push(result.paneSessionId);
-  if (!pass) throw new Error(`MJ3 model did not author+launch the GamePlan workflow (completed=${result.completed}, approvals=${approvals.length}, runIds=${runIds.length})`);
+  if (!pass) throw new Error(`MJ4 model did not author+launch the GamePlan workflow (completed=${result.completed}, approvals=${approvals.length}, runIds=${runIds.length})`);
 }
 
-const RUN_TS_MS = Date.now();
+// Dirs that never hold the agent session store (GPU/browser caches, crash
+// dumps, dependency trees) — skipped by both the DB search and the diagnostic
+// listing below.
+const DB_SEARCH_SKIP_DIRS = /^(cache.*|caches.*|gpucache|code_cache|dawn_cache|crash|node_modules|\.git)$/i;
 
 function findSessionStoreDb() {
-  // Locate the agent-store SQLite DB created/modified during this journey.
-  const roots = [join(PHASEB_HOME, ".zcode")];
+  // Locate the agent session-store SQLite DB for this journey.
+  //
+  // Canonical CLI default: {HOME}/.zcode/cli/db/db.sqlite
+  // (apps/zcode-cli/packages/contracts config DefaultRuntimeConfig.storage.sessionDbPath
+  // "~/.zcode/cli/db/db.sqlite", resolved against the journey HOME that
+  // electronEnv injects). That path is checked directly first. The walk below
+  // is a defensive fallback for relocated stores (per-workspace v2 stores,
+  // wal/shm siblings beside a stale-mtime main file) — CI cleans PHASEB_HOME
+  // before the journey, so everything found under it belongs to this run and
+  // no mtime window is applied (run 42121929897 attempt 2: the walk missed the
+  // store even though the timeline proved a live dwfrun-* had been journaled).
+  const direct = join(PHASEB_HOME, ".zcode", "cli", "db", "db.sqlite");
+  if (existsSync(direct)) return direct;
+  const roots = [join(PHASEB_HOME, ".zcode"), PHASEB_HOME];
   const candidates = [];
+  const seenDirs = new Set();
   const walk = (dir, depth) => {
+    if (seenDirs.has(dir)) return;
+    seenDirs.add(dir);
     let entries;
     try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
     for (const entry of entries) {
       const p = join(dir, entry.name);
-      if (entry.isDirectory() && depth > 0 && !entry.name.startsWith("cache")) walk(p, depth - 1);
-      else if (entry.isFile() && /\.(db|sqlite|sqlite3)$/i.test(entry.name)) {
-        try {
-          const st = statSync(p);
-          if (st.mtimeMs >= RUN_TS_MS - 120_000) candidates.push(p);
-        } catch { /* ignore */ }
+      if (entry.isDirectory()) {
+        if (depth > 0 && !DB_SEARCH_SKIP_DIRS.test(entry.name)) walk(p, depth - 1);
+      } else if (/\.(db|sqlite|sqlite3)$/i.test(entry.name)) {
+        candidates.push(p);
       }
     }
   };
-  for (const root of roots) walk(root, 4);
-  return candidates.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0] ?? null;
+  for (const root of roots) walk(root, 6);
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => {
+    // Prefer the canonical session-store location, then the most recently
+    // touched file (WAL mode can leave the main file's mtime stale; recency is
+    // only a tie-breaker, never a filter).
+    const rank = (p) => (p.includes(`${sep}cli${sep}db${sep}`) ? 0 : 1);
+    const rankDelta = rank(a) - rank(b);
+    if (rankDelta !== 0) return rankDelta;
+    const mt = (p) => { try { return statSync(p).mtimeMs; } catch { return 0; } };
+    return mt(b) - mt(a);
+  });
+  return candidates[0] ?? null;
+}
+
+/** Diagnostic listing of every db/sqlite-like file under the journey home, plus
+ *  the .zcode top-level layout — embedded in the stage detail when the store is
+ *  not found, so a miss pinpoints the actual on-disk state instead of failing
+ *  opaquely. */
+function journeyHomeDbDiagnostic() {
+  const lines = [];
+  const seenDirs = new Set();
+  const walk = (dir, depth, prefix) => {
+    if (seenDirs.has(dir) || lines.length >= 80) return;
+    seenDirs.add(dir);
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const entry of entries) {
+      const p = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (depth === 6) lines.push(`${prefix}/${entry.name}/`);
+        if (depth > 0 && !DB_SEARCH_SKIP_DIRS.test(entry.name)) walk(p, depth - 1, `${prefix}/${entry.name}`);
+      } else if (/\.(db|sqlite|sqlite3|json|jsonl)$/i.test(entry.name) || /-wal$|-shm$/i.test(entry.name)) {
+        let meta = "";
+        try { const st = statSync(p); meta = ` ${st.size}b`; } catch { /* ignore */ }
+        lines.push(`${prefix}/${entry.name}${meta}`);
+      }
+    }
+  };
+  walk(join(PHASEB_HOME, ".zcode"), 6, ".zcode");
+  walk(PHASEB_HOME, 1, "~");
+  return lines.length ? lines.join(" | ") : "no db/sqlite-like files anywhere under the journey home";
 }
 
 function journalSnapshot(db) {
@@ -1525,7 +1615,7 @@ async function stageMJ4() {
   // The workflow executes through the EXISTING runtime; wait for the run to
   // reach a terminal state by polling the dwf_* journal (the authoritative record).
   const dbPath = findSessionStoreDb();
-  if (!dbPath) throw new Error("MJ4 session-store SQLite DB not found under the journey home (dwf journal unavailable)");
+  if (!dbPath) throw new Error(`MJ5 session-store SQLite DB not found under the journey home (dwf journal unavailable); journey-home db diagnostic: ${journeyHomeDbDiagnostic()}`);
   journey.m1DbPath = dbPath;
   const { DatabaseSync } = await import("node:sqlite");
   let db;
@@ -1562,14 +1652,14 @@ async function stageMJ4() {
       : null,
     dwf_run_ids_in_timeline: M1_EVIDENCE.dwfRunIds,
   });
-  if (!pass) throw new Error(`MJ4 workflow run did not reach a completed state (terminal=${terminal})`);
+  if (!pass) throw new Error(`MJ5 workflow run did not reach a completed state (terminal=${terminal})`);
 }
 
 async function stageMJ5() {
   // dwf_* journal records prove execution (contract 05 §2: the existing journal
   // is the ONLY journal — Gamos adds none).
   const dbPath = journey.m1DbPath ?? findSessionStoreDb();
-  if (!dbPath) throw new Error("MJ5 session-store DB not found");
+  if (!dbPath) throw new Error("MJ6 session-store DB not found");
   const { DatabaseSync } = await import("node:sqlite");
   const db = new DatabaseSync(dbPath, { readOnly: true });
   const snap = journalSnapshot(db);
@@ -1589,7 +1679,7 @@ async function stageMJ5() {
     latest_run: snap.dwf_run_latest ?? null,
     journal_evidence: M1_EVIDENCE.journalPath,
   });
-  if (!pass) throw new Error(`MJ5 dwf journal proof insufficient (runs=${runCount}, nodes/events=${nodeOrEvent})`);
+  if (!pass) throw new Error(`MJ6 dwf journal proof insufficient (runs=${runCount}, nodes/events=${nodeOrEvent})`);
 }
 
 async function stageMJ6() {
@@ -1635,7 +1725,7 @@ async function stageMJ6() {
     journal_after_stop: journalState,
     honest_note: stopClicked ? "v4-stop clicked; the journal state below is what was actually observed" : "stop control not visible — the journal state is the evidence",
   });
-  if (!pass) throw new Error("MJ6 cancellation could not be exercised (no stop click, no journal state)");
+  if (!pass) throw new Error("MJ7 cancellation could not be exercised (no stop click, no journal state)");
 }
 
 async function stageMJ7() {
@@ -1670,31 +1760,73 @@ async function stageMJ7() {
     timeline_excerpt: timeline.slice(0, 500),
     honest_note: "the recorded journal state and timeline excerpt are exactly what was observed",
   });
-  if (!pass) throw new Error("MJ7 resume command produced no observable run reaction");
+  if (!pass) throw new Error("MJ8 resume command produced no observable run reaction");
 }
 
 async function stageMJ8() {
   // Session + workflow history persist across an app restart (existing recovery).
+  // The restart sequence mirrors phase-b S9 exactly: stopApp() SIGKILLs Xvfb
+  // along with the app, so the display MUST be restored before Electron is
+  // spawned again (run 42121929897 attempt 2: the relaunched app died with
+  // "Missing X server or $DISPLAY", CDP :9229 never came up, and the stage
+  // burned its whole 10-minute wait).
   const sessionIdBefore = await paneSessionId();
+  const reopenSessionId = journey.sessionIds[journey.sessionIds.length - 1] ?? sessionIdBefore;
+  if (!reopenSessionId || reopenSessionId === "draft") {
+    recordStage("MJ8", "fail", {
+      task: "session and workflow history persist after restart",
+      session_id_before_restart: sessionIdBefore,
+      reason: "no concrete session id recorded by the earlier stages — persistence cannot be verified without a session to reopen",
+    });
+    throw new Error("MJ9 has no session id to verify persistence for (no session was created earlier in the journey)");
+  }
   await stopApp();
+  page = null;
+  await new Promise((r) => setTimeout(r, 2000));
+  await ensureDisplay();
+  stageDesktopOut();
   await launchProd();
   await attachCdp();
+  // Defensive (same as phase-b S9): with the same HOME the skip record plus the
+  // configured provider keep the state usable, but if a login surface does show,
+  // walk the same sanctioned Use API key → Skip path before proceeding.
+  await handleFirstRunLoginEntryIfPresent().catch(() => {});
+  await waitForTid("sidebar", { timeout: 90000 });
+  await new Promise((r) => setTimeout(r, 1500));
+  await screenshot("MJ8-app-restarted");
+  // Reopen that exact session from the task list (phase-b S9 pattern): the
+  // restored pane must land on the same session with its history intact.
+  const taskItemTid = `task-item-${reopenSessionId}`;
+  await waitFor(async () => {
+    if (await hasTid(taskItemTid)) return true;
+    // Expand the default project section so its task rows render.
+    const expanded = await evalJs(`(() => { const s = Array.from(document.querySelectorAll('[data-project-id][data-project-name]')).find(x => (x.dataset.projectName ?? '') === 'default'); if (!s) return false; const t = s.querySelector('[data-testid="virtual-project-toggle"]'); return t ? t.getAttribute('aria-expanded') === 'true' : false; })()`).catch(() => false);
+    if (!expanded) {
+      await evalJs(`(() => { const s = Array.from(document.querySelectorAll('[data-project-id][data-project-name]')).find(x => (x.dataset.projectName ?? '') === 'default'); const t = s?.querySelector('[data-testid="virtual-project-toggle"]'); if (t && !t.disabled) t.click(); return Boolean(t); })()`).catch(() => false);
+      await new Promise((r) => setTimeout(r, 800));
+    }
+    return false;
+  }, { what: `task list row for session ${reopenSessionId}`, timeout: 60000 });
+  await clickTid(taskItemTid, { timeout: 30000 });
+  await waitFor(async () => (await paneSessionId()) === reopenSessionId, { what: `pane session id === ${reopenSessionId}`, timeout: 45000 });
   const state = await waitFor(async () => {
     const s = await timelineState().catch(() => null);
-    return s && s.rows > 0 && s.paneSessionId && s.paneSessionId !== "draft" ? s : false;
-  }, { what: "restored session pane with history", timeout: 90000 }).catch(() => null);
+    return s && s.rows > 0 ? s : false;
+  }, { what: "restored session pane with history", timeout: 60000 }).catch(() => null);
   await screenshot("MJ8-session-restored");
   const historySurvived = Boolean(state) && /inspect this game project/i.test((state?.timeline ?? ""));
   const pass = historySurvived;
   recordStage("MJ8", pass ? "pass" : "fail", {
     task: "session and workflow history persist after restart",
+    restart: "app killed (SIGTERM/SIGKILL) and relaunched with the same isolated home (display restored first)",
     session_id_before_restart: sessionIdBefore,
+    reopened_session_id: reopenSessionId,
     session_id_after_restart: state?.paneSessionId ?? null,
     timeline_rows: state?.rows,
     conversation_history_survived: historySurvived,
     timeline_excerpt: (state?.timeline ?? "").slice(0, 400),
   });
-  if (!pass) throw new Error("MJ8 session history did not survive the restart");
+  if (!pass) throw new Error("MJ9 session history did not survive the restart");
 }
 
 /* ------------------------------------------------------------------ */
@@ -1726,6 +1858,7 @@ async function main() {
     for (const stage of STAGES) {
       const fn = M1_STAGE_MAP[stage];
       if (!fn) { recordStage(stage, "fail", `unknown M1 stage id ${stage}`); continue; }
+      activeCanonicalStageId = stage;
       try {
         await fn();
       } catch (e) {
@@ -1733,6 +1866,8 @@ async function main() {
         evidence.failures.push({ stage, error: e.message });
         await screenshot(`${stage}-failure`).catch(() => {});
         await dumpDom(`${stage}-failure`).catch(() => {});
+      } finally {
+        activeCanonicalStageId = null;
       }
     }
   } finally {
