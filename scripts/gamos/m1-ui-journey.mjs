@@ -1479,10 +1479,17 @@ async function stageMJ3() {
     log("MJ3: model turn failed (chat-error-banner) — resubmitting once (real-user retry)");
     await screenshot("MJ3-turn-failed");
     const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
+    // A real user does not resubmit into an active rate limit: when the failed
+    // turn's banner carries a rate-limit code, wait for the window to clear
+    // before the single retry (run 42228881628: the immediate resubmission hit
+    // the same rate_limit_error again within seconds).
+    const retryBackoffMs = /rate|limit|429/i.test(String(staleBanner?.code ?? "")) ? 90_000 : 0;
+    if (retryBackoffMs) log(`MJ3: banner code=${staleBanner?.code} — backing off ${retryBackoffMs}ms before the retry`);
     await dismissErrorBanner();
+    if (retryBackoffMs) await new Promise((r) => setTimeout(r, retryBackoffMs));
     await submitComposerTask(taskText, "MJ3-retry");
     result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals, staleBanner });
-    result = { ...result, retriedAfterTurnFailure: true };
+    result = { ...result, retriedAfterTurnFailure: true, retryBackoffMs };
   }
   const timeline = result.timeline ?? "";
   const runIds = [...new Set((timeline.match(/dwfrun-[0-9a-f-]{8,}/g) ?? []))];
@@ -1496,6 +1503,7 @@ async function stageMJ3() {
     context_sections_sent: Object.keys(contextSections),
     model_turn_completed: result.completed,
     retried_after_turn_failure: Boolean(result.retriedAfterTurnFailure),
+    retry_backoff_ms: result.retryBackoffMs ?? 0,
     permission_approvals: approvals.map((a) => ({ kind: a.kind, result: a.result })),
     create_workflow_evidence_seen: createWorkflowApproved,
     dwf_run_ids_in_timeline: runIds,
@@ -1689,10 +1697,18 @@ async function stageMJ6() {
   const approvals = [];
   let result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals });
   if (result.turnFailed) {
+    log("MJ6: cancel-task turn failed (chat-error-banner) — resubmitting once (real-user retry)");
+    await screenshot("MJ6-turn-failed");
     const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
+    // Same rate-limit backoff as MJ3 (run 42228881628: rate_limit_error on the
+    // cancel task too — immediate retry failed identically).
+    const retryBackoffMs = /rate|limit|429/i.test(String(staleBanner?.code ?? "")) ? 90_000 : 0;
+    if (retryBackoffMs) log(`MJ6: banner code=${staleBanner?.code} — backing off ${retryBackoffMs}ms before the retry`);
     await dismissErrorBanner();
+    if (retryBackoffMs) await new Promise((r) => setTimeout(r, retryBackoffMs));
     await submitComposerTask(cancelTask, "MJ6-retry");
     result = await waitForTurnCompletion({ timeout: MAX_WAIT, approvals, staleBanner });
+    result = { ...result, retriedAfterTurnFailure: true };
   }
   // While the second run is active (or right after the turn), click the existing stop control.
   let stopClicked = false;
@@ -1732,7 +1748,22 @@ async function stageMJ7() {
   // Resume through the EXISTING mechanism: the /dwf resume composer command.
   const resumeCommand = "/dwf resume";
   await submitComposerTask(resumeCommand, "MJ7");
-  const result = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 240000), approvals: [] });
+  let result = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 240000), approvals: [] });
+  let retriedAfterTurnFailure = false;
+  if (result.turnFailed) {
+    log("MJ7: resume turn failed (chat-error-banner) — resubmitting once (real-user retry)");
+    await screenshot("MJ7-turn-failed");
+    const staleBanner = (await timelineState().catch(() => null))?.bannerSignature ?? null;
+    // Same rate-limit backoff as MJ3/MJ6 (run 42228881628: the resume turn
+    // failed instantly with the same rate_limit_error banner).
+    const retryBackoffMs = /rate|limit|429/i.test(String(staleBanner?.code ?? "")) ? 90_000 : 0;
+    if (retryBackoffMs) log(`MJ7: banner code=${staleBanner?.code} — backing off ${retryBackoffMs}ms before the retry`);
+    await dismissErrorBanner();
+    if (retryBackoffMs) await new Promise((r) => setTimeout(r, retryBackoffMs));
+    await submitComposerTask(resumeCommand, "MJ7-retry");
+    result = await waitForTurnCompletion({ timeout: Math.min(MAX_WAIT, 240000), approvals: [], staleBanner });
+    retriedAfterTurnFailure = true;
+  }
   const timeline = result.timeline ?? "";
   await screenshot("MJ7-resume-result");
   // Observe the journal transition honestly.
@@ -1756,6 +1787,7 @@ async function stageMJ7() {
     task: "resume through the existing /dwf resume command",
     command: resumeCommand,
     turn_completed: result.completed,
+    retried_after_turn_failure: retriedAfterTurnFailure,
     journal_after_resume: journalState,
     timeline_excerpt: timeline.slice(0, 500),
     honest_note: "the recorded journal state and timeline excerpt are exactly what was observed",
