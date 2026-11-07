@@ -30,7 +30,7 @@ import { completeCapabilityRecord } from "./fixtures.js";
 
 /** Reads the actual shipped manifest of an engine plugin package. */
 function readShippedPlugin(pluginDir: string): { manifest: Record<string, unknown>; packageJson: Record<string, unknown> } {
-  const packagesRoot = fileURLToPath(new URL("../../../../apps/zcode-cli/packages/", import.meta.url));
+  const packagesRoot = fileURLToPath(new URL("../../../apps/zcode-cli/packages/", import.meta.url));
   const manifest = JSON.parse(readFileSync(`${packagesRoot}${pluginDir}/.zcode-plugin/plugin.json`, "utf8"));
   const packageJson = JSON.parse(readFileSync(`${packagesRoot}${pluginDir}/package.json`, "utf8"));
   return { manifest, packageJson };
@@ -262,8 +262,9 @@ describe("Worker C — no engine plugin bypasses the registry or lifecycle (M2.5
     for (const meta of ENGINE_PLUGIN_METAS as EnginePluginMeta[]) {
       const dir = `${meta.pluginId}-plugin`;
       const { manifest } = readShippedPlugin(dir);
-      // The manifest's inline gamos fields must independently validate against the SAME registry.
-      const result = validateEnginePluginMeta(manifest, shippedRegistry);
+      // The manifest's inline gamos fields must independently validate against the
+      // SAME registry (the manifest `name` maps to the meta `pluginId`).
+      const result = validateEnginePluginMeta({ ...manifest, pluginId: manifest.name }, shippedRegistry);
       expect(result.ok, `${dir}: manifest inline gamos fields must validate — ${result.ok ? "" : result.reason}`).toBe(true);
       // And agree with the shipped meta on identity-defining fields.
       if (result.ok) {
