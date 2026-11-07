@@ -355,7 +355,7 @@
     {
       "id": "M2",
       "title": "First-party Unity, Blender and Babylon engine integrations",
-      "status": "planned",
+      "status": "active",
       "depends_on": [
         "M1"
       ],
