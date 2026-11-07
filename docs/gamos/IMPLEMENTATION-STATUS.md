@@ -319,3 +319,29 @@ recovery) remain operational on the development head, per run `42304415769`
 attempt 2. This addendum is documentation-only; it changes no evidence
 record, and the M1 completion evidence remains bound to run `42302128911` @
 `cae5a9a6` as recorded in `evidence/roadmap/M1.json`.
+
+## Final-CI completeness audit (2026-11-07, directive §20 follow-through)
+
+A clause-by-clause audit of the M0-closure/M1 directive against the merged
+repository state surfaced one soft spot in the §20 "required final CI" list:
+item 6 ("all focused Gamos tests") had passed at the M1.6 GREEN commit
+(`38f5777c`, 183/183, recorded in the gate commands of
+`evidence/roadmap/M1.json`) and in local re-verification on the merged tree,
+but was never codified as a CI step — no workflow executed the vitest
+`gamos-domain` project. Two facts close the audit:
+
+1. **Tree identity:** the PR #2 merge commit `474fda32` has the *identical*
+   git tree as the M1 completion commit `00d68d4d` (both `605dd118…`). The
+   post-merge runs on `474fda32` — governance (`42304415690`), the M1
+   journey (`42304415823`) and the inherited regression workflows
+   (`42304415769` attempt 2) — therefore exercised exactly the completion
+   commit's content, closing §20 items 7 (inherited regression suites) and
+   8 (M1 journey) on the completion state in CI.
+2. **Focused tests codified in CI:** the governance workflow's architecture
+   job now runs `pnpm exec vitest run --project gamos-domain` (the project
+   is registered in the root `vitest.config.ts`) on every push, PR, daily
+   schedule and dispatch — §20 item 6 is a machine-enforced check from this
+   commit forward, not a recorded local result.
+
+No evidence record, gate result, tested-commit binding or roadmap state was
+altered by this audit; the change is CI hardening plus this ledger entry.

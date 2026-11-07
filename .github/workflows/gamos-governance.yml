@@ -7,7 +7,9 @@ name: gamos-governance
 #     deletions/modifications of baseline-tracked files, history-rewrite guard).
 #   Job 2 "self-test": tamper-rejection suite proving unauthorized changes to
 #     governance controls are rejected (14 scenarios, synthetic fixtures).
-#   Job 3 "architecture": upstream's module/layering gate plus the Gamos roadmap
+#   Job 3 "architecture": upstream's module/layering gate, the focused Gamos
+#     domain unit suites (vitest project "gamos-domain" — M1 final-CI item
+#     "all focused Gamos tests", directive §20.6), plus the Gamos roadmap
 #     structural/dependency/evidence gate and its self-tests. It remains the
 #     same required status check, so a roadmap violation blocks integration.
 #
@@ -72,6 +74,8 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - name: Architecture check
         run: pnpm run architecture:check
+      - name: Focused Gamos domain tests
+        run: pnpm exec vitest run --project gamos-domain
       - name: Roadmap validator self-tests
         run: node scripts/gamos/roadmap-self-test.mjs
       - name: Canonical roadmap integrity and dependency gate
