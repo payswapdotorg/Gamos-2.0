@@ -130,16 +130,54 @@ function analyzeMessages(requestJson) {
     }
   }
   let lastUserTaskText = "";
+  let lastUserTaskIndex = -1;
+  // The attempt anchor: the last REAL task message (non-tool-result user
+  // message). When the browser pane is open the app injects
+  // <in-app-browser-context> blocks as ADDITIONAL user messages AFTER tool
+  // results — anchoring on the last non-tool-result message would then drop
+  // the current attempt's results from the window (run-15 lesson: the
+  // successfully-stopped project_stop result was hidden and the scenario
+  // re-issued the call in a loop). Prefer the last message carrying a
+  // GAMOS-M2 task marker; fall back to the last non-tool-result message.
+  let fallbackTaskIndex = -1;
+  let fallbackTaskText = "";
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i];
     if (!isRecord(message) || message.role !== "user") continue;
-    if (!messageHasToolResult(message)) {
-      lastUserTaskText = messageText(message);
+    if (messageHasToolResult(message)) continue;
+    const text = messageText(message);
+    if (lastUserTaskIndex === -1 && text.includes("GAMOS-M2-")) {
+      lastUserTaskText = text;
+      lastUserTaskIndex = i;
       break;
     }
+    if (fallbackTaskIndex === -1) {
+      fallbackTaskIndex = i;
+      fallbackTaskText = text;
+    }
   }
-  let lastToolResult = null;
+  if (lastUserTaskIndex === -1) {
+    lastUserTaskIndex = fallbackTaskIndex;
+    lastUserTaskText = fallbackTaskText;
+  }
+  // ALL tool results of the CURRENT attempt (after the anchor message) IN
+  // ORDER — a resubmitted task must not inherit the previous attempt's
+  // denied/failed results (the approved retry after a denial starts clean),
+  // while multi-step flows still see results beyond the last message
+  // (run-9 lesson: after a render result the modify result lives earlier in
+  // the history).
+  const toolResults = [];
+  for (let i = Math.max(lastUserTaskIndex, 0); i < messages.length; i += 1) {
+    const message = messages[i];
+    if (!isRecord(message) || message.role !== "user" || !Array.isArray(message.content)) continue;
+    for (const part of message.content) {
+      if (isRecord(part) && part.type === "tool_result") {
+        toolResults.push({ name: toolUses.get(part.tool_use_id) ?? "(unknown)", text: messageContentText(part.content) });
+      }
+    }
+  }
   const last = messages[messages.length - 1];
+  let lastToolResult = null;
   if (isRecord(last) && last.role === "user" && messageHasToolResult(last)) {
     const names = [];
     for (const part of last.content) {
@@ -149,7 +187,7 @@ function analyzeMessages(requestJson) {
     }
     lastToolResult = { names };
   }
-  return { lastUserTaskText, toolUseNames, lastToolResult, messageCount: messages.length };
+  return { lastUserTaskText, toolUseNames, lastToolResult, toolResults, messageCount: messages.length };
 }
 
 /** The tool names the app actually offered in this request (visibility proof). */
@@ -232,17 +270,18 @@ function extractUnityRoot(task) {
 /* ------------------------------------------------------------------ */
 
 function resolveScenario(requestJson) {
-  const { lastUserTaskText, toolUseNames, lastToolResult } = analyzeMessages(requestJson);
+  const { lastUserTaskText, toolUseNames, toolResults } = analyzeMessages(requestJson);
   const tools = offeredToolNames(requestJson);
   const offer = { tools, toolsJoined: tools.join("\n") };
   const task = lastUserTaskText;
 
-  const lastResultFor = (pattern, contentPattern) => {
-    if (!lastToolResult) return null;
-    const hit = lastToolResult.names.find((n) => {
+  // Full-history result lookup (run-9 lesson: multi-step scenarios must see
+  // results BEYOND the last message — after the render result, the modify
+  // result lives earlier in the history). DeferredToolCall-wrapped calls come
+  // back attributed to the wrapper; match those by RESULT CONTENT signature.
+  const resultFor = (pattern, contentPattern) => {
+    const hit = [...toolResults].reverse().find((n) => {
       if (pattern.test(n.name)) return true;
-      // DeferredToolCall-wrapped engine calls come back attributed to the
-      // wrapper's tool_use id; match them by their RESULT CONTENT signature.
       if (DEFERRED_TOOL.test(n.name) && contentPattern && contentPattern.test(n.text)) return true;
       return false;
     });
@@ -253,10 +292,10 @@ function resolveScenario(requestJson) {
   if (task.includes("GAMOS-M2-BLENDER-TASK")) {
     const blend = extractBlendPath(task);
     const render = extractRenderPath(task);
-    const modifyResult = lastResultFor(BLENDER_MODIFY_TOOL, /"applied"|blendSha256|GamosJourneyCube|scene_modify/i);
-    const renderResult = lastResultFor(BLENDER_RENDER_TOOL, /imageSha256|"rendered"|scene_render/i);
+    const modifyResult = resultFor(BLENDER_MODIFY_TOOL, /"applied"|blendSha256|GamosJourneyCube|scene_modify/i);
+    const renderResult = resultFor(BLENDER_RENDER_TOOL, /imageSha256|"rendered"|scene_render/i);
     const denied = modifyResult && /denied|rejected|permission|not approved|取消|拒绝/i.test(modifyResult.text);
-    const failed = modifyResult && /blender-unavailable|unexpected-error|invalid-input|PATH_SAFETY/i.test(modifyResult.text);
+    const failed = modifyResult && /blender-unavailable|unexpected-error|invalid-input|PATH_SAFETY|inputSchema validation|schema violation/i.test(modifyResult.text);
 
     // Step 1 — modify (the permission-gated native mutation).
     if (!modifyResult) {
@@ -264,7 +303,7 @@ function resolveScenario(requestJson) {
         blendFile: blend,
         operations: [
           { op: "add-primitive", primitive: "cube", name: "GamosJourneyCube", location: [0, 0, 1] },
-          { op: "set-material-color", target: "GamosJourneyCube", color: [0.8, 0.2, 0.2, 1] },
+          { op: "set-material-color", target: "GamosJourneyCube", color: [0.8, 0.2, 0.2] },
         ],
         save: true,
       });
@@ -331,9 +370,9 @@ function resolveScenario(requestJson) {
   // ---------- Babylon journey leg ----------
   if (task.includes("GAMOS-M2-BABYLON-TASK")) {
     const root = extractBabylonRoot(task);
-    const buildResult = lastResultFor(BABYLON_BUILD_TOOL, /"dist"|indexHtmlSha256|project_build|vite/i);
-    const runResult = lastResultFor(BABYLON_RUN_TOOL, /"url"|runtime url|project_run|127\.0\.0\.1:\d+/i);
-    const stopResult = lastResultFor(BABYLON_STOP_TOOL, /stopped|port[\s_]?free|project_stop/i);
+    const buildResult = resultFor(BABYLON_BUILD_TOOL, /"dist"|indexHtmlSha256|project_build|vite/i);
+    const runResult = resultFor(BABYLON_RUN_TOOL, /"url"|runtime url|project_run|127\.0\.0\.1:\d+/i);
+    const stopResult = resultFor(BABYLON_STOP_TOOL, /stopped|port[\s_]?free|project_stop/i);
 
     if (!buildResult) {
       const call = toolCallFor(offer, BABYLON_BUILD_TOOL, CANONICAL.babylonBuild, { projectRoot: root });
@@ -379,6 +418,16 @@ function resolveScenario(requestJson) {
 
   // ---------- Babylon stop task (separate user turn after browser verification) ----------
   if (task.includes("GAMOS-M2-BABYLON-STOP")) {
+    // A completed stop result ends the flow with the summary (run-16 lesson:
+    // this branch unconditionally re-issued the call, looping the engine
+    // stop + permission dialog until the turn timed out).
+    const stopDone = resultFor(BABYLON_STOP_TOOL, /stopped|port[\s_]?freed|project_stop|cancelled/i);
+    if (stopDone) {
+      return {
+        scenario: "babylon-stop-summary",
+        text: "The Babylon dev-server runtime was cancelled through project_stop (process-group termination; the port was verified free). Journey leg closed.",
+      };
+    }
     // The pid was in the project_run tool result earlier in the conversation.
     const pidMatch = /"pid"\s*:\s*(\d+)/.exec(task) ?? /pid[=: ]+(\d+)/.exec(task);
     const pid = pidMatch ? Number(pidMatch[1]) : null;
@@ -395,8 +444,8 @@ function resolveScenario(requestJson) {
   // ---------- Unity honest-negative journey leg ----------
   if (task.includes("GAMOS-M2-UNITY-TASK")) {
     const root = extractUnityRoot(task);
-    const inspectResult = lastResultFor(UNITY_INSPECT_TOOL, /unityVersion|projectVersion|project_inspect|"family"\s*:\s*"unity"/i);
-    const modifyResult = lastResultFor(UNITY_MODIFY_TOOL, /exitStatus|unity-editor-unavailable|scene_modify|add-cube/i);
+    const inspectResult = resultFor(UNITY_INSPECT_TOOL, /unityVersion|projectVersion|project_inspect|"family"\s*:\s*"unity"/i);
+    const modifyResult = resultFor(UNITY_MODIFY_TOOL, /exitStatus|unity-editor-unavailable|scene_modify|add-cube/i);
 
     if (!inspectResult) {
       const call = toolCallFor(offer, UNITY_INSPECT_TOOL, CANONICAL.unityInspect, { projectRoot: root });
@@ -412,7 +461,7 @@ function resolveScenario(requestJson) {
       const call = toolCallFor(offer, UNITY_MODIFY_TOOL, CANONICAL.unityModify, {
         projectRoot: root,
         operation: "scene.add-cube",
-        parameters: { name: "GamosJourneyCube", position: [0, 1, 0] },
+        parameters: { name: "GamosJourneyCube", location: [0, 1, 0] },
       });
       if (!call) {
         return {

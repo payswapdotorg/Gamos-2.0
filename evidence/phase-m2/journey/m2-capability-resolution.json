@@ -1,0 +1,257 @@
+{
+  "schema": "gamos/m2-capability-resolution@1",
+  "resolvedAt": "2026-11-07T13:27:41.594Z",
+  "registryRecords": 10,
+  "sourceCommit": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+  "capabilities": [
+    {
+      "id": "blender/scene.inspect",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "blender",
+      "providerIdentity": "plugin:blender-engine:engine",
+      "permissions": [
+        "command-execution:read-only"
+      ],
+      "availability": "conditional",
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/blender-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "output-schema",
+      "timeoutMs": 120000,
+      "cancellation": true
+    },
+    {
+      "id": "blender/scene.modify",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "blender",
+      "providerIdentity": "plugin:blender-engine:engine",
+      "permissions": [
+        "engine-headless:declared-workspace",
+        "filesystem-write:declared-workspace"
+      ],
+      "availability": "conditional",
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/blender-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "engine-query",
+      "timeoutMs": 300000,
+      "cancellation": true
+    },
+    {
+      "id": "blender/scene.render",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "blender",
+      "providerIdentity": "plugin:blender-engine:engine",
+      "permissions": [
+        "engine-headless:declared-workspace",
+        "filesystem-write:declared-workspace"
+      ],
+      "availability": "conditional",
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/blender-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "artifact-hash",
+      "timeoutMs": 600000,
+      "cancellation": true
+    },
+    {
+      "id": "babylon/project.inspect",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "babylon",
+      "providerIdentity": "plugin:babylon-engine:engine",
+      "permissions": [
+        "command-execution:read-only"
+      ],
+      "availability": "conditional",
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/babylon-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "output-schema",
+      "timeoutMs": 60000,
+      "cancellation": true
+    },
+    {
+      "id": "babylon/project.build",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "babylon",
+      "providerIdentity": "plugin:babylon-engine:engine",
+      "permissions": [
+        "command-execution:declared-build-script"
+      ],
+      "availability": "conditional",
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/babylon-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "artifact-hash",
+      "timeoutMs": 600000,
+      "cancellation": true
+    },
+    {
+      "id": "babylon/project.run",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "babylon",
+      "providerIdentity": "plugin:babylon-engine:engine",
+      "permissions": [
+        "command-execution:declared-dev-script",
+        "network-access:loopback"
+      ],
+      "availability": "conditional",
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/babylon-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "engine-query",
+      "timeoutMs": 120000,
+      "cancellation": true
+    },
+    {
+      "id": "unity/project.inspect",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "unity",
+      "providerIdentity": "plugin:unity-engine:engine",
+      "permissions": [
+        "command-execution:read-only"
+      ],
+      "availability": "conditional",
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/unity-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "output-schema",
+      "timeoutMs": 60000,
+      "cancellation": true
+    },
+    {
+      "id": "unity/scene.modify",
+      "resolved": false,
+      "error": {
+        "code": "missing-prerequisite",
+        "requestedId": "unity/scene.modify",
+        "reason": "capability unity/scene.modify requires prerequisites that are not satisfied: unity-editor-installed, unity-license-active",
+        "remediation": [
+          {
+            "capabilityId": "unity/scene.modify",
+            "version": "1.0.0",
+            "difference": "remediation: satisfy prerequisite \"unity-editor-installed\" — real Unity Editor executable discovered on the machine (NOT inferred from ProjectVersion.txt)"
+          },
+          {
+            "capabilityId": "unity/scene.modify",
+            "version": "1.0.0",
+            "difference": "remediation: satisfy prerequisite \"unity-license-active\" — an activated Unity license (Unity Personal/Plus/Pro sign-in or a CI license file) — an external, user-controlled prerequisite"
+          }
+        ]
+      }
+    }
+  ],
+  "shippedPlugins": [
+    {
+      "pluginId": "unity-engine",
+      "engineFamily": "unity",
+      "engineVersions": ">=2022.3",
+      "manifestName": "unity-engine",
+      "manifestVersion": "0.1.0",
+      "declaredCapabilities": [
+        "unity/project.inspect",
+        "unity/scene.modify",
+        "unity/project.build"
+      ],
+      "provenanceCommit": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+      "provenanceCommitIsSourceOfRecord": true,
+      "mcpServerEntry": "node ${ZCODE_PLUGIN_ROOT}/dist/mcp/server.js"
+    },
+    {
+      "pluginId": "blender-engine",
+      "engineFamily": "blender",
+      "engineVersions": ">=4.1",
+      "manifestName": "blender-engine",
+      "manifestVersion": "0.1.0",
+      "declaredCapabilities": [
+        "blender/scene.inspect",
+        "blender/scene.modify",
+        "blender/scene.render",
+        "blender/asset.export"
+      ],
+      "provenanceCommit": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+      "provenanceCommitIsSourceOfRecord": true,
+      "mcpServerEntry": "node ${ZCODE_PLUGIN_ROOT}/dist/mcp/server.js"
+    },
+    {
+      "pluginId": "babylon-engine",
+      "engineFamily": "babylon",
+      "engineVersions": ">=18.0",
+      "manifestName": "babylon-engine",
+      "manifestVersion": "0.1.0",
+      "declaredCapabilities": [
+        "babylon/project.inspect",
+        "babylon/project.build",
+        "babylon/project.run"
+      ],
+      "provenanceCommit": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+      "provenanceCommitIsSourceOfRecord": true,
+      "mcpServerEntry": "node ${ZCODE_PLUGIN_ROOT}/dist/mcp/server.js"
+    }
+  ],
+  "verdict": "ok",
+  "note": "unity/scene.modify intentionally resolves as missing-prerequisite without a licensed editor — the honest negative path (contract 07 availability, never fabricated)"
+}

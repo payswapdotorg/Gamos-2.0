@@ -24,16 +24,23 @@ import {
 
 const REQUESTED = [
   // Blender leg (§9 + M2-G2): typed modify + render through the real engine.
+  // Prerequisite ids match the records' declared prerequisites exactly; the
+  // ones satisfied on the journey machine are passed as satisfied.
   { id: "blender/scene.inspect", prerequisites: ["blender-installed"] },
   { id: "blender/scene.modify", prerequisites: ["blender-installed"] },
   { id: "blender/scene.render", prerequisites: ["blender-installed"] },
-  // Babylon leg (§9 + M2-G3): typed build + run through the real toolchain.
-  { id: "babylon/project.inspect", prerequisites: [] },
-  { id: "babylon/project.build", prerequisites: [] },
-  { id: "babylon/project.run", prerequisites: [] },
-  // Unity leg (§9 negative path): marker-only inspect + honest-unavailable modify.
-  { id: "unity/project.inspect", prerequisites: [] },
-  { id: "unity/scene.modify", prerequisites: ["unity-editor-installed", "unity-license-active"] },
+  // Babylon leg (§9 + M2-G3): typed build + run through the real toolchain
+  // (network-for-dependencies is declared and SATISFIED on the journey runner —
+  // dependency fetches use the declared network permission with recorded hashes).
+  { id: "babylon/project.inspect", prerequisites: ["babylon-project-root"] },
+  { id: "babylon/project.build", prerequisites: ["babylon-project-root", "node-toolchain", "network-for-dependencies"] },
+  { id: "babylon/project.run", prerequisites: ["babylon-project-root", "node-toolchain"] },
+  // Unity leg (§9 negative path): marker-only inspect resolves (the project
+  // fixture root is staged); scene.modify is resolved WITHOUT the editor/license
+  // prerequisites — the registry reports the honest missing-prerequisite state
+  // (exactly the negative path the journey then exercises live through the plugin).
+  { id: "unity/project.inspect", prerequisites: ["unity-project-root"] },
+  { id: "unity/scene.modify", prerequisites: ["unity-project-root"] },
 ];
 
 const registry = registerEnginePluginCapabilities();

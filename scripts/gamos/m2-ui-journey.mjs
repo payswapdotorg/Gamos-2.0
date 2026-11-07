@@ -64,9 +64,10 @@
  */
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, appendFileSync } from "node:fs";
-import { request as httpRequest } from "node:http";
-import { dirname, join, resolve, sep } from "node:path";
+import { createServer, request as httpRequest } from "node:http";
+import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -740,10 +741,99 @@ async function launchProd() {
     throw new Error(`production renderer missing: ${rendererIndex} — run the desktop production build first`);
   }
   const electronBin = join(REPO_ROOT, "node_modules", ".bin", "electron");
-  _electronChild = spawnChild("electron", electronBin, [STAGED_APP_DIR, "--no-sandbox"], {
+  // --enable-unsafe-swiftshader: software WebGL for headless/Xvfb environments
+  // (run-14 lesson: the Babylon runtime needs a WebGL context; without the flag
+  // Chromium returns null under Xvfb — verified: WEBGL-NULL vs WEBGL-OK with
+  // the flag. A no-op on real-GPU CI runners).
+  _electronChild = spawnChild("electron", electronBin, [STAGED_APP_DIR, "--no-sandbox", "--enable-unsafe-swiftshader"], {
     cwd: DESKTOP_DIR, env: electronEnv({ NODE_ENV: "production" }),
   });
-  evidence.commands.push({ cmd: `electron ${STAGED_APP_DIR} --no-sandbox (production renderer; HOME=ZCODE_DATA_BASE_DIR=${PHASEB_HOME})`, at: new Date().toISOString() });
+  evidence.commands.push({ cmd: `electron ${STAGED_APP_DIR} --no-sandbox --enable-unsafe-swiftshader (production renderer; HOME=ZCODE_DATA_BASE_DIR=${PHASEB_HOME})`, at: new Date().toISOString() });
+}
+
+/* ------------------------------------------------------------------ */
+/* prod-http mode: the SAME prebuilt production renderer bundle, served */
+/* over a localhost static HTTP server instead of file://.             */
+/*                                                                     */
+/* WHY (sandbox lesson, 2026-11-07): on this 2-core/4GB sandbox the    */
+/* Chromium network service throttles the file:// protocol's parallel  */
+/* request fan-out — ~91% of the renderer's ~319 asset requests fail   */
+/* with net::ERR_FAILED per load (reproduced with a MINIMAL Electron   */
+/* BrowserWindow loading the identical index.html, so it is            */
+/* environment-level, not app-level; GH-hosted CI runners with bigger  */
+/* resources load the same bundle over file:// without the throttle).  */
+/* The app's own unpackaged renderer mechanism (ELECTRON_RENDERER_URL) */
+/* is the sanctioned way to point it at an http origin: the identical  */
+/* staged production bundle is served byte-for-byte from               */
+/* STAGED_APP_DIR/renderer; only the URL origin changes. Every UI      */
+/* interaction, engine operation and MCP dispatch in the journey is    */
+/* unaffected. The mode is recorded honestly in the evidence           */
+/* environment block; CI runs PHASEB_MODE=prod (file://) on runners   */
+/* where the throttle does not occur.                                  */
+/* ------------------------------------------------------------------ */
+let _rendererServer = null;
+
+const RENDERER_MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2": "font/woff2",
+  ".ttf": "font/ttf",
+  ".map": "application/json; charset=utf-8",
+  ".wasm": "application/wasm",
+  ".txt": "text/plain; charset=utf-8",
+};
+
+function startRendererStaticServer(rootDir, port) {
+  const server = createServer((req, res) => {
+    const urlPath = decodeURIComponent((req.url ?? "/").split("?")[0]);
+    let relative = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
+    relative = normalize(relative).replace(/^(\.\.[/\\])+/, "");
+    const filePath = join(rootDir, relative);
+    if (!filePath.startsWith(rootDir + sep) && filePath !== rootDir) {
+      res.writeHead(403); res.end("forbidden"); return;
+    }
+    let st;
+    try { st = statSync(filePath); } catch { st = null; }
+    if (!st || !st.isFile()) { res.writeHead(404, { "content-type": "text/plain" }); res.end("not found"); return; }
+    const headers = { "content-type": RENDERER_MIME[extname(filePath).toLowerCase()] ?? "application/octet-stream", "content-length": st.size, "cache-control": "no-store" };
+    res.writeHead(200, headers);
+    createReadStream(filePath).pipe(res);
+  });
+  return new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.listen(port, "127.0.0.1", () => resolve(server));
+  });
+}
+
+async function launchProdHttp() {
+  const rendererIndex = join(STAGED_APP_DIR, "renderer", "index.html");
+  if (!existsSync(rendererIndex)) {
+    throw new Error(`production renderer missing: ${rendererIndex} — run the desktop production build first`);
+  }
+  const port = Number(process.env.PHASEB_RENDERER_HTTP_PORT ?? 5174);
+  _rendererServer = await startRendererStaticServer(join(STAGED_APP_DIR, "renderer"), port);
+  const base = `http://127.0.0.1:${port}`;
+  await waitFor(() => probeHttp(`${base}/index.html`).catch(() => false), { what: `renderer static server ${base}`, timeout: 30000 });
+  log(`renderer static server ready: ${base} (serving the staged PRODUCTION bundle; file:// throttle workaround — see the launchProdHttp docblock)`);
+  evidence.environment.renderer_origin = `${base} (prod-http mode: identical staged production bundle served over localhost http — the sandbox's Chromium file:// request throttle breaks the file:// load; CI uses file:// prod mode)`;
+  const electronBin = join(REPO_ROOT, "node_modules", ".bin", "electron");
+  // --enable-unsafe-swiftshader: software WebGL for headless/Xvfb environments
+  // (see launchProd's comment — the Babylon runtime needs a working WebGL context).
+  _electronChild = spawnChild("electron", electronBin, [STAGED_APP_DIR, "--no-sandbox", "--enable-unsafe-swiftshader"], {
+    cwd: DESKTOP_DIR, env: electronEnv({ NODE_ENV: "production", ELECTRON_RENDERER_URL: base }),
+  });
+  evidence.commands.push({ cmd: `electron ${STAGED_APP_DIR} --no-sandbox --enable-unsafe-swiftshader (prod-http renderer at ${base}; HOME=ZCODE_DATA_BASE_DIR=${PHASEB_HOME})`, at: new Date().toISOString() });
 }
 
 async function stopApp() {
@@ -755,6 +845,8 @@ async function stopApp() {
     try { child.kill("SIGKILL"); } catch {}
   }
   try { xvfbChild?.kill("SIGKILL"); } catch {}
+  try { _rendererServer?.close(); } catch {}
+  _rendererServer = null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -911,7 +1003,14 @@ async function stageS0() {
   // its per-process request budget on the first pass. Reloading hits vite's warm
   // in-memory transform cache and reliably completes the module graph.
   let reloads = 0;
-  const maxReloads = Number(process.env.PHASEB_S0_RELOADS ?? 3);
+  // M2 sandbox lesson: on 2-core/4GB boxes Chromium exhausts its per-process
+  // request budget (net::ERR_INSUFFICIENT_RESOURCES) on the FIRST vite dev
+  // module-graph pass, and each reload only advances as far as the vite
+  // transform cache has warmed — more retries with longer waits are needed
+  // than the M1 CI default (the same documented mechanism, tuned for slow
+  // boxes; GH runners complete within the M1 defaults).
+  const maxReloads = Number(process.env.PHASEB_S0_RELOADS ?? 10);
+  const reloadWaitMs = Number(process.env.PHASEB_S0_RELOAD_WAIT_MS ?? 20000);
   await waitFor(async () => {
     const state = await evalJs(`(() => ({ ready: document.readyState, url: location.href, tidCount: document.querySelectorAll('[data-testid]').length, bodyLen: (document.body?.innerText ?? '').length }))()`).catch(() => null);
     lastDiag = state;
@@ -928,7 +1027,7 @@ async function stageS0() {
       reloads++;
       log(`S0: renderer blank (tidCount=0) — reloading page (attempt ${reloads}/${maxReloads})`);
       await page.send("Page.reload", { ignoreCache: false }).catch(() => {});
-      await new Promise((r) => setTimeout(r, 15000));
+      await new Promise((r) => setTimeout(r, reloadWaitMs));
     }
     return false;
   }, { what: "workspace DOM (sidebar/onboarding/first-run login entry)", timeout: MAX_WAIT, interval: 5000 });
@@ -1571,8 +1670,12 @@ const M2_EVIDENCE = {
 
 /** Find every JSON file under the journey home whose content carries an
  *  enabledPlugins record, and report the engine plugins' effective state.
- *  (The plugin-management service persists enabledPlugins in the user config;
- *  locating it by content keeps the journey robust to storage relocation.) */
+ *  The agent CLI's user config (`~/.zcode/cli/config.json`, HOME-redirected
+ *  under the journey home) persists the shape
+ *  `{ plugins: { enabledPlugins: { "<plugin>@<marketplace>": true } } }`
+ *  (apps/zcode-cli/packages/adapters/src/config/file-config.adapter.ts
+ *  updatePluginEnabledInFileConfig → resolvePluginConfigPath user scope);
+ *  legacy/other shapes are tolerated as fallbacks. */
 function findEnginePluginsEnabledOnDisk() {
   const files = [];
   const seenDirs = new Set();
@@ -1590,7 +1693,10 @@ function findEnginePluginsEnabledOnDisk() {
           const raw = readFileSync(p, "utf8");
           if (raw.includes("enabledPlugins")) {
             const doc = JSON.parse(raw);
-            const enabled = doc?.config?.plugins?.enabledPlugins ?? doc?.enabledPlugins ?? null;
+            const enabled =
+              doc?.plugins?.enabledPlugins ??
+              doc?.config?.plugins?.enabledPlugins ??
+              doc?.enabledPlugins ?? null;
             if (enabled && typeof enabled === "object") {
               files.push({ path: p, enabledPlugins: enabled });
             }
@@ -1669,14 +1775,57 @@ async function stageM2J3() {
   const capabilityPath = join(EVIDENCE_DIR, "m2-capability-resolution.json");
   writeFileSync(capabilityPath, JSON.stringify(capabilities, null, 2));
   const registryOk = capabilities.verdict === "ok" && capabilities.registryRecords >= 10;
-  // Back to the workspace.
-  await clickTid("settings-back-button", { timeout: 20000 });
-  await waitForTid("v4-composer-input", { timeout: 30000 });
+  // RESTART the app so the SESSION AGENT process picks up the freshly-enabled
+  // engine plugins (sandbox lesson 2026-11-07: the agent resolves its plugin
+  // MCP servers from the config snapshot at process start; the desktop host
+  // starts the agent at app launch — BEFORE these toggles — so the engine MCP
+  // servers never join the session's tool list and the model is never offered
+  // the engine tools; observed as engine_tools_offered=0 in the endpoint
+  // transcript). A restart is the real user's sanctioned apply action (the
+  // same M1 MJ8 restart machinery: stopApp → restore display → restage →
+  // relaunch → re-attach → handle any first-run login entry).
+  await stopApp();
+  page = null;
+  await new Promise((r) => setTimeout(r, 2000));
+  await ensureDisplay();
+  stageDesktopOut();
+  stageEnginePluginsForDevAgent();
+  if (MODE === "dev") await launchDev();
+  else if (MODE === "prod") await launchProd();
+  else if (MODE === "prod-http") await launchProdHttp();
+  else throw new Error(`unknown PHASEB_MODE ${MODE} at the M2J3 restart`);
+  await attachCdp();
+  await handleFirstRunLoginEntryIfPresent().catch(() => {});
+  // Sidebar wait with the S0-style blank-renderer recovery (run-12 lesson:
+  // the relaunched renderer occasionally comes up blank on this slow box —
+  // a bounded reload loop completes the static module graph, exactly the
+  // stageS0 mechanism).
+  let restartReloads = 0;
+  const maxRestartReloads = Number(process.env.PHASEB_S0_RELOADS ?? 10);
+  await waitFor(async () => {
+    if (await hasTid("sidebar")) return true;
+    const state = await evalJs(`(() => ({ ready: document.readyState, bodyLen: (document.body?.innerText ?? '').length }))()`).catch(() => null);
+    if (state?.ready === "complete" && state.bodyLen === 0 && restartReloads < maxRestartReloads) {
+      restartReloads++;
+      log(`M2J3 restart: renderer blank — reloading (attempt ${restartReloads}/${maxRestartReloads})`);
+      await page.send("Page.reload", { ignoreCache: false }).catch(() => {});
+      await new Promise((r) => setTimeout(r, 15000));
+    }
+    return false;
+  }, { what: "sidebar after the M2J3 app restart (with blank-renderer reload recovery)", timeout: 120000, interval: 5000 });
+  await waitForTid("sidebar", { timeout: 90000 });
+  await new Promise((r) => setTimeout(r, 1500));
+  await screenshot("M2J3-app-restarted-with-engine-plugins");
   const pass = toggled.length === ENGINE_PLUGIN_IDS.length && disk.allEnabled && registryOk;
   recordStage("M2J3", pass ? "pass" : "fail", {
-    task: "the three engine plugins enabled through the REAL Settings → Plugins toggles; enabled state persisted; registry capability resolution recorded",
+    task: "the three engine plugins enabled through the REAL Settings → Plugins toggles; enabled state persisted; registry capability resolution recorded; app restarted so the session agent resolves the engine plugin MCP servers",
     toggled,
     enabled_on_disk: disk,
+    app_restart: {
+      why: "the agent process resolves plugin MCP servers from its startup config snapshot; enabling plugins mid-run does not add their MCP tools to the already-running agent — a restart is the real user's apply action",
+      relaunched_mode: MODE,
+      sidebar_after_restart: true,
+    },
     registry_resolution: {
       verdict: capabilities.verdict,
       records: capabilities.registryRecords,
@@ -1726,6 +1875,12 @@ function bootstrapBlendWorkspace() {
 async function stageM2J4() {
   const boot = bootstrapBlendWorkspace();
   const renderPath = join(M2_WORKSPACES.blender, "render.png");
+  // Select the configured model in the composer FIRST (the same M1 walk: the
+  // send button stays disabled without a model selection on a fresh session —
+  // run 2026-11-07 sandbox lesson: every subsequent leg then failed at
+  // "composer send button enabled").
+  const modelSelection = await selectModelInComposer();
+  journey.m2ModelSelection = modelSelection;
   const taskText = [
     "Add a red cube named GamosJourneyCube to this Blender scene, save it, and render it.",
     "",
@@ -1783,14 +1938,29 @@ async function stageM2J4() {
   const pngMagic = renderExists ? readFileSync(renderPath).subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) : false;
   const renderSha256 = renderExists ? sha256File(renderPath) : null;
   const savedSha256 = sha256File(boot.blendFile);
-  const toolResultsSeen = /GamosJourneyCube|imageSha256|blendSha256|applied/i.test(timeline);
+  // Result-only markers (run-6 lesson: "GamosJourneyCube" is echoed in the
+  // TASK TEXT — require the tools' structured RESULT fields instead: the
+  // modify result's applied array + the render result's 64-hex imageSha256).
+  const toolResultsSeen = /"applied"\s*:\s*\[/.test(timeline) || /"imageSha256"\s*:\s*"[0-9a-f]{64}"/.test(timeline);
   const finalSummarySeen = /Blender journey leg complete|scene_modify|scene_render|rendered/i.test(timeline);
+  // AUTHORITATIVE dispatch proof — the session store's part rows for the two
+  // engine tools (the timeline UI does not render full tool-result JSON;
+  // run-10 lesson). The artifacts above are the engine's own proof; this is
+  // the app-side dispatch/execution record.
+  const blenderParts = (await readEngineToolParts(["scene_modify", "scene_render"])) ?? {};
+  const modifyPart = (blenderParts["scene_modify"] ?? []).find((p) => p.state?.status === "completed") ?? null;
+  const renderPart = (blenderParts["scene_render"] ?? []).find((p) => p.state?.status === "completed") ?? null;
+  const modifyOutput = toolPartOutput(modifyPart);
+  const renderOutput = toolPartOutput(renderPart);
+  M2_EVIDENCE.sessionDbPath = M2_EVIDENCE.sessionDbPath ?? findSessionStoreDb();
+  const toolDispatchOk = Boolean(modifyPart) && Boolean(renderPart);
   if (result.paneSessionId && result.paneSessionId !== "draft") journey.sessionIds.push(result.paneSessionId);
   M2_EVIDENCE.blender.savedBlendSha256 = savedSha256;
   M2_EVIDENCE.blender.renderPngSha256 = renderSha256;
-  const pass = result.completed && blendChanged && renderExists && pngMagic && toolResultsSeen;
+  const pass = result.completed && blendChanged && renderExists && pngMagic && toolDispatchOk;
   recordStage("M2J4", pass ? "pass" : "fail", {
     task: "Blender §9 journey leg — composer → typed capability → permission (DENIAL then APPROVAL) → real Blender modify+render → verified artifacts",
+    model_selected: { after: journey.m2ModelSelection?.after ?? null, clickedItem: journey.m2ModelSelection?.clickedItem ?? null },
     blender: { executable: BLENDER_PATH, rawVersion: boot.rawVersion },
     workspace: M2_WORKSPACES.blender,
     denial_leg: M2_EVIDENCE.blender.denial,
@@ -1803,13 +1973,17 @@ async function stageM2J4() {
       blend_mutated: blendChanged,
       render_png: { path: renderPath, exists: renderExists, png_magic: pngMagic, sha256: renderSha256, bytes: renderExists ? statSync(renderPath).size : 0 },
       tool_results_seen_in_timeline: toolResultsSeen,
+      session_store_dispatch: {
+        modify: modifyPart ? { status: modifyPart.state?.status, input: modifyPart.state?.input, output: modifyOutput } : null,
+        render: renderPart ? { status: renderPart.state?.status, output: renderOutput } : null,
+      },
       final_summary_seen: finalSummarySeen,
       session_id: result.paneSessionId,
     },
     timeline_excerpt: timeline.slice(0, 600),
     honest_note: "the .blend bootstrap used the plugin's committed reviewed bridge (save_empty.py) as fixture preparation; every engine operation in the turn itself ran through the app's MCP plugin path with real Blender",
   });
-  if (!pass) throw new Error(`M2J4 approved leg failed (completed=${result.completed}, blendChanged=${blendChanged}, render=${renderExists}/${pngMagic}, toolResults=${toolResultsSeen})`);
+  if (!pass) throw new Error(`M2J4 approved leg failed (completed=${result.completed}, blendChanged=${blendChanged}, render=${renderExists}/${pngMagic}, dispatch=${toolDispatchOk})`);
 }
 
 /** Copy the committed Babylon fixture project into the journey workspace. */
@@ -1820,12 +1994,63 @@ function stageBabylonFixtureWorkspace() {
   rmSync(M2_WORKSPACES.babylon, { recursive: true, force: true });
   cpSync(BABYLON_FIXTURE_DIR, M2_WORKSPACES.babylon, { recursive: true });
   const lockSha = sha256File(join(M2_WORKSPACES.babylon, "package-lock.json"));
-  log(`M2J5 fixture staged: ${M2_WORKSPACES.babylon} (committed fixture, lockfile sha256=${lockSha})`);
-  return { projectRoot: M2_WORKSPACES.babylon, lockfileSha256: lockSha };
+  // Fixture preparation (same disclosure class as the M2J4 .blend bootstrap):
+  // a reproducible `npm ci` against the COMMITTED lockfile, run BEFORE the
+  // turn so the in-turn memory profile is the real vite build + dev-server +
+  // browser verification (the plugin's own integration suite covers the
+  // in-turn install path; on this 4GB sandbox the npm-ci + renderer together
+  // exceed the cgroup and the renderer gets OOM-killed mid-journey —
+  // run-8 evidence: CDP "Internal error" during M2J5). The install itself is
+  // REAL and hash-recorded; the build/run inside the turn is unchanged.
+  const npmCi = spawnSync("npm", ["ci", "--no-audit", "--no-fund"], {
+    cwd: M2_WORKSPACES.babylon,
+    encoding: "utf8",
+    timeout: 600000,
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  if (npmCi.status !== 0) {
+    throw new Error(`babylon fixture npm ci failed (exit ${npmCi.status}): ${String(npmCi.stderr ?? npmCi.stdout).slice(0, 400)}`);
+  }
+  const installedSha = sha256File(join(M2_WORKSPACES.babylon, "package-lock.json"));
+  log(`M2J5 fixture staged: ${M2_WORKSPACES.babylon} (committed fixture, lockfile sha256=${lockSha}; npm ci OK — dependencies pre-installed for the in-turn build/run)`);
+  return { projectRoot: M2_WORKSPACES.babylon, lockfileSha256: lockSha, preinstalledLockfileSha256: installedSha, npmCiPrepared: true };
 }
 
-/** M2J5 — the Babylon §9 journey leg: real build + run + THE ORIGINAL ZCODE
- *  BROWSER verification of the running experience + honest cancellation. */
+/** Authoritative engine-tool evidence reader: the session store's `part` rows
+ *  carry the COMPLETE tool outputs (input + output + status). The timeline UI
+ *  is virtualized and its scrape capped at 2500 chars from the TOP — older
+ *  rows only (run-10 lesson: the Blender task text hid the Babylon/Unity
+ *  turns' results). Every engine-stage assertion reads the store instead. */
+async function readEngineToolParts(patterns) {
+  const dbPath = M2_EVIDENCE.sessionDbPath ?? findSessionStoreDb();
+  if (!dbPath) return null;
+  const { DatabaseSync } = await import("node:sqlite");
+  let db;
+  try {
+    db = new DatabaseSync(dbPath, { readOnly: true });
+  } catch {
+    return null;
+  }
+  try {
+    const out = {};
+    for (const pattern of patterns) {
+      const rows = db.prepare("SELECT data FROM part WHERE data LIKE ? ORDER BY rowid ASC").all(`%${pattern}%`);
+      out[pattern] = rows
+        .map((r) => { try { return JSON.parse(String(r.data)); } catch { return null; } })
+        .filter((p) => p && typeof p.tool === "string" && p.tool.includes(pattern));
+    }
+    return out;
+  } finally {
+    db.close();
+  }
+}
+
+/** Parsed output JSON of a tool part (state.output is a JSON string). */
+function toolPartOutput(part) {
+  if (!part?.state?.output) return null;
+  try { return JSON.parse(part.state.output); } catch { return null; }
+}
+
 async function stageM2J5() {
   const fixture = stageBabylonFixtureWorkspace();
   const taskText = [
@@ -1853,22 +2078,38 @@ async function stageM2J5() {
   await screenshot("M2J5-turn-result");
   if (result.paneSessionId && result.paneSessionId !== "draft") journey.sessionIds.push(result.paneSessionId);
 
-  // --- Runtime URL + pid recovery (timeline first, session store fallback) ---
-  const runtimeUrl = /(https?:\/\/127\.0\.0\.1:\d+)/.exec(timeline)?.[1] ?? null;
-  const runtimePid = Number(/"pid"\s*:\s*(\d+)/.exec(timeline)?.[1] ?? /pid[=: ]+(\d+)/.exec(timeline)?.[1] ?? NaN);
+  // --- Runtime URL + pid + build result: AUTHORITATIVE session-store reads
+  //     (the timeline scrape is capped at 2500 chars from the top and only
+  //     shows the OLDEST rows — run-10 lesson; the part rows carry the
+  //     complete tool outputs). The timeline regexes stay as a fallback.
+  const engineParts = (await readEngineToolParts(["project_build", "project_run"])) ?? {};
+  const buildPart = (engineParts["project_build"] ?? []).find((p) => p.state?.status === "completed") ?? null;
+  const buildOutput = toolPartOutput(buildPart);
+  const runPart = (engineParts["project_run"] ?? []).find((p) => p.state?.status === "completed") ?? null;
+  const runOutput = toolPartOutput(runPart);
+  const runtimeUrl =
+    runOutput?.runtimeUrl ??
+    /(https?:\/\/127\.0\.0\.1:\d+)/.exec(timeline)?.[1] ??
+    null;
+  const runtimePid =
+    runOutput?.pid ??
+    (Number(/"pid"\s*:\s*(\d+)/.exec(timeline)?.[1] ?? NaN) || null);
   const distIndex = join(fixture.projectRoot, "dist", "index.html");
   const distExists = existsSync(distIndex);
   const distSha256 = distExists ? sha256File(distIndex) : null;
   M2_EVIDENCE.babylon.runtimeUrl = runtimeUrl;
-  M2_EVIDENCE.babylon.runtimePid = Number.isFinite(runtimePid) ? runtimePid : null;
+  M2_EVIDENCE.babylon.runtimePid = runtimePid ?? null;
   M2_EVIDENCE.babylon.distSha256 = distSha256;
+  M2_EVIDENCE.sessionDbPath = M2_EVIDENCE.sessionDbPath ?? findSessionStoreDb();
 
-  const buildVerified = distExists && distSha256 !== null;
+  const buildVerified = distExists && distSha256 !== null && (buildPart !== null || buildOutput !== null);
   const urlRecovered = Boolean(runtimeUrl);
   if (!buildVerified || !urlRecovered || !result.completed) {
     recordStage("M2J5", "fail", {
       task: "Babylon §9 leg (build + run)",
-      reason: `build=${buildVerified} url=${runtimeUrl} completed=${result.completed}`,
+      reason: `build=${buildVerified} url=${runtimeUrl} completed=${result.completed} buildPart=${Boolean(buildPart)} runPart=${Boolean(runPart)}`,
+      build_output: buildOutput,
+      run_output: runOutput,
       timeline_excerpt: timeline.slice(0, 800),
       approvals: approvals.map((a) => ({ kind: a.kind, result: a.result })),
     });
@@ -1903,9 +2144,9 @@ async function stageM2J5() {
   const pass = buildVerified && urlRecovered && browser.pass && (stopVerified || !stopSubmitted && !M2_EVIDENCE.babylon.runtimePid);
   recordStage("M2J5", pass ? "pass" : "fail", {
     task: "Babylon §9 journey leg — composer → typed capability → permission → real vite build + dev-server run → ZCODE BROWSER verification → project_stop cancellation",
-    fixture: { projectRoot: fixture.projectRoot, lockfileSha256: fixture.lockfileSha256, committedFixture: BABYLON_FIXTURE_DIR },
+    fixture: { projectRoot: fixture.projectRoot, lockfileSha256: fixture.lockfileSha256, committedFixture: BABYLON_FIXTURE_DIR, npm_ci_prepared: fixture.npmCiPrepared, preinstall_note: "fixture preparation only — a reproducible npm ci against the committed lockfile BEFORE the turn (sandbox memory: npm-ci + renderer exceed the 4GB cgroup); the in-turn project_build runs the REAL vite build on these installed dependencies and project_run starts the REAL dev server" },
     build: { distIndex, distSha256, exists: distExists },
-    runtime: { url: runtimeUrl, pid: M2_EVIDENCE.babylon.runtimePid, urlRecoveredVia: "timeline scrape (tool result + model summary)" },
+    runtime: { url: runtimeUrl, pid: M2_EVIDENCE.babylon.runtimePid, urlRecoveredVia: "session-store part rows (authoritative tool outputs) with timeline-regex fallback", run_output: runOutput, build_output: buildOutput },
     browser_verification: browser.detail,
     cancellation: {
       stop_submitted: stopSubmitted,
@@ -2034,6 +2275,14 @@ async function verifyBabylonRuntimeInZcodeBrowser(runtimeUrl) {
   await screenshot("M2J5-browser-open");
   // Navigate FIRST — then wait for the webview (the guest only mounts after a
   // confirmed navigation; the phase-b S7 lesson).
+  // Pre-navigation probe: the runtime URL must still be serving (the dev
+  // server keeps running after project_run; an early death is an honest
+  // failure with a clear reason, not a browser-integration failure).
+  const runtimeServing = await probeHttp(runtimeUrl).catch(() => false);
+  log(`M2J5 browser navigation: runtime URL ${runtimeUrl} serving=${runtimeServing}`);
+  if (!runtimeServing) {
+    throw new Error(`M2J5: the Babylon runtime URL ${runtimeUrl} is not serving before browser navigation — the dev server died after project_run (see the project_run tool output in the session store)`);
+  }
   await clickAndType("browser-address-input", runtimeUrl, { timeout: 20000, clearFirst: true });
   await pressKey("Enter");
   await waitForTid("browser-webview", { timeout: 45000, visible: false });
@@ -2041,6 +2290,7 @@ async function verifyBabylonRuntimeInZcodeBrowser(runtimeUrl) {
   // getURL() is the guest's actual current URL; executeJavaScript runs INSIDE
   // the guest WebContents. This is the ZCode Browser looking at the REAL
   // running Babylon experience.
+  let guestDebugClock = null;
   const GUEST_READ_JS = assertPageJs("babylon guest in-page read", `(async () => {
     const w = document.querySelector('[data-testid="browser-webview"]');
     if (!w) return { error: 'no webview element' };
@@ -2054,12 +2304,17 @@ async function verifyBabylonRuntimeInZcodeBrowser(runtimeUrl) {
   })()`);
   const guest = await waitFor(async () => {
     const r = await evalJs(GUEST_READ_JS, { awaitPromise: true }).catch(() => null);
+    if (guestDebugClock === null) guestDebugClock = Date.now();
+    if (Date.now() - guestDebugClock > 20000) {
+      guestDebugClock = Date.now();
+      log(`M2J5 guest-read diagnostics: ${JSON.stringify(r).slice(0, 400)}`);
+    }
     if (!r || r.error) return false;
     if (!/^http:\/\/127\.0\.0\.1:\d+\//.test(r.url ?? "")) return false;
     if (r.page?.ready !== true) return false;
     if (r.page?.canvasPresent !== true) return false;
     return r;
-  }, { what: `webview guest actually running the Babylon experience (in-guest read: URL + canvas + __GAMOS_BABYLON_READY__)`, timeout: 90000 });
+  }, { what: `webview guest actually running the Babylon experience (in-guest read: URL + canvas + __GAMOS_BABYLON_READY__)`, timeout: 300000, interval: 4000 });
   await new Promise((r) => setTimeout(r, 1200));
   await screenshot("M2J5-babylon-runtime-in-zcode-browser");
   // LIVE-BEHAVIOR assertion: the render loop must be producing frames
@@ -2141,12 +2396,34 @@ async function stageM2J6() {
   await screenshot("M2J6-turn-result");
   if (result.paneSessionId && result.paneSessionId !== "draft") journey.sessionIds.push(result.paneSessionId);
 
-  const inspectSeen = /6000\.0\.23f1|unityVersion|projectVersion|project_inspect/i.test(timeline);
+  // AUTHORITATIVE assertions — session-store part rows (run-10 lesson: the
+  // timeline scrape is capped from the top and hid the Unity turn's rows
+  // entirely; run-6 lesson: the task-text echo produced false positives).
+  // The inspect result must carry the real marker fields; the modify result
+  // must either surface the structured honest-unavailable state (no licensed
+  // editor on this machine) OR the real exitStatus/changedFiles success shape.
+  const unityParts = (await readEngineToolParts(["project_inspect", "unity_scene_modify", "scene_modify"])) ?? {};
+  const inspectPart = (unityParts["project_inspect"] ?? []).find((p) => p.state?.status === "completed") ?? null;
+  const inspectOutput = toolPartOutput(inspectPart);
+  const unityModifyPart = (unityParts["scene_modify"] ?? []).find((p) => String(p.tool).includes("unity-engine")) ?? null;
+  const modifyOutput = toolPartOutput(unityModifyPart);
+  const modifyState = unityModifyPart?.state ?? null;
+  const modifyText = JSON.stringify(modifyState ?? {});
+  M2_EVIDENCE.sessionDbPath = M2_EVIDENCE.sessionDbPath ?? findSessionStoreDb();
+  const inspectSeen =
+    Boolean(inspectOutput) &&
+    (inspectOutput.projectVersion !== undefined || Array.isArray(inspectOutput.evidencePaths) || typeof inspectOutput.sceneCount === "number");
   // The honest unavailable state: the engine reports the missing licensed editor
   // explicitly (a licensed runner would instead perform the REAL mutation —
   // both outcomes are acceptable; anything else fails the stage).
-  const honestUnavailable = /unity-editor-unavailable|no Unity Editor|license/i.test(timeline);
-  const realSuccess = /GamosJourneyCube|exitStatus/i.test(timeline) && !honestUnavailable;
+  const honestUnavailable =
+    /unity-editor-unavailable/i.test(modifyText) ||
+    (Boolean(modifyOutput) && modifyOutput.ok === false && /unavailable|license/i.test(JSON.stringify(modifyOutput)));
+  const realSuccess =
+    Boolean(modifyOutput) &&
+    modifyOutput.ok === true &&
+    typeof modifyOutput.exitStatus === "number" &&
+    Array.isArray(modifyOutput.changedFiles);
   const negativePathSeen = honestUnavailable || realSuccess;
   M2_EVIDENCE.unity.honestUnavailable = honestUnavailable;
   const pass = result.completed && inspectSeen && negativePathSeen;
@@ -2162,6 +2439,10 @@ async function stageM2J6() {
     },
     inspection_seen: inspectSeen,
     honest_unavailable_seen: honestUnavailable,
+    session_store_evidence: {
+      inspect: inspectPart ? { status: inspectPart.state?.status, output: inspectOutput } : null,
+      modify: unityModifyPart ? { status: unityModifyPart.state?.status, output: modifyOutput, error: unityModifyPart.state?.error ?? null } : null,
+    },
     timeline_excerpt: timeline.slice(0, 800),
     gate_note: "M2-G1 remains NOT PASSING while the editor prerequisite is external — this stage proves the honest negative path, not a passing Unity integration gate",
   });
@@ -2258,6 +2539,7 @@ async function main() {
   try {
     if (MODE === "dev") await launchDev();
     else if (MODE === "prod") await launchProd();
+    else if (MODE === "prod-http") await launchProdHttp();
     else if (MODE !== "attach") throw new Error(`unknown PHASEB_MODE ${MODE}`);
     for (const stage of STAGES) {
       const fn = M2_STAGE_MAP[stage];

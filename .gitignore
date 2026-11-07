@@ -80,3 +80,4 @@ __pycache__/
 # (same treatment the M1 journey's .phaseb-home receives; evidence goes to evidence/phase-m2/).
 .phaseb-m2-home/
 .phaseb-m2-app/
+.phaseb-m2-debug-home/

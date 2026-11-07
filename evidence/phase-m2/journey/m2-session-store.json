@@ -1,0 +1,131 @@
+{
+  "db_path": "/home/z/gamos-2.0/.phaseb-m2-home/.zcode/cli/db/db.sqlite",
+  "tables": [
+    "schema_migration",
+    "session",
+    "message",
+    "part",
+    "todo",
+    "session_entry",
+    "permission",
+    "input_history",
+    "local_setting",
+    "session_target",
+    "workflow_definition",
+    "workflow_run",
+    "workflow_activity",
+    "workflow_event",
+    "session_task_link",
+    "model_usage",
+    "turn_usage",
+    "tool_usage",
+    "session_input",
+    "dwf_run",
+    "dwf_actor",
+    "sqlite_sequence",
+    "dwf_node",
+    "dwf_event",
+    "zcode_database_identity"
+  ],
+  "session_rows": [
+    {
+      "sessionId": "sess_f47015ea-ffa3-416a-ba86-b95872c030b1",
+      "present": true
+    },
+    {
+      "sessionId": "sess_f47015ea-ffa3-416a-ba86-b95872c030b1",
+      "present": true
+    },
+    {
+      "sessionId": "sess_f47015ea-ffa3-416a-ba86-b95872c030b1",
+      "present": true
+    }
+  ],
+  "engine_tool_records": [
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "mcp__plugin_blender-engine",
+      "rows": 4
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "mcp__plugin_babylon-engine",
+      "rows": 4
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "mcp__plugin_unity-engine",
+      "rows": 4
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "GamosJourneyCube",
+      "rows": 3
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "mcp__plugin_blender-engine",
+      "rows": 3
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "mcp__plugin_babylon-engine",
+      "rows": 3
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "mcp__plugin_unity-engine",
+      "rows": 2
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "GamosJourneyCube",
+      "rows": 7
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "unity-editor-unavailable",
+      "rows": 2
+    },
+    {
+      "table": "input_history",
+      "col": "text",
+      "marker": "GamosJourneyCube",
+      "rows": 2
+    },
+    {
+      "table": "tool_usage",
+      "col": "tool_name",
+      "marker": "mcp__plugin_blender-engine",
+      "rows": 3
+    },
+    {
+      "table": "tool_usage",
+      "col": "tool_name",
+      "marker": "mcp__plugin_babylon-engine",
+      "rows": 3
+    },
+    {
+      "table": "tool_usage",
+      "col": "tool_name",
+      "marker": "mcp__plugin_unity-engine",
+      "rows": 2
+    },
+    {
+      "table": "session_input",
+      "col": "payload",
+      "marker": "GamosJourneyCube",
+      "rows": 3
+    }
+  ],
+  "checked_at": "2026-11-07T13:31:45.936Z"
+}
