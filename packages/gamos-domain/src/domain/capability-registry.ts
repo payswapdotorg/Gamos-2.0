@@ -11,6 +11,7 @@
  */
 
 import type { EngineFamily } from "./game-concept.js";
+import type { ProvenanceRef } from "./provenance.js";
 import {
   validateProvenanceRef,
   PROVENANCE_SCHEMA_ID,

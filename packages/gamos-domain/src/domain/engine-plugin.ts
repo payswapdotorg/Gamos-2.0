@@ -168,7 +168,7 @@ export function validateEnginePluginMeta(
 
   return {
     ok: true,
-    meta: input as EnginePluginMeta,
+    meta: input as unknown as EnginePluginMeta,
   };
 }
 

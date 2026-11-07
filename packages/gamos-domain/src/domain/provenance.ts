@@ -168,5 +168,5 @@ export function validateProvenanceRef(input: unknown): ProvenanceValidation {
   // Retention: the canonical record is passed through verbatim — no field of
   // the structured source, surfaces, publisher, reviewer or review ref is
   // dropped or rewritten by validation.
-  return { ok: true, ref: input as ProvenanceRef };
+  return { ok: true, ref: input as unknown as ProvenanceRef };
 }
