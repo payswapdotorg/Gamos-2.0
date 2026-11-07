@@ -432,6 +432,44 @@
         "date": "2026-11-07T10:30:00Z",
         "decision_ref": "M2 directive §5 M2.5/§12 (audit and close remaining soft spots) + TL review of the packaging-chain gap (engine plugins registered in definitions/SEA/build-chain but absent from officialPluginPackages — the packaged-app delivery path)"
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0008",
+      "phase": "M2",
+      "date": "2026-11-07T13:45:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "M2 §9 journey support (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §9/§12 audit-and-close): scripts/gamos/m2-ui-journey.mjs runs the original ZCode application against an isolated home (PHASEB_HOME default .phaseb-m2-home under the repo), a staged dev app dir (.phaseb-m2-app) and a debug home used by the renderer-diagnosis probes (.phaseb-m2-debug-home). These are build/test runtime outputs that must never be committed (the same treatment the M1 journey's .phaseb-home staging receives via untracked paths); without the ignore entries a git add -A sweeps isolated app state (including locally generated cert material) into the tree — exactly what the first GREEN commit did before the amend. Three additive ignore lines only; no existing ignore rule is changed or removed.",
+      "risk": "low",
+      "affected_functionality": "Repository ignore list only: three additive directory patterns for the M2 journey's runtime output dirs. No source, build or behavior change.",
+      "new_functionality": "The M2 §9 journey's isolated app homes are kept out of the working-tree status, keeping evidence commits clean.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin $GAMOS_BASELINE_SHA256",
+        "node scripts/gamos/governance-self-test.mjs",
+        "pnpm run architecture:check"
+      ],
+      "evidence": {
+        "summary": "M2 §9 journey GREEN commit initially included .phaseb-m2-debug-home app state; amended out and the ignore entries added so the class of accident cannot recur.",
+        "links": [
+          "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
+          "PR (gamos/roadmap-m2-journeys): M2 §9 journeys + audit closure"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": ".gitignore",
+          "content_sha256": "0fa70c192bc5281ffc7117297298aac4e93d1ae8a1b906547159edb061d91044"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-07T13:45:00Z",
+        "decision_ref": "M2 directive §12 (audit and close remaining soft spots) + TL review of the journey-runtime-dirs ignore need"
+      }
     }
   ]
 }
