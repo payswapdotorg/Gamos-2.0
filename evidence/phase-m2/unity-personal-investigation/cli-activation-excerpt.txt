@@ -1,0 +1,22 @@
+SOURCE: https://docs.unity.com/en-us/engine/current/manual/get-started/install-and-upgrade/licenses-and-activation/managing-your-unity-license
+        (redirects from https://docs.unity3d.com/Manual/ManagingYourUnityLicense.html)
+RETRIEVED: 2026-11-07 (Gamos dev sandbox, plain HTTPS GET)
+
+=== Scope of command-line activation (verbatim) ===
+d 8 days ago To use Unity, you need an activated license. 
+ The primary license activation method for Unity Pro and Unity Personal is the Unity Hub . For information about activating a Unity Industry license, refer to the Unity Support article, How to activate or return a Unity Industry license . 
+ The following information covers an alternate method to Unity Hub for activating and returning a license for Unity Pro, by using the command line. You might consider this method in situations such as: 
+ You have internet access, but you use Unity in headless mode (without a GUI) for automated tasks, such as builds and tests. 
+ You have internet access, but you’re unable or unwilling to install the Unity Hub. 
+ Note The following procedures don’t apply to Unity Personal. To activate a license for Unity Personal, log in to the Unity Hub. To return a Personal license, log out of the Unity Hub. 
+ If you don’t know your Unity license information, speak to the Owner of your license. Owners can ass
+
+=== Unity Personal is excluded from CLI/serial activation (verbatim) ===
+Note The following procedures don’t apply to Unity Personal. To activate a license for Unity Personal, log in to the Unity Hub. To return a Personal license, log out of the Unity Hub. 
+ If you don’t know your Unity license information, speak to the Owner of your license. Owners can assign a seat to you via the Organiza
+
+=== Headless/automated use is an acknowledged CLI-activation use case (verbatim) ===
+d returning a license for Unity Pro, by using the command line. You might consider this method in situations such as: 
+ You have internet access, but you use Unity in headless mode (without a GUI) for automated tasks, such as builds and tests. 
+ You have internet access, but you’re unable or unwilling to install the Unity Hub. 
+ Note The following procedures don’t apply to Unit

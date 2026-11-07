@@ -1,0 +1,16 @@
+SOURCE: https://docs.unity.com/en-us/engine/current/manual/get-started/install-and-upgrade/licenses-and-activation/activation-faq
+RETRIEVED: 2026-11-07 (Gamos dev sandbox, plain HTTPS GET)
+
+=== License file locations (verbatim) ===
+iptions within your organization. The Support Team can return your license manually if you provide the previous information; however, it can take some time. Unity Hub issues Refer to Unity Hub help . 
+ Unity license file location 
+ Question Answer Where is my serial-based license file stored? - Windows: %PROGRAMDATA%\Unity\Unity_lic.ulf - macOS: /Library/Application\ Support/Unity/Unity_lic.ulf - Linux: ~/.local/share/unity3d/Unity/Unity_lic.ulf Note : If Windows User Account Control (UAC) has restricted your access to C:\ProgramData\Unity , you can find your ulf file at: C:\Users\(username)\AppData\Local\VirtualStore\ProgramData\Unity (UAC can restrict access if the folder is deleted or if you start the Unity Editor with administrative permissions first time.) Where is my named user license file stored? - Windows: %LOCALAPPDATA%\Unity\licenses\UnityEntitlementLicense.xml - macOS: ~/Libr
+
+=== Machines per license (verbatim — worded for paid licenses) ===
+How many computers can I install my copy of Unity on? Every paid commercial Unity license allows one person to use Unity on two computers that they have exclusive use of. It doesn't matter where the computers are physically located or what operating system they're running. Educational licenses sold via Unity or any one of Unity's resellers are good only for a single activation. The free version of Unity can't be licensed by a commercial, educational, non-profit, or government entity whose gross revenues or budget exceeds the financial threshold identified in the Unity Editor Software Terms section of the Unity Terms of Service . If you are a Legal Entity, you can't combine files developed wi
+
+=== Free-version entity threshold (verbatim) ===
+The free version of Unity can't be licensed by a commercial, educational, non-profit, or government entity whose gross revenues or budget exceeds the financial threshold identified in the Unity Editor Software Terms section of the Unity Terms of Service . If you are a Legal Entity, you can't combine files developed with the free version of Unity with any files developed by you (or by any third par
+
+=== Build servers acknowledged in the login-rate-limit row (verbatim) ===
+sure you enter your details correctly. Passwords are case sensitive, so make sure you enter them as registered. To reset your password, go to the Unity ID Portal: https://id.unity.com/en/password/new . You can also receive failed login or activation errors if you or your build server exceeds the login rate limit, which is 10 login attempts per minute for a specific user. If you still have problems logging in, submit a request in the Unity Support portal . Unity Hub issues Ref

@@ -539,3 +539,57 @@ commit `c9c397a1…`, resolves via `git cat-file`).
   required gate with committed, hash-recomputable evidence paths; no
   completion is claimed now). M2-G2/M2-G3/M2-G4/M2-G5 evidence legs are
   complete and CI-recorded per above.
+
+**M2-G1 Unity Personal licensing investigation (2026-11-07, maintainer
+directive: no paid Unity licenses — investigate Unity Personal; full report:
+`docs/gamos/UNITY-M2G1-PROVISIONING.md`, evidence:
+`evidence/phase-m2/unity-personal-investigation/`):**
+
+1. **Eligibility (task 1):** verified against the official `unity.com/pricing`
+   terms — Unity Personal is $0 for small businesses/individuals whose
+   aggregate gross revenue **and** funding are **< $200K USD** (trailing 12
+   months; service-provider client test applies). Gamos is a games/entertainment
+   application (Industry plan inapplicable). **Eligibility is NOT assumed —
+   the org's revenue/funding figures are a maintainer attestation item.**
+2. **Least-expensive compliant provisioning (task 2):** $0 — Unity 6
+   6000.0.23f1 Linux Editor (free official download; revision hash bound to the
+   committed fixture's `ProjectVersion.txt`) + Unity Personal activation via
+   Unity Hub (the only officially documented Personal activation path; CLI/serial
+   activation is Pro-only; manual `.ulf` activation is Enterprise/Industry-only
+   — all quotes committed as evidence).
+3. **CI/build-machine licensing (task 3):** the retrievable official text
+   (ToS "Authorized Users", node-locked-per-user machines, named-user/serial/
+   floating models, build-server rate-limit acknowledgment) does NOT contain
+   the decisive clause; `unity.com/legal/software-terms` is bot/geo-blocked
+   from the sandbox network — **the Personal machine-count / build-machine
+   clause is an explicit verification gap the maintainer must read from a
+   normal browser** before any CI license activation is relied upon. The
+   GameCI community mechanism is recorded as third-party reference, not terms.
+4. **Existing-machine preference (tasks 4–5):** the dev sandbox cannot host
+   the editor (3.7 GB free disk vs ~13 GB peak need; 3.9 GB RAM; recorded with
+   command output as evidence). GitHub-hosted runners can host the editor
+   binary (Blender precedent) but cannot host the license (no credentials; and
+   the terms position is unverified). The compliant free path is a
+   maintainer-provisioned **self-hosted runner** where the eligible account
+   activates Personal through Unity Hub; credentials/license material stay
+   outside Git and CI artifacts per the directive (runbook §6 of the report).
+5. **Execution (task 6):** no compliant activated runner is currently
+   provisionable in this environment (no Unity account credentials exist, and
+   none may be fabricated). The real integration tests therefore did NOT run
+   against a licensed editor. **M2-G1 stays BLOCKED** (task 7) — exactly what
+   is missing is recorded in the report §7: maintainer eligibility attestation,
+   Software-Terms verification, Unity account + activation, and a licensed
+   runner.
+6. **Honest-evidence hardening shipped alongside:** the `unity-engine-status`
+   CI job previously wrote `editor-verified` whenever `UNITY_EDITOR_PATH`
+   merely pointed at an executable — a present-but-**unactivated** editor
+   would have produced a fabricated pass-record. The job now derives the gate
+   status from the integration suite's own machine evidence
+   (`editorLicensed=true/false` markers; suite log retained in the artifact)
+   with honest states for every outcome (`editor-verified`,
+   `editor-present-unlicensed`, `editor-present-unverified`,
+   `unavailable-license`, `suite-failed-no-gate-evidence`), and the
+   self-hosted-runner path is plumbed via the `UNITY_RUNNER_LABEL` repository
+   variable (default `ubuntu-latest` — zero behavior change until the
+   maintainer sets it). Roadmap, contracts, plugin code and all Blender/Babylon
+   work untouched.

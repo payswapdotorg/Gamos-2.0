@@ -1,0 +1,11 @@
+SOURCE: https://unity.com/legal/terms-of-service (fetched as server-rendered HTML via plain HTTPS GET)
+RETRIEVED: 2026-11-07 (Gamos dev sandbox)
+
+=== Authorized Users definition (verbatim) ===
+“ Authorized Users ” means (a) you (if you are an individual) and (b) identified individuals (such as your individual employees, consultants and contractors and other individuals accessing and using an Offering for your benefit) for whom you have acquired a subscription to an Offering. " Bug Fix Materials " means information used to learn about the vulnerabilities identified in the bug submission 
+
+=== Node-locked machines are per Authorized User, per the Additional Terms (verbatim) ===
+e Software will be made available for download through your account or other electronic means or delivered to you by Unity or a Unity-authorized third party at Unity’s discretion. During your subscription term, you may make one copy of the Software you subscribed to solely for your backup purposes. If you have purchased a node-locked subscription to Software, you may access and use such Software on the number of computers or operating systems per Authorized User as set forth in the Additional Terms and the Offering Identification. If you have purchased a floating subscription to Software, you may use such Software on multiple devices and share such Software among multiple Authorized Users, but the number of con
+
+=== Floating concurrency cap (verbatim) ===
+If you have purchased a floating subscription to Software, you may use such Software on multiple devices and share such Software among multiple Authorized Users, but the number of concurrent Authorized Users may not exceed your total number of floating subscri

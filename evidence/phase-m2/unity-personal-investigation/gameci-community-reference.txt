@@ -1,0 +1,16 @@
+SOURCE: https://game.ci/docs/github/activation (THIRD-PARTY COMMUNITY DOCUMENTATION — not Unity terms;
+        referenced only as the community-standard CI activation mechanism)
+RETRIEVED: 2026-11-07 (Gamos dev sandbox, plain HTTPS GET)
+
+=== Personal license on CI — community mental model (verbatim) ===
+dy for use. Personal license ​ Follow these steps if you are using the free version of Unity. Note: Do not follow the steps for the personal license if you have a professional license. Mental Model ​ Activate the license locally : Use Unity Hub to create a .ulf license file linked to your
+Unity account. Add the license to GitHub : Store the .ulf file and Unity credentials as GitHub secrets for
+use in CI builds. Setting Up Your Unity License ​ Install Unity Hub : Download and install Unity Hub on your local
+machine. Log in to Unity Hub : Use the Unity account linked to your CI setup to log in. Ensure you're
+using the correct account to activate the intended license. Activate Your License : Manually activate by navigating to: Unity Hub > Preferences > Licenses and click the Add button Select Get a free personal license . Ensure File Creation Even if a license appears in Unity Hub, a .ulf f
+
+=== Personal .ulf generation via Unity Hub (verbatim) ===
+Activate Your License : Manually activate by navigating to: Unity Hub > Preferences > Licenses and click the Add button Select Get a free personal license . Ensure File Creation Even if a license appears in Unity Hub, a .ulf file may not have been created. To ensure the
+file is generated, make sure to click the Add button and proceed with the activation steps. Do
+not skip this step. If you don't have the activation option to generate a .ulf license file, search in our
+ game-ci Discord community 

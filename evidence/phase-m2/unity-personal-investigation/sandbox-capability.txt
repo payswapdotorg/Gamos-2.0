@@ -1,0 +1,48 @@
+Gamos M2-G1 Unity Personal provisioning — sandbox capability record
+RECORDED: 2026-11-07T16:35Z UTC on the existing Gamos dev sandbox (uid=z)
+PURPOSE: honest record of why this existing machine cannot host the Unity Editor
+
+=== disk (the only persistent filesystem) ===
+  Filesystem                               Size  Used Avail Use% Mounted on
+  c-6aef4187-14127d0f-35eb9fbf5ec4-rootfs  9.9G  5.7G  3.6G  62% /
+  c-6aef4187-14127d0f-35eb9fbf5ec4-rootfs  9.9G  5.7G  3.6G  62% /
+
+=== memory / cpus ===
+                 total        used        free      shared  buff/cache   available
+  Mem:           3.9Gi       1.4Gi       391Mi       7.3Mi       2.3Gi       2.5Gi
+  Swap:             0B          0B          0B
+  nproc: 2
+
+=== the only other writable mounts are small tmpfs (RAM-backed) ===
+  tmpfs on /home/official_skills type tmpfs (rw,relatime,size=2069284k,nr_inodes=15048)
+  tmpfs on /home/sync type tmpfs (rw,relatime,size=2069284k,nr_inodes=15048)
+  tmpfs on /home/z/my-project/upload type tmpfs (rw,relatime,size=2069284k,nr_inodes=15048)
+  tmpfs on /tmp/my-project type tmpfs (rw,relatime,size=2069284k,nr_inodes=15048)
+  tmpfs on /home/user_skills type tmpfs (rw,relatime,size=2069284k,nr_inodes=15048)
+
+=== Unity 6 Linux editor space requirement (for fixture version 6000.0.23f1) ===
+  tarball (LinuxEditorInstaller/Unity.tar.xz): ~4 GB download
+  extracted editor tree: ~9-10 GB
+  peak concurrent need (tarball + extracted): ~13 GB
+  available on the root filesystem: 3.7 GB -> INFEASIBLE on this machine
+  (additionally: only 3.9 GB total RAM for the whole container)
+
+=== network probe of the official Unity download CDN from this sandbox ===
+$ curl -sI https://download.unity3d.com/download_unity/ab2b18a5f80dcba39fd8f5ee57b07edc7c0f600f/LinuxEditorInstaller/Unity.tar.xz
+  HTTP/1.1 302 Moved Temporarily
+  Location: https://download.unitychina.cn/download_unity/ab2b18a5f80dcba39fd8f5ee57b07edc7c0f600f/LinuxEditorInstaller/Unity.tar.xz
+
+$ curl -s -r 0-200 https://download.unitychina.cn/download_unity/ab2b18a5f80dcba39fd8f5ee57b07edc7c0f600f/LinuxEditorInstaller/Unity.tar.xz
+  -> HTTP 404 (the geo-redirected China edge does not serve this object for this sandbox's route)
+  code=404
+
+=== reachability of Unity legal/documentation surfaces from this sandbox ===
+  https://unity.com/pricing -> 200
+  https://unity.com/legal/software-terms -> 404
+  https://docs.unity.com/en-us/engine/current/manual/get-started/install-and-upgrade/licenses-and-activation/managing-your-unity-license -> 200
+  https://license.unity3d.com/manual -> 200
+  https://web.archive.org/ -> 000
+
+CONCLUSION: the existing sandbox cannot host a real Unity Editor installation
+(disk: 3.7G free vs ~13G peak; RAM 3.9G; no root). The compliant free path is a
+maintainer-provisioned licensed runner per docs/gamos/UNITY-M2G1-PROVISIONING.md.

@@ -213,8 +213,20 @@ jobs:
 
   unity-engine-status:
     name: Unity engine gate status (honest — no licensed editor on hosted runners)
-    runs-on: ubuntu-latest
+    # Self-hosted licensed-runner path (Unity Personal provisioning runbook:
+    # docs/gamos/UNITY-M2G1-PROVISIONING.md §6): set the repository variables
+    # UNITY_RUNNER_LABEL (e.g. gamos-unity) and UNITY_EDITOR_PATH (activated
+    # editor executable on that runner). Until then the default hosted-runner
+    # path records the honest unavailable state. The gate status below is
+    # derived from the integration suite's OWN machine evidence
+    # (editorLicensed=true/false markers), never from the mere presence of
+    # an editor binary — an unactivated editor is NOT a passing gate.
+    runs-on: ${{ vars.UNITY_RUNNER_LABEL || 'ubuntu-latest' }}
     timeout-minutes: 30
+    env:
+      # Job-level so the suite step and the gate-status step see the SAME
+      # value (the previous step-level env left the status step blind).
+      UNITY_EDITOR_PATH: ${{ vars.UNITY_EDITOR_PATH }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -228,18 +240,58 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - name: Run the unity-engine-plugin suite (honest skip when no licensed editor)
-        run: pnpm --filter @zcode/unity-engine-plugin exec vitest run test
-        env:
-          UNITY_EDITOR_PATH: ${{ vars.UNITY_EDITOR_PATH }}
+        # The suite log is retained as evidence; the gate-status step below
+        # classifies from the suite's own [gamos-evidence] markers.
+        run: |
+          set -o pipefail
+          pnpm --filter @zcode/unity-engine-plugin exec vitest run test 2>&1 | tee evidence-unity-suite.log
       - name: Record the honest M2-G1 gate status
         if: always()
         run: |
           mkdir -p evidence/phase-m2
-          if [ -n "${UNITY_EDITOR_PATH:-}" ] && [ -x "${UNITY_EDITOR_PATH:-}" ]; then
-            STATUS='{"gate_id":"M2-G1","status":"editor-verified","editor":"'"$UNITY_EDITOR_PATH"'","note":"real licensed editor integration ran on this runner"}'
+          # The suite's own evidence markers decide the recorded state:
+          #   editorLicensed=true  -> real licensed editor integration ran and passed
+          #   editorLicensed=false -> editor binary present but UNACTIVATED (license material missing)
+          #   SKIP banner          -> no usable editor on this runner
+          if grep -q 'editorLicensed=true' evidence-unity-suite.log 2>/dev/null; then
+            EVIDENCE_LINE=$(grep -m1 'editorLicensed=' evidence-unity-suite.log | tr -d '\r')
+            EXE_LINE=$(grep -m1 'real Unity Editor executable:' evidence-unity-suite.log | tr -d '\r' || true)
+            STATUS=$(python3 - "$EVIDENCE_LINE" "$EXE_LINE" <<'PY'
+          import json, sys
+          ev, exe = sys.argv[1], sys.argv[2]
+          editor = exe.split('executable:', 1)[1].strip() if 'executable:' in exe else None
+          print(json.dumps({
+            "gate_id": "M2-G1",
+            "status": "editor-verified",
+            "editor": editor,
+            "suite_evidence": ev.strip(),
+            "note": "recorded ONLY from the integration suite's own licensed-editor evidence (editorLicensed=true); a present-but-unactivated editor can never produce this status",
+          }))
+          PY
+          )
+          elif grep -q 'editorLicensed=false' evidence-unity-suite.log 2>/dev/null; then
+            EVIDENCE_LINE=$(grep -m1 'editorLicensed=' evidence-unity-suite.log | tr -d '\r')
+            STATUS=$(python3 - "$EVIDENCE_LINE" <<'PY'
+          import json, sys
+          print(json.dumps({
+            "gate_id": "M2-G1",
+            "status": "editor-present-unlicensed",
+            "suite_evidence": sys.argv[1].strip(),
+            "reason": "the Unity Editor binary is present and invoked for real, but it is NOT activated — Unity Personal activation requires a Unity Hub sign-in by the eligible account (docs/gamos/UNITY-M2G1-PROVISIONING.md §6); the honest license-required negative path is what the suite proved",
+            "note": "M2-G1 NOT PASSING — an unactivated editor is never a passing integration gate (directive §8)",
+          }))
+          PY
+          )
+          elif grep -q 'SKIP: real Unity Editor not available' evidence-unity-suite.log 2>/dev/null; then
+            if [ -n "${UNITY_EDITOR_PATH:-}" ] && [ -x "${UNITY_EDITOR_PATH:-}" ]; then
+              STATUS='{"gate_id":"M2-G1","status":"editor-present-unverified","reason":"UNITY_EDITOR_PATH is set and executable but the suite could not verify the editor (discovery probe or version gate rejected it — check the editor version: 6000.0.23f1 expected)","note":"M2-G1 NOT PASSING"}'
+            else
+              STATUS='{"gate_id":"M2-G1","status":"unavailable-license","reason":"no licensed Unity Editor on GitHub-hosted runners; Unity licensing is an external, user-controlled prerequisite (directive §8) and is never fabricated; the compliant free path (Unity Personal + self-hosted licensed runner) is documented in docs/gamos/UNITY-M2G1-PROVISIONING.md","note":"M2-G1 NOT PASSING — the milestone cannot complete until a licensed runner provides UNITY_EDITOR_PATH and the real integration passes"}'
+            fi
           else
-            STATUS='{"gate_id":"M2-G1","status":"unavailable-license","reason":"no licensed Unity Editor on GitHub-hosted runners; Unity licensing is an external, user-controlled prerequisite (directive §8) and is never fabricated","note":"M2-G1 NOT PASSING — the milestone cannot complete until a licensed runner provides UNITY_EDITOR_PATH and the real integration passes"}'
+            STATUS='{"gate_id":"M2-G1","status":"suite-failed-no-gate-evidence","reason":"the unity-engine-plugin suite did not produce a machine-readable licensed/unlicensed marker (it may have failed — see unity-suite-output.log in this artifact)","note":"M2-G1 NOT PASSING"}'
           fi
+          cp evidence-unity-suite.log evidence/phase-m2/unity-suite-output.log 2>/dev/null || true
           echo "$STATUS" | python3 -c "import json,sys; d=json.load(sys.stdin); d['recorded_at']='${{ github.run_id }}-${{ github.run_attempt }}'; open('evidence/phase-m2/unity-gate-status.json','w').write(json.dumps(d, indent=2))"
           cat evidence/phase-m2/unity-gate-status.json
       - name: Upload M2 evidence
