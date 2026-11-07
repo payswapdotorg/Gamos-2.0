@@ -185,3 +185,28 @@ export type {
   PluginTrustResult,
 } from "./domain/plugin-trust.js";
 export { validatePluginProcessTrust } from "./domain/plugin-trust.js";
+
+// Canonical provenance (contract 09 §4, gamos/provenance@2 — M2 directive §4 preflight).
+export type {
+  ProvenancePublisher,
+  ProvenanceSurface,
+  MarketplaceProvenanceSource,
+  RepositoryProvenanceSource,
+  ProvenanceSource,
+  ProvenanceValidation,
+} from "./domain/provenance.js";
+export { validateProvenanceRef, PROVENANCE_SCHEMA_ID } from "./domain/provenance.js";
+
+// Engine-plugin capability metadata (contract 03 §2, gamos/engine-plugin@2 — M2.4).
+export type {
+  EnginePluginExecutable,
+  EnginePluginMeta,
+  EnginePluginMetaValidation,
+} from "./domain/engine-plugin.js";
+export {
+  validateEnginePluginMeta,
+  validateEngineVersionsPredicate,
+  registerEnginePluginCapabilities,
+  ENGINE_PLUGIN_CAPABILITIES,
+  ENGINE_PLUGIN_METAS,
+} from "./domain/engine-plugin.js";

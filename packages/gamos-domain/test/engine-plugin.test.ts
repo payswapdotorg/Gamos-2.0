@@ -56,8 +56,12 @@ const validMeta = {
 };
 
 describe("EnginePluginMeta validation (contract 03 §2, gamos/engine-plugin@2)", () => {
+  // A registry holding the declared capability so shape validation can proceed
+  // past contract 03 rule 1 (capability resolution) in the field-level tests.
+  const resolvedRegistry = registryOf({ ...completeCapabilityRecord, id: "unity/project.inspect" });
+
   it("accepts a complete valid meta and retains every field", () => {
-    const result = validateEnginePluginMeta(validMeta);
+    const result = validateEnginePluginMeta(validMeta, resolvedRegistry);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.meta.engineFamily).toBe("unity");
@@ -72,7 +76,7 @@ describe("EnginePluginMeta validation (contract 03 §2, gamos/engine-plugin@2)",
   });
 
   it("rejects an invalid engine family", () => {
-    const result = validateEnginePluginMeta({ ...validMeta, engineFamily: "cryengine" });
+    const result = validateEnginePluginMeta({ ...validMeta, engineFamily: "cryengine" }, resolvedRegistry);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.field).toContain("engineFamily");
   });
@@ -80,45 +84,45 @@ describe("EnginePluginMeta validation (contract 03 §2, gamos/engine-plugin@2)",
   it("rejects a version predicate outside the family grammar (universal SemVer assumption)", () => {
     // Caret/tilde SemVer ranges are NOT family-grammar predicates (contract 03 rule 2).
     for (const predicate of ["^4.1", "~4.1", "4.1 - 5.0", "latest"]) {
-      const result = validateEnginePluginMeta({ ...validMeta, engineFamily: "blender", engineVersions: predicate });
+      const result = validateEnginePluginMeta({ ...validMeta, engineFamily: "blender", engineVersions: predicate }, resolvedRegistry);
       expect(result.ok).toBe(false);
       if (!result.ok) expect(result.field).toContain("engineVersions");
     }
 
     // A Unity predicate expressed as a Blender full-version string ("blender 4.1")
     // is not a legal Unity target.
-    const crossFamily = validateEnginePluginMeta({ ...validMeta, engineFamily: "unity", engineVersions: "blender 4.1" });
+    const crossFamily = validateEnginePluginMeta({ ...validMeta, engineFamily: "unity", engineVersions: "blender 4.1" }, resolvedRegistry);
     expect(crossFamily.ok).toBe(false);
     if (!crossFamily.ok) expect(crossFamily.field).toContain("engineVersions");
   });
 
   it("accepts family-grammar predicates (Unity >=2022.3, Blender >=4.1, Babylon >=18)", () => {
-    for (const [family, predicate] of [["unity", ">=2022.3"], ["blender", ">=4.1"], ["babylon", ">=18"]] as const) {
-      const result = validateEnginePluginMeta({ ...validMeta, engineFamily: family, engineVersions: predicate });
+    for (const [family, predicate] of [["unity", ">=2022.3"], ["blender", ">=4.1"], ["babylon", ">=18.0"]] as const) {
+      const result = validateEnginePluginMeta({ ...validMeta, engineFamily: family, engineVersions: predicate }, resolvedRegistry);
       expect(result.ok).toBe(true);
     }
   });
 
   it("rejects empty capability declarations", () => {
-    const result = validateEnginePluginMeta({ ...validMeta, capabilities: [] });
+    const result = validateEnginePluginMeta({ ...validMeta, capabilities: [] }, resolvedRegistry);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.field).toContain("capabilities");
   });
 
   it("rejects malformed capability ids", () => {
-    const result = validateEnginePluginMeta({ ...validMeta, capabilities: ["Not A Valid Id"] });
+    const result = validateEnginePluginMeta({ ...validMeta, capabilities: ["Not A Valid Id"] }, resolvedRegistry);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.field).toContain("capabilities");
   });
 
   it("rejects invalid headlessSupport values", () => {
-    const result = validateEnginePluginMeta({ ...validMeta, headlessSupport: "sometimes" });
+    const result = validateEnginePluginMeta({ ...validMeta, headlessSupport: "sometimes" }, resolvedRegistry);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.field).toContain("headlessSupport");
   });
 
   it("rejects non-boolean requiresDisplayServer", () => {
-    const result = validateEnginePluginMeta({ ...validMeta, requiresDisplayServer: "no" });
+    const result = validateEnginePluginMeta({ ...validMeta, requiresDisplayServer: "no" }, resolvedRegistry);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.field).toContain("requiresDisplayServer");
   });
@@ -127,21 +131,21 @@ describe("EnginePluginMeta validation (contract 03 §2, gamos/engine-plugin@2)",
     const result = validateEnginePluginMeta({
       ...validMeta,
       provenance: { publisher: "official", source: "gamos-2.0 repository" },
-    });
+    }, resolvedRegistry);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.field).toContain("provenance");
   });
 
   it("rejects malformed executable declarations", () => {
-    const badKind = validateEnginePluginMeta({ ...validMeta, executable: { kind: "daemon", command: "x" } });
+    const badKind = validateEnginePluginMeta({ ...validMeta, executable: { kind: "daemon", command: "x" } }, resolvedRegistry);
     expect(badKind.ok).toBe(false);
     if (!badKind.ok) expect(badKind.field).toContain("executable.kind");
 
-    const noCommand = validateEnginePluginMeta({ ...validMeta, executable: { kind: "cli" } });
+    const noCommand = validateEnginePluginMeta({ ...validMeta, executable: { kind: "cli" } }, resolvedRegistry);
     expect(noCommand.ok).toBe(false);
     if (!noCommand.ok) expect(noCommand.field).toContain("executable.command");
 
-    const badArgs = validateEnginePluginMeta({ ...validMeta, executable: { kind: "cli", command: "x", args: ["ok", 42] } });
+    const badArgs = validateEnginePluginMeta({ ...validMeta, executable: { kind: "cli", command: "x", args: ["ok", 42] } }, resolvedRegistry);
     expect(badArgs.ok).toBe(false);
     if (!badArgs.ok) expect(badArgs.field).toContain("executable.args");
   });
@@ -193,10 +197,21 @@ describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
   it("registers every shipped record without error (complete execution-safety metadata)", () => {
     const registry = registerEnginePluginCapabilities();
     for (const record of ENGINE_PLUGIN_CAPABILITIES) {
-      const resolved = resolveCapability(registry, { id: record.id });
+      // Conditional records resolve when their declared prerequisites are satisfied.
+      const resolved = resolveCapability(registry, {
+        id: record.id,
+        prerequisites: [...(record.availability.prerequisites ?? [])],
+      });
       expect(resolved.ok).toBe(true);
     }
     expect(registry.size).toBe(ENGINE_PLUGIN_CAPABILITIES.length);
+  });
+
+  it("conditional records fail closed when declared prerequisites are NOT satisfied", () => {
+    const registry = registerEnginePluginCapabilities();
+    const resolved = resolveCapability(registry, { id: "unity/scene.modify" });
+    expect(resolved.ok).toBe(false);
+    if (!resolved.ok) expect(resolved.error.code).toBe("missing-prerequisite");
   });
 
   it("every record carries canonical provenance and an mcp-server provider identity", () => {
@@ -212,7 +227,7 @@ describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
     const byId = new Map(ENGINE_PLUGIN_CAPABILITIES.map((r) => [r.id, r]));
     expect(byId.get("unity/project.inspect")!.compatibility.engineVersions).toBe(">=2022.3");
     expect(byId.get("blender/scene.modify")!.compatibility.engineVersions).toBe(">=4.1");
-    expect(byId.get("babylon/project.run")!.compatibility.engineVersions).toBe(">=18");
+    expect(byId.get("babylon/project.run")!.compatibility.engineVersions).toBe(">=18.0");
   });
 
   it("read-only inspection declares read-only permissions; mutations declare engine/headless permission kinds", () => {
