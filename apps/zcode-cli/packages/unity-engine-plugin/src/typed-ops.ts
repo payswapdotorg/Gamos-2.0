@@ -88,6 +88,75 @@ export function meetsMinimumUnityVersion(parsed: UnityVersion): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Exact project/editor version contract (M2-B — RED stubs: current de-facto
+// floor semantics; the exact-contract tests land with this commit and fail)
+// ---------------------------------------------------------------------------
+
+/** The committed fixture's required editor version (ProjectSettings/ProjectVersion.txt). */
+export const REQUIRED_UNITY_EDITOR_VERSION = "6000.0.23f1";
+
+/** The committed fixture's pinned revision hash. */
+export const REQUIRED_UNITY_EDITOR_REVISION = "ab2b18a5f80dcba39fd8f5ee57b07edc7c0f600f";
+
+/** A project's pinned editor version (from ProjectSettings/ProjectVersion.txt). */
+export interface UnityProjectVersionPin {
+  version: string;
+  revision: string | null;
+}
+
+export type UnityVersionContractResult =
+  | { ok: true; version: string; revision: string | null }
+  | {
+      ok: false;
+      code:
+        | "editor-version-missing"
+        | "editor-version-incompatible"
+        | "editor-revision-incompatible";
+      reason: string;
+    };
+
+/** Parse `ProjectSettings/ProjectVersion.txt` content. RED stub: not implemented. */
+export function parseProjectVersionFile(content: string): UnityProjectVersionPin | null {
+  void content;
+  return null;
+}
+
+/** Extract a 40-hex revision from editor `-version` output. RED stub: not implemented. */
+export function parseUnityRevisionFromVersionOutput(output: string): string | null {
+  void output;
+  return null;
+}
+
+/**
+ * Exact editor/project version contract. RED stub: the CURRENT de-facto
+ * behavior — the 2022.3 discovery floor, ignoring the project pin and the
+ * revision entirely.
+ */
+export function checkUnityVersionContract(
+  editorRawVersion: string | null,
+  editorRevision: string | null,
+  project: UnityProjectVersionPin,
+): UnityVersionContractResult {
+  void editorRevision;
+  void project;
+  if (editorRawVersion === null || editorRawVersion === "") {
+    return { ok: false, code: "editor-version-missing", reason: "editor version metadata is missing" };
+  }
+  const parsed = parseUnityVersionLine(editorRawVersion);
+  if (parsed === null) {
+    return { ok: false, code: "editor-version-incompatible", reason: `unparsable editor version "${editorRawVersion}"` };
+  }
+  if (!meetsMinimumUnityVersion(parsed.parsed)) {
+    return {
+      ok: false,
+      code: "editor-version-incompatible",
+      reason: `editor ${editorRawVersion} is below the minimum supported version`,
+    };
+  }
+  return { ok: true, version: editorRawVersion, revision: null };
+}
+
+// ---------------------------------------------------------------------------
 // Workspace path safety
 // ---------------------------------------------------------------------------
 
