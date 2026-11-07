@@ -4,11 +4,13 @@ import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { discoverNode } from "../src/discovery.js";
 
-// The real Node install this suite verifies against (the sandbox pins
-// /usr/bin/node at v24.22.2). BABYLON_NODE_PATH (if set by the runner) wins;
-// otherwise the standard sandbox install is used.
+// The real Node install this suite verifies against. BABYLON_NODE_PATH (if set
+// by the runner) wins; otherwise the first EXISTING standard install is used
+// (runners differ: the sandbox pins /usr/bin/node, GitHub-hosted runners use
+// /usr/local/bin/node — candidates are filtered by existence, not just type).
+import { existsSync } from "node:fs";
 const realNodeCandidates = [process.env.BABYLON_NODE_PATH, "/usr/bin/node", "/usr/local/bin/node"].filter(
-  (candidate): candidate is string => typeof candidate === "string" && candidate.length > 0,
+  (candidate): candidate is string => typeof candidate === "string" && candidate.length > 0 && existsSync(candidate),
 );
 const realNode = realNodeCandidates[0];
 
@@ -29,9 +31,11 @@ describe("node discovery", () => {
       const found = discoverNode({ env: { BABYLON_NODE_PATH: realNode } });
       expect(found.status).toBe("available");
       expect(found.executable).toBe(realNode);
-      // the sandbox node is v24.22.2 — pinned in the environment contract
-      expect(found.rawVersion).toBe("24.22.2");
-      expect(found.parsed).toEqual({ major: 24, minor: 22, patch: 2 });
+      // Version-agnostic gate: whatever real node the runner provides must be
+      // parsed by the family grammar and satisfy the >=18.0 toolchain floor.
+      expect(found.rawVersion).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(found.parsed).toBeDefined();
+      expect(found.parsed?.major ?? 0).toBeGreaterThanOrEqual(18);
     },
   );
 
