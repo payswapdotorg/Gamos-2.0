@@ -88,19 +88,24 @@ export function meetsMinimumUnityVersion(parsed: UnityVersion): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Exact project/editor version contract (M2-B — RED stubs: current de-facto
-// floor semantics; the exact-contract tests land with this commit and fail)
+// Exact project/editor version contract (M2-B, final-closure directive §2)
 // ---------------------------------------------------------------------------
 
-/** The committed fixture's required editor version (ProjectSettings/ProjectVersion.txt). */
+/**
+ * The Unity Editor version the committed fixture project requires (from its
+ * `ProjectSettings/ProjectVersion.txt`: `m_EditorVersion: 6000.0.23f1`).
+ * The tested editor version and the project version must agree EXACTLY.
+ */
 export const REQUIRED_UNITY_EDITOR_VERSION = "6000.0.23f1";
 
-/** The committed fixture's pinned revision hash. */
+/** The revision hash the committed fixture pins (`m_EditorVersionWithRevision`). */
 export const REQUIRED_UNITY_EDITOR_REVISION = "ab2b18a5f80dcba39fd8f5ee57b07edc7c0f600f";
 
-/** A project's pinned editor version (from ProjectSettings/ProjectVersion.txt). */
+/** A project's pinned editor version (parsed from ProjectVersion.txt). */
 export interface UnityProjectVersionPin {
+  /** e.g. `6000.0.23f1` */
   version: string;
+  /** The 40-hex revision hash when `m_EditorVersionWithRevision` carries one. */
   revision: string | null;
 }
 
@@ -108,52 +113,127 @@ export type UnityVersionContractResult =
   | { ok: true; version: string; revision: string | null }
   | {
       ok: false;
-      code:
-        | "editor-version-missing"
-        | "editor-version-incompatible"
-        | "editor-revision-incompatible";
+      code: "editor-version-missing" | "editor-version-incompatible" | "editor-revision-incompatible";
       reason: string;
     };
 
-/** Parse `ProjectSettings/ProjectVersion.txt` content. RED stub: not implemented. */
+const PROJECT_VERSION_KEY = /^m_EditorVersion:\s*(\S+)\s*$/;
+const PROJECT_VERSION_WITH_REVISION_KEY = /^m_EditorVersionWithRevision:\s*(\S+)(?:\s+\(([0-9a-f]{12,64})\))?\s*$/;
+
+/**
+ * Parse `ProjectSettings/ProjectVersion.txt` content into an exact pin.
+ * Fails closed (null) when `m_EditorVersion` is missing or malformed, when a
+ * `m_EditorVersionWithRevision` line is present but malformed (including an
+ * absent or non-hex hash), or when the two lines disagree — never returns a
+ * partial guess.
+ */
 export function parseProjectVersionFile(content: string): UnityProjectVersionPin | null {
-  void content;
-  return null;
+  if (typeof content !== "string") {
+    return null;
+  }
+  let version: string | null = null;
+  let revision: string | null = null;
+  let sawPrimaryVersionKey = false;
+  for (const rawLine of content.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (line === "") {
+      continue;
+    }
+    if (/^m_EditorVersion:/.test(line)) {
+      const match = PROJECT_VERSION_KEY.exec(line);
+      if (match === null || !UNITY_VERSION_PATTERN.test(match[1] ?? "")) {
+        return null; // present but malformed — fail closed, never a guess
+      }
+      const candidate = match[1] ?? "";
+      if (sawPrimaryVersionKey && version !== candidate) {
+        return null; // duplicate disagreeing m_EditorVersion lines
+      }
+      sawPrimaryVersionKey = true;
+      version = candidate;
+      continue;
+    }
+    if (/^m_EditorVersionWithRevision:/.test(line)) {
+      const match = PROJECT_VERSION_WITH_REVISION_KEY.exec(line);
+      if (match === null) {
+        return null; // present but malformed (bad version or bad/missing hash) — fail closed
+      }
+      const candidateVersion = match[1] ?? "";
+      const candidateRevision = match[2] ?? null;
+      if (!UNITY_VERSION_PATTERN.test(candidateVersion)) {
+        return null;
+      }
+      if (candidateRevision !== null && !/^[0-9a-f]{12,64}$/.test(candidateRevision)) {
+        return null;
+      }
+      if (version !== null && version !== candidateVersion) {
+        return null; // the two lines disagree — malformed file
+      }
+      if (revision !== null && revision !== candidateRevision) {
+        return null; // duplicate disagreeing revision lines
+      }
+      version = candidateVersion;
+      revision = candidateRevision;
+    }
+  }
+  if (!sawPrimaryVersionKey || version === null) {
+    return null; // the primary m_EditorVersion key is mandatory
+  }
+  return { version, revision };
 }
 
-/** Extract a 40-hex revision from editor `-version` output. RED stub: not implemented. */
+/** Extract a 40-hex revision hash from editor `-version` output, when exposed. */
 export function parseUnityRevisionFromVersionOutput(output: string): string | null {
-  void output;
+  if (typeof output !== "string") {
+    return null;
+  }
+  for (const line of output.split(/\r?\n/)) {
+    const match = /\(([0-9a-f]{40})\)/.exec(line);
+    if (match) {
+      return match[1] ?? null;
+    }
+  }
   return null;
 }
 
 /**
- * Exact editor/project version contract. RED stub: the CURRENT de-facto
- * behavior — the 2022.3 discovery floor, ignoring the project pin and the
- * revision entirely.
+ * The EXACT editor/project version contract (M2-B): the tested editor version
+ * and the project's pinned version must agree exactly — including the
+ * revision where the official installation metadata exposes it. An
+ * incompatible editor is reported as incompatible, never licensed or
+ * verified; an older editor is never silently accepted against a project
+ * that requires a newer version, and a newer editor is not accepted either
+ * (the contract is exact, not a floor).
  */
 export function checkUnityVersionContract(
   editorRawVersion: string | null,
   editorRevision: string | null,
   project: UnityProjectVersionPin,
 ): UnityVersionContractResult {
-  void editorRevision;
-  void project;
-  if (editorRawVersion === null || editorRawVersion === "") {
-    return { ok: false, code: "editor-version-missing", reason: "editor version metadata is missing" };
+  if (editorRawVersion === null || editorRawVersion === "" || !UNITY_VERSION_PATTERN.test(editorRawVersion)) {
+    return {
+      ok: false,
+      code: editorRawVersion === null || editorRawVersion === "" ? "editor-version-missing" : "editor-version-incompatible",
+      reason:
+        editorRawVersion === null || editorRawVersion === ""
+          ? "the editor's version metadata is missing — the version contract cannot be verified (fail closed)"
+          : `the editor version "${editorRawVersion}" does not satisfy the Unity version grammar`,
+    };
   }
-  const parsed = parseUnityVersionLine(editorRawVersion);
-  if (parsed === null) {
-    return { ok: false, code: "editor-version-incompatible", reason: `unparsable editor version "${editorRawVersion}"` };
-  }
-  if (!meetsMinimumUnityVersion(parsed.parsed)) {
+  if (editorRawVersion !== project.version) {
     return {
       ok: false,
       code: "editor-version-incompatible",
-      reason: `editor ${editorRawVersion} is below the minimum supported version`,
+      reason: `editor ${editorRawVersion} does not match the project requirement ${project.version} exactly (the version contract is exact, not a floor)`,
     };
   }
-  return { ok: true, version: editorRawVersion, revision: null };
+  if (editorRevision !== null && project.revision !== null && editorRevision !== project.revision) {
+    return {
+      ok: false,
+      code: "editor-revision-incompatible",
+      reason: `editor revision ${editorRevision} does not match the project requirement ${project.revision}`,
+    };
+  }
+  return { ok: true, version: editorRawVersion, revision: editorRevision };
 }
 
 // ---------------------------------------------------------------------------
