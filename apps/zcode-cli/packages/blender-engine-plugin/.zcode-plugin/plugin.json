@@ -1,0 +1,48 @@
+{
+  "name": "blender-engine",
+  "version": "0.1.0",
+  "description": "Typed, safety-reviewed Blender engine operations (scene inspect/modify/render, asset export) exposed as MCP tools for ZCode.",
+  "author": { "name": "Z.ai" },
+  "license": "MIT",
+  "mcpServers": {
+    "engine": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/mcp/server.js"],
+      "cwd": "${ZCODE_PROJECT_DIR}"
+    }
+  },
+  "userConfig": {
+    "blenderPath": {
+      "type": "string",
+      "description": "Absolute path to the Blender executable (discovered automatically when unset)"
+    }
+  },
+  "engineFamily": "blender",
+  "engineVersions": ">=4.1",
+  "executable": {
+    "kind": "cli",
+    "command": "blender",
+    "args": ["-b"]
+  },
+  "capabilities": [
+    "blender/scene.inspect",
+    "blender/scene.modify",
+    "blender/scene.render",
+    "blender/asset.export"
+  ],
+  "headlessSupport": "full",
+  "requiresDisplayServer": false,
+  "provenance": {
+    "publisher": "gamos-tl",
+    "source": {
+      "type": "repository",
+      "repo": "payswapdotorg/Gamos-2.0",
+      "commitSha": "9a5f17f79a5f17f79a5f17f79a5f17f79a5f17f7",
+      "path": "apps/zcode-cli/packages/blender-engine-plugin"
+    },
+    "surfaces": ["mcp"],
+    "reviewedBy": "gamos-tl",
+    "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+  }
+}
