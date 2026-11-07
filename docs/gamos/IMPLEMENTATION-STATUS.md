@@ -443,23 +443,63 @@ compliant, roadmap validator green, `main` pristine):
    (the app builds and the M1 journey passes with the engine plugins in the
    agent CLI chain).
 
+**M2 handoff audit (§12 "audit every clause … close any remaining soft
+spots") — closed 2026-11-07, branch gamos/roadmap-m2-journeys:**
+
+1. **Shipped provenance exactness (contract 09 §4):** the three plugin
+   manifests + the domain records carried a synthetic `"9a5f17f7".repeat(5)`
+   commitSha (40-hex format-valid, NOT a real commit object; the in-code
+   "replaced at integration time" replacement never happened). RED
+   `bc830b2f` → GREEN `e1d06c77`: all shipped surfaces now carry the REAL
+   source-of-record commit `c9c397a1` (PR #5 integration merge, CI run
+   42356695328), exported as `M2_ENGINE_PLUGIN_SOURCE_COMMIT`; 3 new
+   realness tests (254/254 domain); the m2-e2e domain job additionally
+   verifies object-realness with `git cat-file` on a full-history checkout.
+2. **Desktop packaging chain (directive §5 M2.5 "prove the three plugins are
+   handled by the existing plugin lifecycle"):** the packaged-app staging
+   list (`packages/desktop/scripts/prepare-agent-node-bundle.mjs`
+   officialPluginPackages) omitted the engine plugins — a packaged desktop
+   app could never seed them (the exact restore-legacy-sessions defect
+   class that file documents). Three additive android-emulator-pattern
+   entries, authorized via GAMOS-AUTH-0007 + sanctioned rebaseline rotation.
+3. **§9 in-app journeys — BUILT and passing (local run17, verdict=pass, all
+   M2J0–M2J7; CI job `m2-engine-journey` reruns them):**
+   `scripts/gamos/m2-ui-journey.mjs` + `m2-local-model-server.mjs` +
+   `m2-capability-cli.ts`. The journeys drive the ORIGINAL app: the three
+   engine plugins enabled through the REAL Settings→Plugins toggles
+   (on-disk `plugins.enabledPlugins` verified; app restarted so the session
+   agent resolves the engine MCP servers — engine tools offered: 11);
+   Blender leg = permission DENIAL blocks the mutation (hash unchanged, no
+   artifact) then the approved turn runs the REAL modify+render through the
+   app's MCP plugin path (scene.blend mutated + PNG magic/sha256); Babylon
+   leg = REAL vite build (dist sha256) + REAL dev-server run + THE ORIGINAL
+   ZCODE BROWSER verifying the running experience (in-guest reads: URL +
+   canvas + `__GAMOS_BABYLON_READY__` + live render loop at ~60fps with a
+   live scene graph) + project_stop cancellation (port verified freed);
+   Unity leg = the honest negative path (real marker inspection; structured
+   `unity-editor-unavailable` from the mutation — never fabricated); the
+   session store records all three engines' tool invocations + results.
+   Model endpoint: deterministic local Anthropic-Messages endpoint
+   (disclosed in every evidence artifact; engine tool calls are matched
+   against the tool list the app ACTUALLY offers — the transcript records
+   it; no fabricated tool names).
+4. **GAMOS-AUTH-0008:** three additive `.gitignore` entries for the journey
+   runtime dirs (sanctioned rebaseline rotation).
+
 **Remaining before M2 can be declared complete (exact gates):**
 
 - **M2-G1 (Unity real integration):** requires a runner with a licensed Unity
   Editor — an external, user-controlled prerequisite (Unity Personal/Pro
   activation credentials). The invocation layer is fully implemented and
   scratch-verified against conforming editor emulations (license-required
-  negative path, full add-cube verification, build artifact, timeouts), and
-  the CI job honestly records the unavailable state. Provision
+  negative path, full add-cube verification, build artifact, timeouts), the
+  CI job honestly records the unavailable state, and the §9 journey now
+  proves the honest negative path end-to-end through the app. Provision
   `UNITY_EDITOR_PATH` on a licensed runner to close the gate.
-- **§9 in-app journeys (evidence legs of M2-G2/M2-G3):** the engine layers are
-  CI-proven, but the directive's end-to-end journeys — original ZCode New Task
-  composer → selected model → registry-resolved typed capability → real
-  permission interaction → installed plugin MCP invocation → real engine
-  operation → verified result → session history (plus the ZCode Browser
-  verification of the running Babylon experience for M2-G3's browser leg, and
-  the honest negative paths) — still need to be built on the M1 journey
-  infrastructure (`scripts/gamos/m1-ui-journey.mjs` pattern).
+- **M2-G2/M2-G3 evidence legs:** the engine layers are CI-proven (REQUIRED
+  real-engine jobs) and the §9 journeys are green locally; the
+  `m2-engine-journey` CI job must pass on the PR head to complete these
+  evidence legs with a CI run ID.
 - **evidence/roadmap/M2.json + ROADMAP.json promotion:** correctly blocked
   until every gate has real passing evidence (roadmap validator enforces
   tested-commit binding; no completion is claimed now).
