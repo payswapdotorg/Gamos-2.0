@@ -1,0 +1,46 @@
+{
+  "name": "babylon-engine",
+  "version": "0.1.0",
+  "description": "Typed, safety-reviewed Babylon.js project operations (inspect/build/run) driven by the real Node/Vite toolchain, exposed as MCP tools for ZCode.",
+  "author": { "name": "Z.ai" },
+  "license": "MIT",
+  "mcpServers": {
+    "engine": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/mcp/server.js"],
+      "cwd": "${ZCODE_PROJECT_DIR}"
+    }
+  },
+  "userConfig": {
+    "nodePath": {
+      "type": "string",
+      "description": "Absolute path to the Node.js executable (discovered automatically when unset)"
+    }
+  },
+  "engineFamily": "babylon",
+  "engineVersions": ">=18.0",
+  "executable": {
+    "kind": "server",
+    "command": "node"
+  },
+  "capabilities": [
+    "babylon/project.inspect",
+    "babylon/project.build",
+    "babylon/project.run"
+  ],
+  "headlessSupport": "full",
+  "requiresDisplayServer": false,
+  "provenance": {
+    "publisher": "gamos-tl",
+    "source": {
+      "type": "repository",
+      "repo": "payswapdotorg/Gamos-2.0",
+      "commitSha": "9a5f17f79a5f17f79a5f17f79a5f17f79a5f17f7",
+      "path": "apps/zcode-cli/packages/babylon-engine-plugin"
+    },
+    "surfaces": ["mcp"],
+    "reviewedBy": "gamos-tl",
+    "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+  }
+}

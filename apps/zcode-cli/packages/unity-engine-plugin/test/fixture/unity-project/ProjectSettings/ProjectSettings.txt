@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!129 &1
+PlayerSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 26
+  productGUID: 8b14d0d5a1c24e3f9a4c2d7e5f60ab18
+  companyName: Gamos
+  productName: Gamos Unity Fixture
+  defaultScreenWidth: 1920
+  defaultScreenHeight: 1080
+  runInBackground: 1
+  captureSingleScreen: 0
+  muteOtherAudioSources: 0
+  usePlayerLog: 1
+  resizableWindow: 1
+  fullscreenMode: 3
+  smokeOptions: 0
