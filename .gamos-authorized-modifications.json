@@ -470,6 +470,46 @@
         "date": "2026-11-07T13:45:00Z",
         "decision_ref": "M2 directive §12 (audit and close remaining soft spots) + TL review of the journey-runtime-dirs ignore need"
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0009",
+      "phase": "M2",
+      "date": "2026-11-07T13:55:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "M2 §9 journey branch push (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §11 CI/regression requirements): the repository's pre-push verification chain (verify:pre-push → architecture:check --changed, base merge-base origin/main) flags every engine-plugin source file as unmanaged-new-file — the three first-party engine plugin packages (unity/blender/babylon-engine-plugin, contract 03 §2 gamos/engine-plugin@2) entered the repo in PR #5 after the newFilesEnforcedSince gate timestamp and live under the unmanaged zcode-cli scope without an architecture exception. One additive exceptions entry (gamos-engine-plugins-unmanaged-new-files) registers the three packages' src/**, test/** and vitest.config.ts paths with the exact zcode-cua-unmanaged-new-files precedent (74780b9b registered gamos-domain's configs the same way; the zcode-cua package registered its whole src tree). A dedicated architecture-adoption pass (managed-module split of the plugin packages) remains out of scope for this branch, exactly as documented for zcode-cua. No module, rule, gate timestamp or existing exception is changed.",
+      "risk": "low",
+      "affected_functionality": "architecture-policy.yaml exceptions list only: one additive entry covering the three engine plugin packages' files for the unmanaged-new-file rule. No module definition, dependency rule, gate timestamp or existing exception is modified.",
+      "new_functionality": "The M2 §9 journey branch passes the repository's pre-push architecture verification (verify:pre-push), keeping the established push discipline intact for the engine-plugin delivery.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin $GAMOS_BASELINE_SHA256",
+        "node scripts/gamos/governance-self-test.mjs",
+        "pnpm run architecture:check",
+        "pnpm run architecture:check -- --changed",
+        "pnpm exec vitest run --project gamos-domain"
+      ],
+      "evidence": {
+        "summary": "Pre-push architecture check on the journey branch flagged 20 unmanaged-new-file violations, all engine-plugin files (PR #5 additions). The additive exception follows the zcode-cua precedent; architecture:check (full and --changed) now reports 0 violations.",
+        "links": [
+          "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
+          "PR (gamos/roadmap-m2-journeys): M2 §9 journeys + audit closure"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "architecture-policy.yaml",
+          "content_sha256": "6595d3d76530fd82ebab92c1b1b7448902d278d57b379560f0489d8fb1ba0a1a"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-07T13:55:00Z",
+        "decision_ref": "M2 directive §11 (CI and regression requirements — the new CI must not weaken existing checks; the pre-push chain is part of the repo's verification discipline) + TL review of the zcode-cua-precedent exception"
+      }
     }
   ]
 }
