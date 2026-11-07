@@ -486,20 +486,56 @@ spots") — closed 2026-11-07, branch gamos/roadmap-m2-journeys:**
 4. **GAMOS-AUTH-0008:** three additive `.gitignore` entries for the journey
    runtime dirs (sanctioned rebaseline rotation).
 
+**M2 handoff re-audit + evidence closure (2026-11-07, second pass on the merged
+head `9c775ad8`):**
+
+Every clause of the directive was re-verified against the merged repository
+state, and the three remaining soft spots found were closed:
+
+1. **The `m2-engine-journey` CI evidence leg is now COMPLETE:** run
+   `42379468980` on the merged development head `9c775ad8` (PR #6) passed all
+   five `gamos-m2-e2e` jobs — domain+contracts, real-Blender (M2-G2), real
+   Babylon toolchain (M2-G3 engine layer), honest Unity gate status, and the
+   §9 in-app journeys (verdict `pass`, M2J0–M2J7; journey artifact verified:
+   Blender denial-then-approved mutation with saved `.blend` + rendered PNG
+   sha256s, Babylon real build/dev-server + ORIGINAL ZCode Browser
+   verification with live render-loop reads, Unity honest-negative). The
+   sibling workflows on the same head are green (governance `42379469020`,
+   m1-e2e `42379469001`). With this run, **M2-G2 and M2-G3 have both evidence
+   layers CI-proven** (engine layer + §9 in-app journey).
+2. **Evidence-fidelity fix (blender gate status):** the M2-G2 gate-status JSON
+   carried the literal `${BLENDER_TARBALL_SHA256}` placeholder because the
+   quoted heredoc blocked shell expansion (the tarball hash was genuinely
+   verified in-run via `sha256sum --check --strict`; only the recorded JSON was
+   wrong). Fixed to the Actions template form `${{ env.BLENDER_TARBALL_SHA256 }}`
+   so the machine-readable record now carries the real hash.
+3. **Evidence-retention fix (journey gate statuses):** the three journey-leg
+   gate-status records were written above the artifact upload root and existed
+   only in job logs; they are now written into `evidence/phase-m2/journey-ci/`
+   and retained in the `m2-journey-*` artifact.
+
+Local re-verification on the audited tree: roadmap-check green; roadmap
+self-test 12/12; governance compliant with the rotated trust-anchor pin
+(`7bb6e0bc…`, GAMOS-AUTH-0006/0007/0008/0009 rebaseline chain — the M1-era
+`da3fbbd9…` pin is superseded history); gamos-domain 254/254; unity plugin
+51 passed + 3 honest real-editor skips; architecture check 0 violations;
+shipped provenance exactness re-verified (all three manifests carry the real
+commit `c9c397a1…`, resolves via `git cat-file`).
+
 **Remaining before M2 can be declared complete (exact gates):**
 
-- **M2-G1 (Unity real integration):** requires a runner with a licensed Unity
-  Editor — an external, user-controlled prerequisite (Unity Personal/Pro
-  activation credentials). The invocation layer is fully implemented and
-  scratch-verified against conforming editor emulations (license-required
-  negative path, full add-cube verification, build artifact, timeouts), the
-  CI job honestly records the unavailable state, and the §9 journey now
-  proves the honest negative path end-to-end through the app. Provision
-  `UNITY_EDITOR_PATH` on a licensed runner to close the gate.
-- **M2-G2/M2-G3 evidence legs:** the engine layers are CI-proven (REQUIRED
-  real-engine jobs) and the §9 journeys are green locally; the
-  `m2-engine-journey` CI job must pass on the PR head to complete these
-  evidence legs with a CI run ID.
+- **M2-G1 (Unity real integration) — the sole remaining gate:** requires a
+  runner with a licensed Unity Editor — an external, user-controlled
+  prerequisite (Unity Personal/Pro activation credentials). The invocation
+  layer is fully implemented and scratch-verified against conforming editor
+  emulations (license-required negative path, full add-cube verification,
+  build artifact, timeouts), the CI job honestly records the
+  `unavailable-license` state, and the §9 journey proves the honest negative
+  path end-to-end through the app. Provision `UNITY_EDITOR_PATH` on a
+  licensed runner to close the gate (the `unity-engine-status` job then runs
+  the real integration and records `editor-verified`).
 - **evidence/roadmap/M2.json + ROADMAP.json promotion:** correctly blocked
-  until every gate has real passing evidence (roadmap validator enforces
-  tested-commit binding; no completion is claimed now).
+  until M2-G1 passes (roadmap validator enforces one passed result for every
+  required gate with committed, hash-recomputable evidence paths; no
+  completion is claimed now). M2-G2/M2-G3/M2-G4/M2-G5 evidence legs are
+  complete and CI-recorded per above.

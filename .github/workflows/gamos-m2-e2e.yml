@@ -148,11 +148,16 @@ jobs:
         if: always()
         run: |
           mkdir -p evidence/phase-m2
+          # NOTE: the heredoc delimiter is quoted (<<'JSON') so the shell does
+          # NOT expand ${...}; the tarball hash therefore uses the Actions
+          # template form ${{ env.* }} which the runner expands before the
+          # shell sees it (audit fix: the previous "${BLENDER_TARBALL_SHA256}"
+          # shell form stayed a literal placeholder in the recorded JSON).
           cat > evidence/phase-m2/blender-gate-status.json <<'JSON'
           {
             "gate_id": "M2-G2",
             "job": "blender-real-engine",
-            "engine": { "family": "blender", "version": "4.1.1", "source": "download.blender.org release tarball", "tarball_sha256": "${BLENDER_TARBALL_SHA256}" },
+            "engine": { "family": "blender", "version": "4.1.1", "source": "download.blender.org release tarball", "tarball_sha256": "${{ env.BLENDER_TARBALL_SHA256 }}" },
             "status": "engine-verified",
             "recorded_at": "${{ github.run_id }}-${{ github.run_attempt }}"
           }
@@ -354,7 +359,11 @@ jobs:
       - name: Write the M2-G2/M2-G3 journey-leg gate statuses
         if: always()
         run: |
-          mkdir -p evidence/phase-m2
+          # The three machine-readable gate-status records are written INTO
+          # journey-ci/ so the artifact upload (path: evidence/phase-m2/journey-ci/)
+          # retains them — audit fix: they previously landed one level above the
+          # upload root and existed only in the job logs.
+          mkdir -p evidence/phase-m2/journey-ci
           python3 - <<'PY'
           import json, os
           path = "evidence/phase-m2/journey-ci/m2-journey-evidence.json"
@@ -366,7 +375,7 @@ jobs:
               babylon = m2.get("babylon", {})
               unity = m2.get("unity", {})
               verdict = d.get("summary", {}).get("verdict")
-              open("evidence/phase-m2/blender-journey-gate-status.json", "w").write(json.dumps({
+              open("evidence/phase-m2/journey-ci/blender-journey-gate-status.json", "w").write(json.dumps({
                   "gate_id": "M2-G2",
                   "layer": "in-app journey (directive §9)",
                   "status": "journey-verified" if verdict == "pass" and blender.get("render_png_sha256") else "not-verified",
@@ -375,7 +384,7 @@ jobs:
                   "render_png_sha256": blender.get("render_png_sha256"),
                   **entry,
               }, indent=2))
-              open("evidence/phase-m2/babylon-journey-gate-status.json", "w").write(json.dumps({
+              open("evidence/phase-m2/journey-ci/babylon-journey-gate-status.json", "w").write(json.dumps({
                   "gate_id": "M2-G3",
                   "layer": "in-app journey (directive §9) incl. the ZCode Browser verification",
                   "status": "journey-verified" if verdict == "pass" and babylon.get("browser_verified", {}).get("babylon_ready_flag") else "not-verified",
@@ -384,7 +393,7 @@ jobs:
                   "browser_verified": babylon.get("browser_verified"),
                   **entry,
               }, indent=2))
-              open("evidence/phase-m2/unity-journey-status.json", "w").write(json.dumps({
+              open("evidence/phase-m2/journey-ci/unity-journey-status.json", "w").write(json.dumps({
                   "gate_id": "M2-G1",
                   "layer": "in-app journey (directive §9) — honest negative path",
                   "status": "honest-unavailable" if unity.get("honest_unavailable") else "not-verified",
@@ -395,9 +404,9 @@ jobs:
           else:
               print("journey evidence missing — statuses not written")
           PY
-          cat evidence/phase-m2/blender-journey-gate-status.json 2>/dev/null || true
-          cat evidence/phase-m2/babylon-journey-gate-status.json 2>/dev/null || true
-          cat evidence/phase-m2/unity-journey-status.json 2>/dev/null || true
+          cat evidence/phase-m2/journey-ci/blender-journey-gate-status.json 2>/dev/null || true
+          cat evidence/phase-m2/journey-ci/babylon-journey-gate-status.json 2>/dev/null || true
+          cat evidence/phase-m2/journey-ci/unity-journey-status.json 2>/dev/null || true
       - name: Upload M2 journey evidence
         if: always()
         uses: actions/upload-artifact@v4
