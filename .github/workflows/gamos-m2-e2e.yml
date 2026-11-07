@@ -60,6 +60,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: the shipped-provenance realness step below verifies the
+          # manifests' commitSha values against real git objects (git cat-file).
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: "24.14.0"
@@ -72,6 +76,21 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - name: Focused gamos-domain tests (provenance, engine-plugin, Worker C security)
         run: pnpm exec vitest run --project gamos-domain
+      - name: Verify shipped provenance commitSha values are REAL git objects (M2 audit)
+        run: |
+          set -e
+          for f in apps/zcode-cli/packages/unity-engine-plugin/.zcode-plugin/plugin.json \
+                   apps/zcode-cli/packages/blender-engine-plugin/.zcode-plugin/plugin.json \
+                   apps/zcode-cli/packages/babylon-engine-plugin/.zcode-plugin/plugin.json; do
+            sha=$(python3 -c "import json;print(json.load(open('$f'))['provenance']['source']['commitSha'])")
+            echo "$f -> $sha"
+            t=$(git cat-file -t "$sha" 2>/dev/null || true)
+            if [ "$t" != "commit" ]; then
+              echo "::error::$f provenance commitSha $sha is not a real commit object in this repository (contract 09 §4 exact provenance)"
+              exit 1
+            fi
+          done
+          echo "shipped provenance commitSha values verified against real git objects"
       - name: Typecheck the three engine plugins
         run: |
           for pkg in unity-engine-plugin blender-engine-plugin babylon-engine-plugin; do
