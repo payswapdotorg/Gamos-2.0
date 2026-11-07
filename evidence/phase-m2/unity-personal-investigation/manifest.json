@@ -1,0 +1,65 @@
+{
+  "purpose": "M2-G1 Unity Personal licensing investigation evidence (maintainer directive 2026-11-07: no paid Unity licenses; verify eligibility; determine the least-expensive compliant provisioning path; respect Unity build-machine licensing; keep credentials/license material out of Git)",
+  "recorded_at": "2026-11-07T16:36:00Z",
+  "investigated_by": "Gamos TL",
+  "retrieval_environment": "Gamos dev sandbox (plain HTTPS GET via curl; agent-browser blocked by unity.com bot protection \u2014 recorded in sandbox-capability.txt)",
+  "verification_gap": "https://unity.com/legal/software-terms (the Unity Editor Software Terms EULA) is bot/geo-blocked from the sandbox network (HTTP 404 shell) \u2014 the exact Personal machine-count / build-machine clause could NOT be verified from this environment and MUST be read by the maintainer from a normal browser before any CI license activation is relied upon",
+  "files": [
+    {
+      "file": "pricing-excerpt.txt",
+      "source_url": "https://unity.com/pricing",
+      "description": "official Unity plans & pricing page \u2014 Personal eligibility thresholds",
+      "sha256": "aef21067a2fa69cd0a39bb0c6f6e3b9a2495cf971dca844457398bfe6b4fe20f",
+      "bytes": 2438
+    },
+    {
+      "file": "cli-activation-excerpt.txt",
+      "source_url": "https://docs.unity.com/en-us/engine/current/manual/get-started/install-and-upgrade/licenses-and-activation/managing-your-unity-license",
+      "description": "official docs \u2014 command-line activation scope; Personal = Unity Hub sign-in only",
+      "sha256": "02663c72273931bb2ee5d08d74b43752e7e595ab652b38799df80795e9861bbf",
+      "bytes": 2218
+    },
+    {
+      "file": "manual-activation-excerpt.txt",
+      "source_url": "https://docs.unity.com/en-us/engine/current/manual/get-started/install-and-upgrade/licenses-and-activation/manual-license-activation",
+      "description": "official docs \u2014 manual .ulf activation is Enterprise/Industry/legacy-serial only",
+      "sha256": "b869cdbc11458885c9f97670f08bba525be65ff9b74e03d20376493f082d28e7",
+      "bytes": 657
+    },
+    {
+      "file": "activation-faq-excerpt.txt",
+      "source_url": "https://docs.unity.com/en-us/engine/current/manual/get-started/install-and-upgrade/licenses-and-activation/activation-faq",
+      "description": "official docs \u2014 license file locations; two-computers wording (paid); free-version entity threshold; build-server rate-limit row",
+      "sha256": "a5b61076a9df4eed61687bd6b16ac77c788f8bc39c0c3a901cdd8bcb7bdb4173",
+      "bytes": 2910
+    },
+    {
+      "file": "license-overview-excerpt.txt",
+      "source_url": "https://docs.unity.com/en-us/engine/current/manual/get-started/install-and-upgrade/licenses-and-activation/license-overview",
+      "description": "official docs \u2014 named-user / serial / floating licensing models",
+      "sha256": "e4978adc8fff6d49bdf6e08e4a3f672e62d038d63d9b560cc6d92e750b4e5b55",
+      "bytes": 1599
+    },
+    {
+      "file": "tos-authorized-user-excerpt.txt",
+      "source_url": "https://unity.com/legal/terms-of-service",
+      "description": "official Unity Terms of Service \u2014 Authorized Users definition; node-locked per-user machine counts per Additional Terms",
+      "sha256": "1f4338de6c537e08331d717603411d7b21a8e8f73a0c38e5120092a63dcaa78c",
+      "bytes": 1717
+    },
+    {
+      "file": "gameci-community-reference.txt",
+      "source_url": "https://game.ci/docs/github/activation",
+      "description": "THIRD-PARTY community reference (not Unity terms) \u2014 the widely used Personal-on-CI mechanism",
+      "sha256": "86e937a42912f901b700bb3102dd053cf52abafe8ca510f6a3c14c6df78b18bf",
+      "bytes": 1775
+    },
+    {
+      "file": "sandbox-capability.txt",
+      "source_url": "local command record",
+      "description": "honest record of why the existing dev sandbox cannot host the Unity Editor",
+      "sha256": "5f6b9a4be7d44c24e9f408db195aa649a481fb454828002908eaa23c8aff5ad9",
+      "bytes": 2837
+    }
+  ]
+}

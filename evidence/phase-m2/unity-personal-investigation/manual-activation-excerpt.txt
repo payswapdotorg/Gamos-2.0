@@ -1,0 +1,6 @@
+SOURCE: https://docs.unity.com/en-us/engine/current/manual/get-started/install-and-upgrade/licenses-and-activation/manual-license-activation
+RETRIEVED: 2026-11-07 (Gamos dev sandbox, plain HTTPS GET)
+
+=== Manual (.ulf) activation eligibility (verbatim) ===
+If you can't activate your license via the Unity Hub or the command line , you can activate your license manually if you have an assigned seat on a Unity Enterprise or Unity Industry subscription, or a legacy serial key. 
+ Topic Description Introduction to manual license activation Understand the manual license activation process if you can't activate via the Hub or command line. Submit a license 

@@ -1,0 +1,11 @@
+SOURCE: https://docs.unity.com/en-us/engine/current/manual/get-started/install-and-upgrade/licenses-and-activation/license-overview
+RETRIEVED: 2026-11-07 (Gamos dev sandbox, plain HTTPS GET)
+
+=== Licensing models (verbatim) ===
+Named user licensing (NUL) is a seat-based licensing solution designed for individual users in a network-connected environment. Users can be members in one or more organizations, with one or more subscriptions. When a user signs in, they're granted all the entitlements from their organizations' subscriptions. 
+ Named user licensing requires an internet connection and requires you to sign in to the Unity Hub or the Unity Editor with your Unity ID credentials. Signing in activates your license on the current computer. To move your license to another computer, sign out of Unity applications, then sign in on another computer to continue your work there. 
+ The license provides a grace period, in 
+
+=== Floating licensing is an org/license-server model (verbatim) ===
+Floating licensing is a concurrency-based model designed for complex projects or larger organizations that need to support multiple users at the same time. 
+ With this model, your organization sets up an on-premises licensing server, and buys a pool of licenses large enough to accommodate its members who use Unity concurrently. Whenever an organization member starts the Unity Editor from a client computer connected to the licensing server, the server removes a license from the pool. The server assigns that license to the client computer and the license can be used there for a session. When the

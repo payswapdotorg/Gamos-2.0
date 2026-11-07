@@ -1,0 +1,13 @@
+SOURCE: https://unity.com/pricing (official Unity plans & pricing page)
+RETRIEVED: 2026-11-07T16:0xZ via plain HTTPS GET (curl -L) from the Gamos dev sandbox
+NOTE: this page is server-rendered HTML; the excerpt below is the plan-eligibility
+FAQ text extracted verbatim from the served document.
+
+=== Unity Personal eligibility (verbatim) ===
+What Unity plan am I eligible to use? Unity Personal Individuals, hobbyists, and small businesses using Unity to provide services to others are eligible to use Unity Personal if their respective clients, in the aggregate, have less than $200K USD of revenue or funds raised in the prior 12 months. Individuals, hobbyists, and small businesses using Unity but not providing services to a third party are eligible to use Unity Personal if (i) for small businesses, if their aggregate gross revenue and funding are less than $200K USD, or (ii) for individuals and hobbyists if the amount generated in connection with their use of Unity is less than $200K USD. Unity Student Students enrolled in an accredited educational institution of legal age to consent to the collection and processing of their personal information (e.g., age 13 in the U.S., 16 in the E.U.) are eligible to use the free Unity Student plan. Unity Pro and Enterprise Effective January 1, 2025 upon plan purchase or renewal: Unity Pro will be required for businesses with revenue or funding greater than $200K USD in the last 12 months, and for those who do work with them. Unity Enterprise will be required for businesses with revenue or funding greater than $25 million USD in the last 12 months. Even if you make less than these thresholds, you can purchase Unity Pro and Unity Enterprise subscriptions at any time to take advantag
+
+=== Unity Industry applicability (verbatim) ===
+Unity Industry Unity Industry plan is required if you create applications outside of games or entertainment and your company’s total finances exceed $1,000,000 USD. Unity Industry’s features, add-ons, onboarding, and support options are tailored to your needs. All plans are subject to Unity Terms of
+
+=== Plan headline prices (verbatim) ===
+Unity Personal Free Get started Unity Pro from $2,310.00 /yr Choose plan Unity Enterprise Custom pricing Contact Sales Unity Industry Custom pricing Contact Sales Create Unity Engine Unity AI Monthly subscription required Unity AI Gateway Monthly subscription required Unity AI Credits Monthly subscr
