@@ -159,8 +159,6 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - name: Run the babylon-engine-plugin real integration suite
         run: pnpm --filter @zcode/babylon-engine-plugin exec vitest run test/engine-real-babylon.integration.test.ts
-        env:
-          BABYLON_NODE_PATH: /usr/local/bin/node
       - name: Write the engine-layer status (browser-verification journey is separate)
         if: always()
         run: |
