@@ -345,3 +345,42 @@ but was never codified as a CI step — no workflow executed the vitest
 
 No evidence record, gate result, tested-commit binding or roadmap state was
 altered by this audit; the change is CI hardening plus this ledger entry.
+
+## M2 directive §4 provenance preflight — finding and remediation (2026-11-07)
+
+**Finding (material M1 conformance defect, honestly recorded):** the M1 domain
+implementation carried a NON-canonical provenance shape:
+`packages/gamos-domain/src/domain/capability-registry.ts` exported
+`ProvenanceRef { publisher: "official"|"community"|"local"; source: string;
+commitSha?; verifiedAt? }` and `plugin-trust.ts` exported
+`PluginProvenance { publisher: "official"|"gamos-tl"|"community"; source:
+string; commitSha?; reviewRef? }` — while frozen contract 09 §4 defines
+`gamos/provenance@2` as `publisher: "zcode-official"|"gamos-tl"|"community"`
+with a STRUCTURED source (`{ type: "marketplace"; marketplaceId; version;
+sha256 }` or `{ type: "repository"; repo; commitSha; path }`), optional
+`surfaces`, `reviewedBy` and `reviewRef`. The two implementations also
+diverged from each other. No M1 gate or evidence record claimed canonical
+provenance conformance — the M1 gates exercised fail-closed registration and
+the provenance field's presence — but the M1 journey's capability snapshot
+(`evidence/phase-b/m1-closure-ci-evidence.json`) truthfully records the
+legacy-shape provenance that ran at the time. **M1 history and evidence are
+left intact.**
+
+**Remediation (TDD, this change):** a canonical shared module
+`packages/gamos-domain/src/domain/provenance.ts` implements
+`gamos/provenance@2` exactly per contract 09 §4; BOTH capability records
+(contract 02) and engine-plugin records (contract 03) now validate against
+the same canonical semantics (one schema, two consumers). Legacy shapes fail
+closed with structured reasons. Contract 09 was NOT modified (hash-protected;
+the implementation was corrected to the contract, not vice versa). New
+capability: `provenance-unresolvable` (contract 09 §3 rule 7 — explicit
+disabled/rejected state when a provenance reference cannot be resolved,
+injected as a pure resolver hook) and `provenance-surface-uncovered`
+(uncovered shipped content fails closed). RED commit `b0bb1df7` (suite fails
+on the missing canonical module; 183/183 existing tests unaffected) → GREEN
+commit `6bbe16d5` (205/205 domain tests, 22 new canonical-conformance tests
+covering all eight required preflight behaviors). The M1 journey CLI
+(`scripts/gamos/m1-context-cli.ts`) now registers its capability with
+canonical repository provenance carrying the exact CI commit
+(`GAMOS_SOURCE_COMMIT`), so every future m1-e2e run exercises the canonical
+chain.
