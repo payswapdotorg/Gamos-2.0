@@ -72,6 +72,19 @@ const requiredDevPluginRuntimeBuilds = [
     packageName: "@zcode/node-repl-host",
     artifactPath: "node-repl-host/dist/mcp/server.js",
   },
+  // Gamos M2 引擎插件（plugin.json 均声明 mcpServers —— 按本清单的登记规则必须构建并校验）。
+  {
+    packageName: "@zcode/unity-engine-plugin",
+    artifactPath: "unity-engine-plugin/dist/mcp/server.js",
+  },
+  {
+    packageName: "@zcode/blender-engine-plugin",
+    artifactPath: "blender-engine-plugin/dist/mcp/server.js",
+  },
+  {
+    packageName: "@zcode/babylon-engine-plugin",
+    artifactPath: "babylon-engine-plugin/dist/mcp/server.js",
+  },
   {
     // browser-use 自己的 runtime 只剩 browser-client；宿主不再由它携带。
     packageName: "@zcode/browser-use-plugin",

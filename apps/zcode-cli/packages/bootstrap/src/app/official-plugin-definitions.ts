@@ -469,6 +469,67 @@ export const OFFICIAL_PLUGIN_DEFINITIONS: readonly OfficialPluginDefinition[] = 
     ],
     version: "0.4.2",
   },
+  // Gamos M2 first-party engine integrations (gamos/engine-plugin@2, contract 03 §2).
+  // 重负载引擎插件与 android-emulator/ios-simulator 同类：默认关闭，用户显式启用。
+  // MCP server 产物在构建后生成（dist/mcp/server.js），requiredSeedPaths 不钉 dist
+  // ——与 android-emulator 一致（其定义同样不钉 dist，运行时产物由构建管线提供）。
+  {
+    listing: {
+      author: ZAI_AUTHOR,
+      category: "utilities",
+      displayName: "Unity Engine",
+      displayName_i18n: { "zh-CN": "Unity 引擎" },
+      description_i18n: {
+        "zh-CN": "Unity 项目的类型化检视、场景修改与构建（真实 Editor 批处理通道）。",
+      },
+    },
+    name: "unity-engine",
+    rootCandidates: [
+      "packages/unity-engine-plugin",
+      "../unity-engine-plugin",
+      "../../unity-engine-plugin",
+      "../../../unity-engine-plugin",
+    ],
+    version: "0.1.0",
+  },
+  {
+    listing: {
+      author: ZAI_AUTHOR,
+      category: "utilities",
+      displayName: "Blender Engine",
+      displayName_i18n: { "zh-CN": "Blender 引擎" },
+      description_i18n: {
+        "zh-CN": "Blender 场景的类型化检视、修改、渲染与资产导出（受审 bpy 桥接，无任意 Python）。",
+      },
+    },
+    name: "blender-engine",
+    rootCandidates: [
+      "packages/blender-engine-plugin",
+      "../blender-engine-plugin",
+      "../../blender-engine-plugin",
+      "../../../blender-engine-plugin",
+    ],
+    version: "0.1.0",
+  },
+  {
+    listing: {
+      author: ZAI_AUTHOR,
+      category: "utilities",
+      displayName: "Babylon Engine",
+      displayName_i18n: { "zh-CN": "Babylon 引擎" },
+      description_i18n: {
+        "zh-CN": "Babylon.js 项目的类型化检视、构建与开发运行时（声明式脚本，端口健康管理）。",
+      },
+    },
+    name: "babylon-engine",
+    rootCandidates: [
+      "packages/babylon-engine-plugin",
+      "../babylon-engine-plugin",
+      "../../babylon-engine-plugin",
+      "../../../babylon-engine-plugin",
+    ],
+    version: "0.1.0",
+  },
 ];
 
 // 在 official plugin 定义里标了 defaultEnabled: true 的, 拼成 `<name>@<marketplace>` 形式,

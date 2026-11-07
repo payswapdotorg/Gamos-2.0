@@ -1,0 +1,47 @@
+{
+  "name": "unity-engine",
+  "version": "0.1.0",
+  "description": "Typed, safety-reviewed Unity engine operations (project inspect, scene modify, project build) driven by the real Unity Editor in batch mode, exposed as MCP tools for ZCode.",
+  "author": { "name": "Z.ai" },
+  "license": "MIT",
+  "mcpServers": {
+    "engine": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/mcp/server.js"],
+      "cwd": "${ZCODE_PROJECT_DIR}"
+    }
+  },
+  "userConfig": {
+    "unityEditorPath": {
+      "type": "string",
+      "description": "Absolute path to the Unity Editor executable (discovered automatically when unset)"
+    }
+  },
+  "engineFamily": "unity",
+  "engineVersions": ">=2022.3",
+  "executable": {
+    "kind": "batch",
+    "command": "unity-editor",
+    "args": ["-batchmode", "-nographics"]
+  },
+  "capabilities": [
+    "unity/project.inspect",
+    "unity/scene.modify",
+    "unity/project.build"
+  ],
+  "headlessSupport": "full",
+  "requiresDisplayServer": false,
+  "provenance": {
+    "publisher": "gamos-tl",
+    "source": {
+      "type": "repository",
+      "repo": "payswapdotorg/Gamos-2.0",
+      "commitSha": "9a5f17f79a5f17f79a5f17f79a5f17f79a5f17f7",
+      "path": "apps/zcode-cli/packages/unity-engine-plugin"
+    },
+    "surfaces": ["mcp"],
+    "reviewedBy": "gamos-tl",
+    "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+  }
+}

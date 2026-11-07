@@ -332,6 +332,64 @@
         "date": "2026-11-05T20:50:00Z",
         "decision_ref": "M1 directive Part I §3 (TL autonomy for M1 implementation within frozen contracts) + TDD RED evidence 70c6352f; reviewed on gamos/roadmap-integration"
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0006",
+      "phase": "M2",
+      "date": "2026-11-07T08:30:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "Roadmap M2.5/TL integration (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §5 M2.5 + §11; branch gamos/roadmap-m2-integration): register the three first-party engine plugins (unity-engine/blender-engine/babylon-engine, contract 03 §2 gamos/engine-plugin@2, all purely additive packages) into the EXISTING ZCode plugin lifecycle. Four baseline-tracked files require minimal additive modification: (1) official-plugin-definitions.ts — three new OfficialPluginDefinition entries (default-off like android-emulator/ios-simulator, listings, no dist-pinned requiredSeedPaths) so the plugins seed through the standard bundled-plugins path and the marketplace/settings surfaces see them; (2) sea-official-plugin-assets.mjs — three officialSeaPlugins entries with dist/mcp/server.js runtime paths so SEA builds embed and mechanically validate the engine MCP servers; (3) scripts/build-desktop-agent-cli.mjs — three requiredDevPluginRuntimeBuilds entries enforcing the file's own declared rule 'every official plugin whose plugin.json declares mcpServers must be registered here', so the agent CLI chain builds the engine MCP servers and verifies the real entry files before the agent bundle starts; (4) pnpm-lock.yaml — regenerated via pnpm install --lockfile-only so the frozen-lockfile CI install resolves the three new workspace packages (M1 GAMOS-AUTH-0005 precedent for registering a new workspace package in the lockfile). No governance control file, frozen contract or protected upstream behavior is altered; the additive engine-plugin packages themselves are new files (additive allowed).",
+      "risk": "medium",
+      "affected_functionality": "Plugin lifecycle registration surfaces only: official plugin definitions/seed listings, SEA asset collection, desktop agent CLI build chain, pnpm lockfile. No existing plugin's definition, seeding or build is changed (additions only); the ZCode application runtime behavior for existing plugins is untouched.",
+      "new_functionality": "The three engine plugins become first-class official plugins: seeded via bundled-plugins, listed in settings/marketplace surfaces (default-off), built + runtime-verified by the agent CLI chain, embedded in SEA builds, and resolvable by the frozen-lockfile workspace install.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin $GAMOS_BASELINE_SHA256",
+        "node scripts/gamos/governance-self-test.mjs",
+        "pnpm run architecture:check",
+        "pnpm exec vitest run --project gamos-domain",
+        "pnpm --filter @zcode/unity-engine-plugin exec tsc --noEmit && pnpm --filter @zcode/blender-engine-plugin exec tsc --noEmit && pnpm --filter @zcode/babylon-engine-plugin exec tsc --noEmit",
+        "bootstrap alignment test (apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts 'keeps every bundled plugin package, manifest, and seed version aligned')",
+        "apps/zcode-cli/packages/cli/tests/build-sea.test.mjs ('keeps SEA official plugin versions aligned with package and plugin manifests')"
+      ],
+      "evidence": {
+        "summary": "TL-reviewed engine-plugin integration: Worker A RED->GREEN vertical slices (blender 58560e20/34fcd448 26/26 incl. 6 real-Blender-4.1.1 integration tests; babylon 4f35882c/6983152d 35/35 incl. 6 real-Node/Vite integration tests; unity 58885430/e330bbc9 54/54 with honest no-editor skip per directive §8); Worker C adversarial package validator 251/251 domain tests incl. the three SHIPPED manifests INTEGRATE-validated; gamos-m2-e2e CI workflow with REQUIRED real-engine jobs. All alignment invariants verified (definition == manifest == package versions; SEA entries aligned; agent-CLI runtime artifacts verified post-build).",
+        "links": [
+          "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
+          "docs/gamos/IMPLEMENTATION-STATUS.md",
+          "PR #5 (gamos/roadmap-m2-integration)"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "apps/zcode-cli/packages/bootstrap/src/app/official-plugin-definitions.ts",
+          "content_sha256": "8a8f483635e92960395ab028aab9c5796b8ae0c9056ec35c7d083c9882354c74"
+        },
+        {
+          "action": "modify",
+          "path": "apps/zcode-cli/packages/cli/scripts/sea-official-plugin-assets.mjs",
+          "content_sha256": "d13d91db972fd14eba706f75039888754543de8cbadd3f8b2827822f1f9ef5c2"
+        },
+        {
+          "action": "modify",
+          "path": "scripts/build-desktop-agent-cli.mjs",
+          "content_sha256": "71245ce361315561d88f6989346f7ce8498c06d37ccd0461c66531ab4ffef256"
+        },
+        {
+          "action": "modify",
+          "path": "pnpm-lock.yaml",
+          "content_sha256": "b5ef95e5416f481e7e37cc11dae5027b63e8b0f359e64dc7dda076f9df538b1a"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-07T08:30:00Z",
+        "decision_ref": "M2 directive §5 M2.5/§11 + TL integration review of PR #5 (engine-plugin lifecycle registration; three additive packages, four minimal additive modifications to baseline-tracked registration surfaces)"
+      }
     }
   ]
 }
