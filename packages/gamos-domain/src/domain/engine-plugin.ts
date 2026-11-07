@@ -512,7 +512,7 @@ const babylonCapabilities: readonly CapabilityRecord[] = [
     prerequisites: [
       { id: "babylon-project-root", description: "real Babylon project root" },
       { id: "node-toolchain", description: "Node runtime satisfying the project's engines constraint" },
-      { id: "network-for-dependencies", description: "declared network permission for dependency fetch (hashes recorded)" },
+      { id: "network-for-dependencies", description: "declared network permission for dependency downloads — hashes of fetched artifacts are recorded" },
     ],
     compatibility: { engineVersions: ">=18.0", notes: "dependency fetches use the declared network permission and record fetched artifact hashes (contract 08)" },
     reversibility: { kind: "reversible", notes: "build outputs are additive artifacts" },
