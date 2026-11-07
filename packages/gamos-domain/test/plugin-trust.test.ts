@@ -19,7 +19,16 @@ function officialUiPlugin() {
   return {
     pluginId: "zcode-github",
     surfaces: ["ui"] as const,
-    provenance: { publisher: "official" as const, source: "marketplace:zcode-plugins-official", commitSha: "a".repeat(40) },
+    provenance: {
+      publisher: "zcode-official" as const,
+      source: {
+        type: "marketplace",
+        marketplaceId: "zcode-plugins-official",
+        version: "0.1.4",
+        sha256: "d".repeat(64),
+      },
+      surfaces: ["ui"],
+    },
   };
 }
 
@@ -30,7 +39,13 @@ function communityMcpPlugin(overrides: Record<string, unknown> = {}) {
     mcpServers: [{ name: "blender-bridge", entryPoint: "dist/mcp/server.js" }],
     provenance: {
       publisher: "community" as const,
-      source: "marketplace:community",
+      source: {
+        type: "repository",
+        repo: "example/community-blender-mcp",
+        commitSha: "c".repeat(40),
+        path: ".",
+      },
+      surfaces: ["mcp"],
       reviewRef: "PR #42 (TL-reviewed entry points)",
     },
     processRegime: {
@@ -181,7 +196,16 @@ describe("validatePluginProcessTrust — trust/provenance validation (M1.6)", ()
   it("NEGATIVE: community mcp-carrying plugin without a reviewRef is rejected (contract 09 §4.3)", () => {
     const result = validatePluginProcessTrust(
       communityMcpPlugin({
-        provenance: { publisher: "community" as const, source: "marketplace:community" },
+        provenance: {
+          publisher: "community" as const,
+          source: {
+            type: "repository",
+            repo: "example/community-blender-mcp",
+            commitSha: "c".repeat(40),
+            path: ".",
+          },
+          surfaces: ["mcp"],
+        },
       }),
     );
     expect(result.ok).toBe(false);
@@ -269,7 +293,16 @@ describe("validatePluginProcessTrust — trust/provenance validation (M1.6)", ()
       pluginId: "zcode-official-engine-bridge",
       surfaces: ["mcp"] as const,
       mcpServers: [{ name: "bridge", entryPoint: "dist/mcp/server.js" }],
-      provenance: { publisher: "official" as const, source: "marketplace:zcode-plugins-official", commitSha: "b".repeat(40) },
+      provenance: {
+        publisher: "zcode-official" as const,
+        source: {
+          type: "marketplace",
+          marketplaceId: "zcode-plugins-official",
+          version: "1.0.0",
+          sha256: "e".repeat(64),
+        },
+        surfaces: ["mcp"],
+      },
       processRegime: {
         environmentMinimized: false,
         workingDirectoryContained: false,

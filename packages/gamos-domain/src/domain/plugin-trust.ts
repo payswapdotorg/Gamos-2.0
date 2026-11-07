@@ -20,13 +20,21 @@
 /** Which execution surfaces a plugin declares (must match shipped content). */
 export type PluginSurface = "ui" | "mcp";
 
-/** The provenance ref (contract 09 §4, `gamos/provenance@2` shape). */
-export interface PluginProvenance {
-  readonly publisher: "official" | "gamos-tl" | "community";
-  readonly source: string;
-  readonly commitSha?: string;
-  /** REQUIRED for community/mcp-carrying plugins (contract 09 §4 rule 3). */
-  readonly reviewRef?: string;
+// Canonical provenance semantics (contract 09 §4, `gamos/provenance@2`) — the
+// SAME schema capability records consume (contract 02). One schema, two consumers.
+import { validateProvenanceRef, PROVENANCE_SCHEMA_ID } from "./provenance.js";
+import type { ProvenanceRef } from "./provenance.js";
+
+/** The provenance ref for engine-plugin records — canonical `gamos/provenance@2` (contract 09 §4). */
+export type PluginProvenance = ProvenanceRef;
+
+/** Optional provenance-resolution hook (pure-domain injection point).
+ *  Callers that can actually resolve a provenance reference (marketplace hash
+ *  re-verification, repository lookup) inject this; an unresolvable reference
+ *  yields an explicit rejected state — contract 09 §3 rule 7 (disable on
+ *  unresolvable provenance), never a silent skip. */
+export interface ProvenanceResolutionOptions {
+  resolveProvenance?: (ref: ProvenanceRef) => { resolved: boolean; detail: string };
 }
 
 export interface PluginMcpServerDeclaration {
@@ -81,6 +89,9 @@ export type PluginTrustResult =
       ok: false;
       code:
         | "provenance-missing"
+        | "provenance-invalid"
+        | "provenance-surface-uncovered"
+        | "provenance-unresolvable"
         | "surfaces-mismatch"
         | "community-review-missing"
         | "sandbox-claim"
@@ -104,12 +115,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * Validates a plugin's process-trust declaration. Fail closed on every
- * misrepresentation: missing provenance, surface/content mismatch, prohibited
- * sandbox wording, missing disclosures, unreviewed credential env exposure,
- * missing community least-privilege controls (without explicit full-authority
- * approval). Returns the trust record downstream disclosure surfaces must use.
+ * misrepresentation: missing or non-canonical provenance, surface/content
+ * mismatch, prohibited sandbox wording, missing disclosures, unreviewed
+ * credential env exposure, missing community least-privilege controls
+ * (without explicit full-authority approval). Returns the trust record
+ * downstream disclosure surfaces must use.
+ *
+ * `options.resolveProvenance`, when provided, is invoked with the validated
+ * canonical ref; an unresolvable reference yields the explicit
+ * `provenance-unresolvable` rejected state (contract 09 §3 rule 7).
  */
-export function validatePluginProcessTrust(declaration: unknown): PluginTrustResult {
+export function validatePluginProcessTrust(
+  declaration: unknown,
+  options?: ProvenanceResolutionOptions,
+): PluginTrustResult {
   if (!isRecord(declaration)) {
     return { ok: false, code: "provenance-missing", reason: "plugin declaration must be a non-null object" };
   }
@@ -127,6 +146,19 @@ export function validatePluginProcessTrust(declaration: unknown): PluginTrustRes
     };
   }
 
+  // 1a. Provenance must be canonical `gamos/provenance@2` (contract 09 §4) —
+  //     the same schema capability records consume. Legacy publisher values
+  //     ("official"/"local") and loose-string sources fail closed here.
+  const canonical = validateProvenanceRef(provenance);
+  if (!canonical.ok) {
+    return {
+      ok: false,
+      code: "provenance-invalid",
+      reason: `plugin ${pluginId} provenance is not canonical ${PROVENANCE_SCHEMA_ID}: ${canonical.field} — ${canonical.reason} (contract 09 §4; capability and engine-plugin records share this schema)`,
+    };
+  }
+  const canonicalProvenance = canonical.ref;
+
   // 2. Surfaces declaration must match content (contract 09 §2 consequences).
   const hasMcpContent = mcpServers.length > 0;
   const declaresMcpSurface = surfaces.includes("mcp");
@@ -139,8 +171,8 @@ export function validatePluginProcessTrust(declaration: unknown): PluginTrustRes
   }
 
   // 3. Community mcp-carrying plugins require a reviewRef (contract 09 §4 rule 3).
-  const isCommunity = provenance.publisher === "community";
-  if (isCommunity && declaresMcpSurface && (typeof provenance.reviewRef !== "string" || provenance.reviewRef.length === 0)) {
+  const isCommunity = canonicalProvenance.publisher === "community";
+  if (isCommunity && declaresMcpSurface && (typeof canonicalProvenance.reviewRef !== "string" || canonicalProvenance.reviewRef.length === 0)) {
     return {
       ok: false,
       code: "community-review-missing",
@@ -148,7 +180,35 @@ export function validatePluginProcessTrust(declaration: unknown): PluginTrustRes
     };
   }
 
-  const base = { pluginId, surfaces, provenance };
+  // 3a. When the provenance declares which surfaces it covers, every surface
+  //     the plugin actually ships must be covered — uncovered content is
+  //     unprovenanced content (contract 09 §4 rule 1, fail closed).
+  if (canonicalProvenance.surfaces !== undefined) {
+    const covered = new Set<string>(canonicalProvenance.surfaces);
+    const uncovered = surfaces.filter((s) => !covered.has(s));
+    if (uncovered.length > 0) {
+      return {
+        ok: false,
+        code: "provenance-surface-uncovered",
+        reason: `plugin ${pluginId} ships content on surfaces [${uncovered.join(", ")}] that its provenance does not cover (provenance covers [${[...covered].join(", ")}]) — uncovered engine-plugin content fails closed (contract 09 §4 rule 1)`,
+      };
+    }
+  }
+
+  // 3b. An unresolvable provenance reference produces an explicit rejected/
+  //     disabled state — never a silent skip (contract 09 §3 rule 7).
+  if (options?.resolveProvenance) {
+    const resolution = options.resolveProvenance(canonicalProvenance);
+    if (!resolution.resolved) {
+      return {
+        ok: false,
+        code: "provenance-unresolvable",
+        reason: `plugin ${pluginId} provenance could not be resolved: ${resolution.detail} — the plugin MUST be disabled with an explicit state, not silently skipped (contract 09 §3 rule 7)`,
+      };
+    }
+  }
+
+  const base = { pluginId, surfaces, provenance: canonicalProvenance };
 
   // UI-only plugins carry no MCP process authority to validate.
   if (!declaresMcpSurface) {
