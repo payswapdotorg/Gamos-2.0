@@ -36,7 +36,7 @@
     "source": {
       "type": "repository",
       "repo": "payswapdotorg/Gamos-2.0",
-      "commitSha": "9a5f17f79a5f17f79a5f17f79a5f17f79a5f17f7",
+      "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
       "path": "apps/zcode-cli/packages/babylon-engine-plugin"
     },
     "surfaces": ["mcp"],

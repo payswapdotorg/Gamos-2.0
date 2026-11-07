@@ -209,4 +209,5 @@ export {
   registerEnginePluginCapabilities,
   ENGINE_PLUGIN_CAPABILITIES,
   ENGINE_PLUGIN_METAS,
+  M2_ENGINE_PLUGIN_SOURCE_COMMIT,
 } from "./domain/engine-plugin.js";

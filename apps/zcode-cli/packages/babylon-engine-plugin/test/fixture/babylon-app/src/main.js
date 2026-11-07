@@ -9,10 +9,15 @@ import {
 
 // Real minimal Babylon.js scene: engine, scene, camera, light, ground mesh,
 // render loop. `window.__GAMOS_BABYLON_READY__` flips after the first rendered
-// frame so downstream verification can assert real rendering happened.
+// frame so downstream verification can assert real rendering happened; the
+// engine/scene handles are exposed for the M2 journey's LIVE-behavior
+// assertions (fps > 0 proves the render loop is still producing frames — a
+// static DOM cannot fake engine.getFps()).
 const canvas = document.getElementById("renderCanvas");
 const engine = new Engine(canvas, true);
 const scene = new Scene(engine);
+window.__GAMOS_BABYLON_ENGINE__ = engine;
+window.__GAMOS_BABYLON_SCENE__ = scene;
 
 new ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 10, Vector3.Zero(), scene);
 new HemisphericLight("light", new Vector3(0, 1, 0), scene);

@@ -1538,3 +1538,20 @@ exceptions:
     paths:
       - packages/zcode-cua/src/**
     reason: The whole zcode-cua producer package (broker, native adapters, tools) entered the repo after the gate timestamp as pre-existing code moved from a separate repository; adopting its internal layers needs a dedicated CONTRACT pass (it has known internal cycles by design), not a mechanical split in this branch.
+  # Gamos M2 first-party engine plugins (gamos/engine-plugin@2, contract 03):
+  # 纯新增的第一方包（typed-ops / discovery / engine / MCP server / reviewed
+  # bridges），随 PR #5 进入仓库；与 zcode-cua 同一登记模式——完整架构收编
+  # （模块化分层）需要专门的 CONTRACT pass，不在 M2 §9 旅程分支内做机械拆分。
+  - id: gamos-engine-plugins-unmanaged-new-files
+    rule: unmanaged-new-file
+    paths:
+      - apps/zcode-cli/packages/unity-engine-plugin/src/**
+      - apps/zcode-cli/packages/unity-engine-plugin/test/**
+      - apps/zcode-cli/packages/unity-engine-plugin/vitest.config.ts
+      - apps/zcode-cli/packages/blender-engine-plugin/src/**
+      - apps/zcode-cli/packages/blender-engine-plugin/test/**
+      - apps/zcode-cli/packages/blender-engine-plugin/vitest.config.ts
+      - apps/zcode-cli/packages/babylon-engine-plugin/src/**
+      - apps/zcode-cli/packages/babylon-engine-plugin/test/**
+      - apps/zcode-cli/packages/babylon-engine-plugin/vitest.config.ts
+    reason: The three first-party engine plugin packages (unity/blender/babylon, gamos/engine-plugin@2) entered the repo after the gate timestamp as new additive packages under the unmanaged zcode-cli scope; each is a self-contained typed-operation + MCP-server package with package-level tests. A dedicated architecture-adoption pass (managed-module split) is out of scope for the M2 §9 journey branch; the zcode-cua precedent registers the same class.

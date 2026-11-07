@@ -293,3 +293,79 @@ describe("Worker C — no engine plugin bypasses the registry or lifecycle (M2.5
     }
   });
 });
+
+describe("M2 audit — shipped provenance identifies the REAL integration commit (contract 09 §4)", () => {
+  /**
+   * The M2 handoff audit (§4/§8: "exact provenance") found the shipped provenance
+   * commitSha values were `"9a5f17f7".repeat(5)` — a 40-hex value that passes the
+   * FORMAT check but is NOT a real commit object (the in-code comment said it
+   * would be "replaced by the shipping commit's sha at integration time" and
+   * that replacement never happened). A provenance ref that names a nonexistent
+   * commit cannot identify a repository source: contract 09 §4 requires the
+   * structured source to identify "a repository, commit and path".
+   *
+   * These tests pin the REAL source-of-record commit for the engine plugins'
+   * 0.1.0 line: the PR #5 integration merge that first shipped all three plugin
+   * packages in the integrated tree (CI run 42356695328 verified that exact
+   * tree). The CI workflow additionally proves object-realness with
+   * `git cat-file -t <sha>` (the domain package stays pure — no git subprocess
+   * here; format + exact-value + cross-surface agreement is what the domain can
+   * and must enforce).
+   */
+  const REAL_INTEGRATION_COMMIT = "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00";
+
+  /** Detects synthetic placeholder SHAs: an 8-hex block repeated 5×, all zeros, or all one char. */
+  function isSyntheticPlaceholder(commitSha: string): boolean {
+    if (!/^[0-9a-f]{40}$/.test(commitSha)) return true;
+    if (/^(.)\1{39}$/.test(commitSha)) return true; // "0".repeat(40) etc. (disclosed local-run placeholder)
+    const block = commitSha.slice(0, 8);
+    if (block.repeat(5) === commitSha) return true; // "9a5f17f7".repeat(5) — looks real, is not
+    return false;
+  }
+
+  const pluginDirs = ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin"];
+
+  it("no shipped manifest carries a synthetic/placeholder provenance commitSha", () => {
+    for (const pluginDir of pluginDirs) {
+      const { manifest } = readShippedPlugin(pluginDir);
+      const provenance = manifest.provenance as { source?: { commitSha?: string } };
+      const commitSha = provenance?.source?.commitSha ?? "";
+      expect(
+        isSyntheticPlaceholder(commitSha),
+        `${pluginDir} provenance commitSha ${commitSha} is a synthetic/placeholder value — a shipped provenance ref must identify a REAL repository commit (contract 09 §4)`,
+      ).toBe(false);
+    }
+  });
+
+  it("every shipped manifest identifies the exact real integration commit (PR #5 merge)", () => {
+    for (const pluginDir of pluginDirs) {
+      const { manifest } = readShippedPlugin(pluginDir);
+      const provenance = manifest.provenance as { source?: { commitSha?: string; repo?: string; path?: string } };
+      expect(provenance?.source?.commitSha, `${pluginDir} must carry the real integration commit`).toBe(REAL_INTEGRATION_COMMIT);
+      expect(provenance?.source?.repo).toBe("payswapdotorg/Gamos-2.0");
+    }
+  });
+
+  it("the domain records (metas + capabilities) carry the SAME real commit — no manifest/domain provenance drift", () => {
+    for (const meta of ENGINE_PLUGIN_METAS as EnginePluginMeta[]) {
+      expect(
+        isSyntheticPlaceholder(meta.provenance.source.type === "repository" ? meta.provenance.source.commitSha : ""),
+        `${meta.pluginId} domain meta provenance is synthetic`,
+      ).toBe(false);
+      expect(meta.provenance.source.type).toBe("repository");
+      if (meta.provenance.source.type === "repository") {
+        expect(meta.provenance.source.commitSha).toBe(REAL_INTEGRATION_COMMIT);
+      }
+    }
+    for (const record of ENGINE_PLUGIN_CAPABILITIES) {
+      const source = record.provenance.source;
+      if (source.type === "repository") {
+        expect(
+          isSyntheticPlaceholder(source.commitSha),
+          `${record.id} capability provenance commitSha is synthetic`,
+        ).toBe(false);
+        expect(source.commitSha).toBe(REAL_INTEGRATION_COMMIT);
+      }
+    }
+  });
+});

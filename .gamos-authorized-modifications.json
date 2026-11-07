@@ -390,6 +390,126 @@
         "date": "2026-11-07T08:30:00Z",
         "decision_ref": "M2 directive §5 M2.5/§11 + TL integration review of PR #5 (engine-plugin lifecycle registration; three additive packages, four minimal additive modifications to baseline-tracked registration surfaces)"
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0007",
+      "phase": "M2",
+      "date": "2026-11-07T10:30:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "M2 handoff audit (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §5 M2.5: 'Prove the three plugins are handled by the existing plugin lifecycle' / §12 audit-and-close): GAMOS-AUTH-0006 registered the three engine plugins in the official definitions, SEA asset manifests and the agent-CLI build chain, but the DESKTOP PACKAGING staging list (packages/desktop/scripts/prepare-agent-node-bundle.mjs officialPluginPackages — the chain that copies plugin packages next to the agent bundle for Electron production builds, and the only delivery path for first-party zcode-official seeded plugins in the packaged desktop app) still omits them: without this entry a packaged desktop app cannot seed unity-engine/blender-engine/babylon-engine at all (the exact 'restore-legacy-sessions registered but not staged' defect class that file already documents). The fix is three additive entries following the established android-emulator/ios-simulator pattern (requiresRuntime + dist/mcp/server.js + scripts/build-mcp.mjs + stagedPath packages/<name>); no existing plugin's entry, ordering or staging behavior is changed.",
+      "risk": "medium",
+      "affected_functionality": "Desktop packaging staging list only (officialPluginPackages in prepare-agent-node-bundle.mjs): three additive entries for the engine plugins. No existing plugin's staging, entry or behavior is modified; no governance control file, frozen contract or protected upstream behavior is altered.",
+      "new_functionality": "The packaged (Electron production) desktop app carries the three engine plugins next to the agent bundle so the bundled-plugins filesystem seed stages them into the official plugin cache (default-off), completing the lifecycle registration across ALL delivery surfaces: definitions (AUTH-0006), SEA CLI assets (AUTH-0006), agent-CLI builds (AUTH-0006), and now the desktop packaging chain.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin $GAMOS_BASELINE_SHA256",
+        "node scripts/gamos/governance-self-test.mjs",
+        "pnpm run architecture:check",
+        "pnpm exec vitest run --project gamos-domain",
+        "node scripts/build-desktop-agent-cli.mjs (declared-mcpServers runtime verification covers the engine dists)",
+        "apps/zcode-cli/packages/cli/tests/build-sea.test.mjs ('keeps SEA official plugin versions aligned with package and plugin manifests')"
+      ],
+      "evidence": {
+        "summary": "M2 handoff audit finding: officialPluginPackages omitted the engine plugins (27 staged packages, none engine). RED: the m2 §9 journey cannot seed the plugins through the dev agent without them staged next to the bundle; the packaged desktop app would never carry them. GREEN: three additive android-emulator-pattern entries; the m2 journey stages the same packages for the dev agent (build-output staging, journey-side) and proves enable/disable + MCP invocation end-to-end.",
+        "links": [
+          "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
+          "docs/gamos/IMPLEMENTATION-STATUS.md",
+          "PR (gamos/roadmap-m2-journeys): M2 §9 journeys + audit closure"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "packages/desktop/scripts/prepare-agent-node-bundle.mjs",
+          "content_sha256": "7eff7fec5be0a976f368b9a1506520434140ca0388170025550a269916d88a2b"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-07T10:30:00Z",
+        "decision_ref": "M2 directive §5 M2.5/§12 (audit and close remaining soft spots) + TL review of the packaging-chain gap (engine plugins registered in definitions/SEA/build-chain but absent from officialPluginPackages — the packaged-app delivery path)"
+      }
+    },
+    {
+      "id": "GAMOS-AUTH-0008",
+      "phase": "M2",
+      "date": "2026-11-07T13:45:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "M2 §9 journey support (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §9/§12 audit-and-close): scripts/gamos/m2-ui-journey.mjs runs the original ZCode application against an isolated home (PHASEB_HOME default .phaseb-m2-home under the repo), a staged dev app dir (.phaseb-m2-app) and a debug home used by the renderer-diagnosis probes (.phaseb-m2-debug-home). These are build/test runtime outputs that must never be committed (the same treatment the M1 journey's .phaseb-home staging receives via untracked paths); without the ignore entries a git add -A sweeps isolated app state (including locally generated cert material) into the tree — exactly what the first GREEN commit did before the amend. Three additive ignore lines only; no existing ignore rule is changed or removed.",
+      "risk": "low",
+      "affected_functionality": "Repository ignore list only: three additive directory patterns for the M2 journey's runtime output dirs. No source, build or behavior change.",
+      "new_functionality": "The M2 §9 journey's isolated app homes are kept out of the working-tree status, keeping evidence commits clean.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin $GAMOS_BASELINE_SHA256",
+        "node scripts/gamos/governance-self-test.mjs",
+        "pnpm run architecture:check"
+      ],
+      "evidence": {
+        "summary": "M2 §9 journey GREEN commit initially included .phaseb-m2-debug-home app state; amended out and the ignore entries added so the class of accident cannot recur.",
+        "links": [
+          "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
+          "PR (gamos/roadmap-m2-journeys): M2 §9 journeys + audit closure"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": ".gitignore",
+          "content_sha256": "0fa70c192bc5281ffc7117297298aac4e93d1ae8a1b906547159edb061d91044"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-07T13:45:00Z",
+        "decision_ref": "M2 directive §12 (audit and close remaining soft spots) + TL review of the journey-runtime-dirs ignore need"
+      }
+    },
+    {
+      "id": "GAMOS-AUTH-0009",
+      "phase": "M2",
+      "date": "2026-11-07T13:55:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "M2 §9 journey branch push (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §11 CI/regression requirements): the repository's pre-push verification chain (verify:pre-push → architecture:check --changed, base merge-base origin/main) flags every engine-plugin source file as unmanaged-new-file — the three first-party engine plugin packages (unity/blender/babylon-engine-plugin, contract 03 §2 gamos/engine-plugin@2) entered the repo in PR #5 after the newFilesEnforcedSince gate timestamp and live under the unmanaged zcode-cli scope without an architecture exception. One additive exceptions entry (gamos-engine-plugins-unmanaged-new-files) registers the three packages' src/**, test/** and vitest.config.ts paths with the exact zcode-cua-unmanaged-new-files precedent (74780b9b registered gamos-domain's configs the same way; the zcode-cua package registered its whole src tree). A dedicated architecture-adoption pass (managed-module split of the plugin packages) remains out of scope for this branch, exactly as documented for zcode-cua. No module, rule, gate timestamp or existing exception is changed.",
+      "risk": "low",
+      "affected_functionality": "architecture-policy.yaml exceptions list only: one additive entry covering the three engine plugin packages' files for the unmanaged-new-file rule. No module definition, dependency rule, gate timestamp or existing exception is modified.",
+      "new_functionality": "The M2 §9 journey branch passes the repository's pre-push architecture verification (verify:pre-push), keeping the established push discipline intact for the engine-plugin delivery.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin $GAMOS_BASELINE_SHA256",
+        "node scripts/gamos/governance-self-test.mjs",
+        "pnpm run architecture:check",
+        "pnpm run architecture:check -- --changed",
+        "pnpm exec vitest run --project gamos-domain"
+      ],
+      "evidence": {
+        "summary": "Pre-push architecture check on the journey branch flagged 20 unmanaged-new-file violations, all engine-plugin files (PR #5 additions). The additive exception follows the zcode-cua precedent; architecture:check (full and --changed) now reports 0 violations.",
+        "links": [
+          "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
+          "PR (gamos/roadmap-m2-journeys): M2 §9 journeys + audit closure"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "architecture-policy.yaml",
+          "content_sha256": "6595d3d76530fd82ebab92c1b1b7448902d278d57b379560f0489d8fb1ba0a1a"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-07T13:55:00Z",
+        "decision_ref": "M2 directive §11 (CI and regression requirements — the new CI must not weaken existing checks; the pre-push chain is part of the repo's verification discipline) + TL review of the zcode-cua-precedent exception"
+      }
     }
   ]
 }
