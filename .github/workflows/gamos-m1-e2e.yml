@@ -74,6 +74,7 @@ jobs:
       PHASEB_LOCAL_MODEL: "1"
       PHASEB_MODEL: gamos-m1-deterministic-model
       M1_CONTEXT_CLI: /tmp/m1-context-cli.mjs
+      GAMOS_SOURCE_COMMIT: ${{ github.sha }}
       DISPLAY: ":99"
     steps:
       - uses: actions/checkout@v4

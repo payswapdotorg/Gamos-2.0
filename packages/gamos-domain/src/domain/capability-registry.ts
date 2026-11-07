@@ -11,6 +11,19 @@
  */
 
 import type { EngineFamily } from "./game-concept.js";
+import {
+  validateProvenanceRef,
+  PROVENANCE_SCHEMA_ID,
+} from "./provenance.js";
+
+// Canonical provenance semantics (contract 09 §4, `gamos/provenance@2`) are
+// shared with engine-plugin records — one schema, two consumers.
+export type {
+  ProvenanceRef,
+  ProvenanceSource,
+  ProvenancePublisher,
+  ProvenanceSurface,
+} from "./provenance.js";
 
 /** JSON Schema (draft 2020-12) describing a capability input or output. */
 export interface JsonSchemaSpec {
@@ -39,15 +52,6 @@ export interface AvailabilitySpec {
   readonly state: "available" | "unavailable" | "conditional";
   readonly reason: string;
   readonly prerequisites?: readonly string[];
-}
-
-/** Provenance reference (contract 09): who published this capability and where. */
-export interface ProvenanceRef {
-  readonly publisher: "official" | "community" | "local";
-  /** Repository coordinates or local path identity; never secrets. */
-  readonly source: string;
-  readonly commitSha?: string;
-  readonly verifiedAt?: string;
 }
 
 /** The capability record (schema `gamos/capability@2`, contract 02 §2). */
@@ -210,20 +214,11 @@ export function registerCapability(record: unknown): CapabilityRecord {
 
   const provenance = record.provenance;
   if (!isRecord(provenance)) fail("provenance", "must be an object (contract 09: missing provenance is a registration failure)");
-  const provenancePublisher = provenance.publisher;
-  if (provenancePublisher !== "official" && provenancePublisher !== "community" && provenancePublisher !== "local") {
-    fail("provenance.publisher", 'must be "official" | "community" | "local"');
-  }
-  const provenanceSource = provenance.source;
-  if (typeof provenanceSource !== "string" || provenanceSource.length === 0) {
-    fail("provenance.source", "must be a non-empty string");
-  }
-  const provenanceCommitSha = provenance.commitSha;
-  if (provenanceCommitSha !== undefined && (typeof provenanceCommitSha !== "string" || !/^[0-9a-f]{40}$/.test(provenanceCommitSha))) {
-    fail("provenance.commitSha", "must be a 40-hex git sha when present");
-  }
-  if (provenance.verifiedAt !== undefined && (typeof provenance.verifiedAt !== "string" || !Number.isFinite(Date.parse(provenance.verifiedAt)))) {
-    fail("provenance.verifiedAt", "must be an ISO-8601 timestamp when present");
+  // Canonical `gamos/provenance@2` validation (contract 09 §4) — the same
+  // semantics engine-plugin records consume (shared provenance module).
+  const provenanceValidation = validateProvenanceRef(provenance);
+  if (!provenanceValidation.ok) {
+    fail(provenanceValidation.field, `${provenanceValidation.reason} — canonical ${PROVENANCE_SCHEMA_ID} is required (contract 09 §4; capability and engine-plugin records share this schema)`);
   }
 
   const provider = record.provider;
@@ -329,12 +324,9 @@ export function registerCapability(record: unknown): CapabilityRecord {
       reason: availabilityReason as string,
       ...(availability.prerequisites !== undefined ? { prerequisites: availability.prerequisites as readonly string[] } : {}),
     },
-    provenance: {
-      publisher: provenancePublisher,
-      source: provenanceSource,
-      ...(provenanceCommitSha !== undefined ? { commitSha: provenanceCommitSha } : {}),
-      ...(provenance.verifiedAt !== undefined ? { verifiedAt: provenance.verifiedAt as string } : {}),
-    },
+    // Canonical provenance is retained verbatim (contract 09 §4 retention —
+    // no source, commit, path, publisher, surface or review field is dropped).
+    provenance: provenanceValidation.ref,
     provider: {
       kind: providerKind as CapabilityRecord["provider"]["kind"],
       identity: providerIdentity,

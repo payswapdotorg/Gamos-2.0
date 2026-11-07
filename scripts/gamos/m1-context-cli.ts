@@ -96,7 +96,24 @@ const CAPABILITY = {
   output: { type: "object" as const, properties: { report: { type: "string" } }, required: ["report"] },
   permissions: [{ kind: "command-execution" as const, scope: "read-only", rationale: "filesystem listing only" }],
   availability: { state: "available" as const, reason: "local read-only probes present", prerequisites: [] },
-  provenance: { publisher: "official" as const, source: "gamos-2.0 repository", commitSha: "a".repeat(40) },
+  // Canonical gamos/provenance@2 (contract 09 §4 — M2 directive §4 preflight):
+  // structured repository source with the exact 40-hex commit this CLI runs
+  // from when the CI provides GAMOS_SOURCE_COMMIT; a placeholder 40-hex value
+  // is used only for local manual runs and is disclosed as such.
+  provenance: {
+    publisher: "gamos-tl" as const,
+    source: {
+      type: "repository" as const,
+      repo: "payswapdotorg/Gamos-2.0",
+      commitSha: /^[0-9a-f]{40}$/.test(process.env.GAMOS_SOURCE_COMMIT ?? "")
+        ? (process.env.GAMOS_SOURCE_COMMIT as string)
+        : "0".repeat(40),
+      path: "scripts/gamos/m1-context-cli.ts",
+    },
+    surfaces: ["mcp"] as const,
+    reviewedBy: "gamos-tl",
+    reviewRef: "M1.2 capability registry integration (TL-reviewed)",
+  },
   provider: { kind: "agent-tool" as const, identity: "gamos-domain@1.0.0" },
   prerequisites: [],
   compatibility: { runtime: `node>=24 (runner: ${nodeVersion})`, notes: "pure data" },

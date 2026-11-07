@@ -4,9 +4,20 @@ import {
   PROVENANCE_SCHEMA_ID,
 } from "../src/domain/provenance.js";
 import type { ProvenanceRef } from "../src/domain/provenance.js";
-import { registerCapability, getCapability } from "../src/domain/capability-registry.js";
+import {
+  registerCapability,
+  resolveCapability,
+} from "../src/domain/capability-registry.js";
+import type { CapabilityRecord } from "../src/domain/capability-registry.js";
 import { validatePluginProcessTrust } from "../src/domain/plugin-trust.js";
 import { completeCapabilityRecord } from "./fixtures.js";
+
+/** Registers a record and returns a single-entry registry (test helper). */
+function registerAndIndex(record: unknown): { stored: CapabilityRecord; registry: Map<string, CapabilityRecord> } {
+  const stored = registerCapability(record);
+  const registry = new Map<string, CapabilityRecord>([[`${stored.id}@${stored.version}`, stored]]);
+  return { stored, registry };
+}
 
 /**
  * Provenance contract conformance (M2 directive §4 preflight — BLOCKING
@@ -169,17 +180,18 @@ describe("Capability records consume the canonical provenance (contract 02 + 09)
   it("registers a capability with canonical provenance and retains it on lookup", () => {
     const record = {
       ...completeCapabilityRecord,
-      id: "gamos/test.canonical-provenance@1.0.0",
+      id: "gamos/test-canonical-provenance",
       provenance: canonicalRepositoryProvenance,
     };
-    registerCapability(record);
-    const stored = getCapability("gamos/test.canonical-provenance@1.0.0");
-    expect(stored).toBeDefined();
-    expect(stored!.provenance).toEqual(canonicalRepositoryProvenance);
+    const { stored, registry } = registerAndIndex(record);
+    expect(stored.provenance).toEqual(canonicalRepositoryProvenance);
+    const resolved = resolveCapability(registry, { id: "gamos/test-canonical-provenance" });
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) expect(resolved.record.provenance).toEqual(canonicalRepositoryProvenance);
   });
 
   it("rejects a capability whose provenance uses the legacy publisher values", () => {
-    const legacy = { ...completeCapabilityRecord, id: "gamos/test.legacy-provenance@1.0.0" };
+    const legacy = { ...completeCapabilityRecord, id: "gamos/test-legacy-provenance" };
     (legacy as Record<string, unknown>).provenance = {
       publisher: "official",
       source: "gamos-2.0 repository",
@@ -189,7 +201,7 @@ describe("Capability records consume the canonical provenance (contract 02 + 09)
   });
 
   it("rejects a capability whose provenance source is a loose string (legacy shape)", () => {
-    const legacy = { ...completeCapabilityRecord, id: "gamos/test.loose-source@1.0.0" };
+    const legacy = { ...completeCapabilityRecord, id: "gamos/test-loose-source" };
     (legacy as Record<string, unknown>).provenance = {
       publisher: "gamos-tl",
       source: "gamos-2.0 repository",
@@ -198,7 +210,7 @@ describe("Capability records consume the canonical provenance (contract 02 + 09)
   });
 
   it("still rejects a capability missing provenance entirely (registration failure)", () => {
-    const bad = { ...completeCapabilityRecord, id: "gamos/test.no-provenance@1.0.0" };
+    const bad = { ...completeCapabilityRecord, id: "gamos/test-no-provenance" };
     delete (bad as Record<string, unknown>).provenance;
     expect(() => registerCapability(bad)).toThrow(/provenance/i);
   });
@@ -344,9 +356,14 @@ describe("Capability and engine-plugin records share the SAME canonical semantic
     // One object, two consumers — contract 09 §4 is a single schema.
     const shared: ProvenanceRef = canonicalRepositoryProvenance;
 
-    const cap = { ...completeCapabilityRecord, id: "gamos/test.shared-provenance@1.0.0", provenance: shared };
-    registerCapability(cap);
-    expect(getCapability("gamos/test.shared-provenance@1.0.0")!.provenance).toEqual(shared);
+    const { stored, registry } = registerAndIndex({
+      ...completeCapabilityRecord,
+      id: "gamos/test-shared-provenance",
+      provenance: shared,
+    });
+    expect(stored.provenance).toEqual(shared);
+    const resolved = resolveCapability(registry, { id: "gamos/test-shared-provenance" });
+    expect(resolved.ok).toBe(true);
 
     const trust = validatePluginProcessTrust({
       pluginId: "gamos/test-shared",
@@ -373,7 +390,7 @@ describe("Capability and engine-plugin records share the SAME canonical semantic
       source: "gamos-2.0 repository",
     };
 
-    const cap = { ...completeCapabilityRecord, id: "gamos/test.invalid-shared@1.0.0" };
+    const cap = { ...completeCapabilityRecord, id: "gamos/test-invalid-shared" };
     (cap as Record<string, unknown>).provenance = invalid;
     expect(() => registerCapability(cap)).toThrow(/provenance/i);
 
