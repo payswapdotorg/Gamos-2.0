@@ -300,8 +300,14 @@ describe.skipIf(!realToolchainFound)("babylon-engine plugin real-Node/Vite/Babyl
           console.log(`[gamos-evidence] port conflict on ${conflictPort}: ${outcome.code} — ${outcome.reason}`);
         }
       } finally {
+        // Destroy every accepted socket before close(): the bare net server
+        // holds the engine health-probe's lingering connection, and
+        // server.close() waits for all connections to end — the test would
+        // otherwise hang past its own timeout after a correct outcome.
+        blocker.closeAllConnections?.();
         await new Promise<void>((resolve) => {
           blocker.close(() => resolve());
+          setTimeout(resolve, 2_000).unref?.();
         });
       }
     },
