@@ -390,6 +390,48 @@
         "date": "2026-11-07T08:30:00Z",
         "decision_ref": "M2 directive §5 M2.5/§11 + TL integration review of PR #5 (engine-plugin lifecycle registration; three additive packages, four minimal additive modifications to baseline-tracked registration surfaces)"
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0007",
+      "phase": "M2",
+      "date": "2026-11-07T10:30:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "M2 handoff audit (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §5 M2.5: 'Prove the three plugins are handled by the existing plugin lifecycle' / §12 audit-and-close): GAMOS-AUTH-0006 registered the three engine plugins in the official definitions, SEA asset manifests and the agent-CLI build chain, but the DESKTOP PACKAGING staging list (packages/desktop/scripts/prepare-agent-node-bundle.mjs officialPluginPackages — the chain that copies plugin packages next to the agent bundle for Electron production builds, and the only delivery path for first-party zcode-official seeded plugins in the packaged desktop app) still omits them: without this entry a packaged desktop app cannot seed unity-engine/blender-engine/babylon-engine at all (the exact 'restore-legacy-sessions registered but not staged' defect class that file already documents). The fix is three additive entries following the established android-emulator/ios-simulator pattern (requiresRuntime + dist/mcp/server.js + scripts/build-mcp.mjs + stagedPath packages/<name>); no existing plugin's entry, ordering or staging behavior is changed.",
+      "risk": "medium",
+      "affected_functionality": "Desktop packaging staging list only (officialPluginPackages in prepare-agent-node-bundle.mjs): three additive entries for the engine plugins. No existing plugin's staging, entry or behavior is modified; no governance control file, frozen contract or protected upstream behavior is altered.",
+      "new_functionality": "The packaged (Electron production) desktop app carries the three engine plugins next to the agent bundle so the bundled-plugins filesystem seed stages them into the official plugin cache (default-off), completing the lifecycle registration across ALL delivery surfaces: definitions (AUTH-0006), SEA CLI assets (AUTH-0006), agent-CLI builds (AUTH-0006), and now the desktop packaging chain.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin $GAMOS_BASELINE_SHA256",
+        "node scripts/gamos/governance-self-test.mjs",
+        "pnpm run architecture:check",
+        "pnpm exec vitest run --project gamos-domain",
+        "node scripts/build-desktop-agent-cli.mjs (declared-mcpServers runtime verification covers the engine dists)",
+        "apps/zcode-cli/packages/cli/tests/build-sea.test.mjs ('keeps SEA official plugin versions aligned with package and plugin manifests')"
+      ],
+      "evidence": {
+        "summary": "M2 handoff audit finding: officialPluginPackages omitted the engine plugins (27 staged packages, none engine). RED: the m2 §9 journey cannot seed the plugins through the dev agent without them staged next to the bundle; the packaged desktop app would never carry them. GREEN: three additive android-emulator-pattern entries; the m2 journey stages the same packages for the dev agent (build-output staging, journey-side) and proves enable/disable + MCP invocation end-to-end.",
+        "links": [
+          "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
+          "docs/gamos/IMPLEMENTATION-STATUS.md",
+          "PR (gamos/roadmap-m2-journeys): M2 §9 journeys + audit closure"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "packages/desktop/scripts/prepare-agent-node-bundle.mjs",
+          "content_sha256": "7eff7fec5be0a976f368b9a1506520434140ca0388170025550a269916d88a2b"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-07T10:30:00Z",
+        "decision_ref": "M2 directive §5 M2.5/§12 (audit and close remaining soft spots) + TL review of the packaging-chain gap (engine plugins registered in definitions/SEA/build-chain but absent from officialPluginPackages — the packaged-app delivery path)"
+      }
     }
   ]
 }

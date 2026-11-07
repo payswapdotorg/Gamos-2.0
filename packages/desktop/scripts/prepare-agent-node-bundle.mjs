@@ -219,6 +219,36 @@ const officialPluginPackages = [
     runtimeBuildScript: "scripts/build-mcp.mjs",
     stagedPath: "packages/ios-simulator-plugin",
   },
+  // Gamos M2 first-party engine integrations (contract 03 §2 gamos/engine-plugin@2).
+  // 与 android-emulator / ios-simulator 同类的重负载官方插件：注册进官方定义
+  // (official-plugin-definitions.ts) 与 SEA 资产清单后，还必须进入这条打包暂存链，
+  // 否则 Electron 生产包不携带引擎插件（restore-legacy-sessions 同款漏登问题的预防）。
+  // runtime MCP server 产物 dist/mcp/server.js 由 scripts/build-desktop-agent-cli.mjs
+  // 的 declared-mcpServers 构建规则产出并校验（GAMOS-AUTH-0006）。
+  {
+    packageName: "@zcode/unity-engine-plugin",
+    relativePath: "apps/zcode-cli/packages/unity-engine-plugin",
+    requiresRuntime: true,
+    requiredRuntimePaths: ["dist/mcp/server.js"],
+    runtimeBuildScript: "scripts/build-mcp.mjs",
+    stagedPath: "packages/unity-engine-plugin",
+  },
+  {
+    packageName: "@zcode/blender-engine-plugin",
+    relativePath: "apps/zcode-cli/packages/blender-engine-plugin",
+    requiresRuntime: true,
+    requiredRuntimePaths: ["dist/mcp/server.js"],
+    runtimeBuildScript: "scripts/build-mcp.mjs",
+    stagedPath: "packages/blender-engine-plugin",
+  },
+  {
+    packageName: "@zcode/babylon-engine-plugin",
+    relativePath: "apps/zcode-cli/packages/babylon-engine-plugin",
+    requiresRuntime: true,
+    requiredRuntimePaths: ["dist/mcp/server.js"],
+    runtimeBuildScript: "scripts/build-mcp.mjs",
+    stagedPath: "packages/babylon-engine-plugin",
+  },
   {
     // 修复原因：restore-legacy-sessions 已注册为官方插件，但 Electron 生产包只会拷贝
     // 这里列出的资源。漏掉它会导致用户生产包首次启动后 plugins list 里看不到该插件。
