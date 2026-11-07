@@ -384,3 +384,82 @@ covering all eight required preflight behaviors). The M1 journey CLI
 canonical repository provenance carrying the exact CI commit
 (`GAMOS_SOURCE_COMMIT`), so every future m1-e2e run exercises the canonical
 chain.
+
+## M2 progress record (2026-11-07, directive: docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md)
+
+**M2 status: `active` (correctly NOT complete — honest gate accounting below).**
+
+Landed on `gamos/development` (PR #3 `c4c71e81`, PR #5 `c9c397a1`; M2 activated
+at `9a5f17f7` after preflight verification of HEAD `a8da3bf4`, governance
+compliant, roadmap validator green, `main` pristine):
+
+1. **§4 provenance preflight (blocking prerequisite) — DONE.** Finding: the M1
+   domain types diverged from frozen contract 09 §4 `gamos/provenance@2`
+   (legacy publisher values, loose-string sources; capability and plugin shapes
+   also differed from each other). Remediation via TDD (RED `b0bb1df7` → GREEN
+   `6bbe16d5`): canonical shared provenance module consumed identically by
+   capability records (contract 02) and engine-plugin records (contract 03);
+   legacy shapes fail closed; `provenance-unresolvable` implements contract 09
+   §3.7 (explicit disable). M1 history/evidence left intact; the finding +
+   remediation are recorded above in this ledger. Contract 09 unmodified.
+2. **M2.4 canonical capability records — DONE.** `gamos/engine-plugin@2`
+   metadata validator (family-grammar predicates — never universal SemVer) +
+   10 append-only capability records (unity×3, blender×4, babylon×3) with
+   complete execution-safety metadata + canonical provenance + 3 shipped
+   plugin metas (RED `fc8294b9` → GREEN `bf04b655`).
+3. **M2.1/M2.2/M2.3 engine plugins — implemented (Worker A, RED→GREEN).**
+   `apps/zcode-cli/packages/{unity,blender,babylon}-engine-plugin` following
+   the exact upstream android-emulator conventions: typed zod operation
+   schemas, real discovery with version gates, bounded argument-array process
+   execution with tree-kill timeouts, reviewed bridge code only (Blender bpy
+   bridges / Unity C# Editor methods — never arbitrary model-authored code),
+   MCP stdio servers, honest unavailable states. Package tests: unity 54/54
+   (real-editor integration honestly skipped — no licensed editor available),
+   blender 26/26 (6 real-Blender-4.1.1 integration tests), babylon 35/35
+   (6 real-Node/Vite integration tests).
+4. **M2.5 Worker C adversarial suite — DONE.** RED `4b61b5f2` → GREEN
+   `06319965`: `validateEnginePluginPackage` ties the three SHIPPED manifests
+   to the domain trust contracts; adversarial matrix: cross-package capability
+   smuggling (provider-identity ownership), legacy provenance, community
+   reviewRef/least-privilege fail-closed, sandbox-wording prohibition,
+   unresolvable-provenance explicit disable, unpermissioned-mutation rejection.
+   Domain suite: **251/251**.
+5. **Lifecycle registration — DONE (GAMOS-AUTH-0006).** The three plugins are
+   first-class official plugins: official-plugin-definitions (default-off),
+   SEA asset manifests (dist/mcp/server.js runtime paths), agent-CLI-chain
+   required runtime builds, root pnpm-lock.yaml regenerated. Authorized via
+   the sanctioned governance-rebaseline rotation (trust-anchor pin rotated to
+   `0643288c…`, M1 precedent). Bootstrap/SEA alignment invariants verified.
+6. **M2 CI — DONE and green.** `gamos-m2-e2e`: domain+contract job; REQUIRED
+   Blender real-engine job (run `42356172068` @ `7757cc44`: real Blender 4.1.1
+   provisioned with recorded tarball sha256 `ab2ea3fe…`, typed modify +
+   engine-query verify, Cycles CPU render, OBJ/GLB/FBX exports, timeout
+   tree-kill — **M2-G2 engine layer proven on CI**); REQUIRED Babylon
+   real-toolchain job (reproducible npm ci, vite build + sha, dev-server +
+   HTTP health + stop, strictPort fail-closed); honest Unity gate-status job
+   (records `M2-G1: unavailable-license` — never fabricated; a licensed
+   self-hosted runner with `UNITY_EDITOR_PATH` flips it to editor-verified).
+   Governance green on the merged head; m1-e2e regression green on `f3e12f94`
+   (the app builds and the M1 journey passes with the engine plugins in the
+   agent CLI chain).
+
+**Remaining before M2 can be declared complete (exact gates):**
+
+- **M2-G1 (Unity real integration):** requires a runner with a licensed Unity
+  Editor — an external, user-controlled prerequisite (Unity Personal/Pro
+  activation credentials). The invocation layer is fully implemented and
+  scratch-verified against conforming editor emulations (license-required
+  negative path, full add-cube verification, build artifact, timeouts), and
+  the CI job honestly records the unavailable state. Provision
+  `UNITY_EDITOR_PATH` on a licensed runner to close the gate.
+- **§9 in-app journeys (evidence legs of M2-G2/M2-G3):** the engine layers are
+  CI-proven, but the directive's end-to-end journeys — original ZCode New Task
+  composer → selected model → registry-resolved typed capability → real
+  permission interaction → installed plugin MCP invocation → real engine
+  operation → verified result → session history (plus the ZCode Browser
+  verification of the running Babylon experience for M2-G3's browser leg, and
+  the honest negative paths) — still need to be built on the M1 journey
+  infrastructure (`scripts/gamos/m1-ui-journey.mjs` pattern).
+- **evidence/roadmap/M2.json + ROADMAP.json promotion:** correctly blocked
+  until every gate has real passing evidence (roadmap validator enforces
+  tested-commit binding; no completion is claimed now).
