@@ -11,7 +11,7 @@
 > Honest, evidence-based status. No green checkmark implies completion when only
 > a contract or UI exists. Updated at every integration point.
 >
-> **Last updated:** 2026-11-06T22:18Z (M1 COMPLETE — autonomous closure per the M0-closure/M1 directive: six canonical gates verified against committed evidence of run 42302128911 @ `cae5a9a6` (MJ0–MJ9 all pass, verdict=pass exit 0, on the deterministic local model endpoint per the maintainer's no-OpenRouter-budget directive — full disclosure in `evidence/roadmap/M1.json` notes and below); `evidence/roadmap/M1.json` committed with per-gate SHA-256; ROADMAP.json M1 status=complete with completion evidence bound to the tested commit; roadmap validator + governance checks green. PR #2 merge follows required-CI validation of this completion commit)
+> **Last updated:** 2026-11-07T03:30Z (M1 COMPLETE and MERGED — post-merge regression verification on the development head `474fda32` is fully green, including the re-run of the real-model desktop journey after a documented quota-only failure; see "Post-merge verification" below. M1 completion evidence remains bound to run 42302128911 @ `cae5a9a6` with full disclosure in `evidence/roadmap/M1.json`)
 
 ---
 
@@ -274,3 +274,48 @@ tested commit `cae5a9a6` and run 42302128911. Explicit exclusion: real-LLM
 authorship of the GamePlan content (deterministic endpoint per the maintainer
 directive; app-side integration chain fully real). PR #2 merge follows required
 CI validation of this completion commit.
+
+## Post-merge verification on the development head (2026-11-07T03:17Z)
+
+PR #2 merged `gamos/roadmap-integration` (`00d68d4d`, the M1 completion commit)
+into `gamos/development` as merge commit `474fda32` at 2026-11-06T22:23:59Z.
+The three Gamos workflows then ran on that head with the following outcomes:
+
+1. **gamos-governance** (run `42304415690`) — SUCCESS. Governance verifier
+   (trust-anchor pinned `da3fbbd9…`), tamper-rejection self-tests (14
+   scenarios), upstream architecture gate, roadmap validator self-tests and
+   the canonical roadmap integrity/dependency gate all green on the merged
+   tree (M0+M1 complete, M2 ready, M3–M7 blocked).
+2. **gamos-m1-e2e** (run `42304415823`) — SUCCESS. The M1 acceptance journey
+   re-passed on the merged development head (deterministic local model
+   endpoint; no OpenRouter dependency).
+3. **gamos-phase-b-e2e** (run `42304415769`) — attempt 1 FAILURE, attempt 2
+   SUCCESS (2026-11-07T03:09:28Z → 03:16:59Z). Attempt 1's inherited
+   desktop-E2E (4 verified specs) and upstream-provider replay jobs passed;
+   only the desktop journey job failed (S3/S6/S9). Root cause, from the job
+   log: `APICallError … Rate limit exceeded: free-models-per-day`,
+   `statusCode: 429`, `x-ratelimit-limit: 50`, `x-ratelimit-remaining: 0`,
+   `x-ratelimit-reset: 1794009600000` (= 2026-11-07T00:00:00Z). This is the
+   same documented free-tier daily quota that killed the M1 journey attempts
+   on Nov 6 (run `42235226375` evidence): the quota had been exhausted that
+   day and had not yet reset when the push-triggered run executed at
+   22:24Z. It is environmental, not a code regression — no M1 merge commit
+   touches any application surface the desktop journey exercises. After the
+   documented 00:00Z quota reset, the re-run (attempt 2, same run id, same
+   commit `474fda32`) passed all three jobs: desktop journey verdict=pass
+   with S0–S9 ALL PASS (real free-tier model
+   `nvidia/nemotron-3-ultra-550b-a55b:free`, fresh session
+   `sess_d227fdf2-5230-4cab-89ad-ea0d82d8f323`, `non_pass=[]`, `missing=[]`),
+   inherited desktop E2E 4 specs, upstream-provider replay fixture.
+
+Additional post-merge re-verification performed locally on the merged tree:
+`node scripts/gamos/roadmap-check.mjs` — valid; focused Gamos domain suite
+(vitest 4.1.7, 15 test files) — **183/183 tests passed**.
+
+Conclusion: the M1 merge introduced no regression in the original
+application. All original journeys (New Task with real model, Terminal,
+Browser, Review permission flows, marketplace plugin install, session
+recovery) remain operational on the development head, per run `42304415769`
+attempt 2. This addendum is documentation-only; it changes no evidence
+record, and the M1 completion evidence remains bound to run `42302128911` @
+`cae5a9a6` as recorded in `evidence/roadmap/M1.json`.
