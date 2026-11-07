@@ -176,13 +176,22 @@ export function validateEnginePluginMeta(
 // Canonical M2.4 capability records (append-only once published).
 // ---------------------------------------------------------------------------
 
-/** Shared canonical provenance for the three first-party engine plugins. */
+/**
+ * The REAL source-of-record commit for the engine plugins' 0.1.0 line: the PR #5
+ * integration merge that first shipped all three plugin packages in the
+ * integrated tree (CI run 42356695328 verified that exact tree). Provenance is
+ * exact (contract 09 §4): a shipped ref must name a commit object that exists.
+ * A later plugin version bump points at ITS own shipping commit — the 0.1.0
+ * source-of-record stays pinned here (append-only semantics, directive §5).
+ */
+export const M2_ENGINE_PLUGIN_SOURCE_COMMIT = "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00";
+
 const enginePluginProvenance = (path: string): ProvenanceRef => ({
   publisher: "gamos-tl",
   source: {
     type: "repository",
     repo: "payswapdotorg/Gamos-2.0",
-    commitSha: "9a5f17f7".repeat(5), // replaced by the shipping commit's sha at integration time
+    commitSha: M2_ENGINE_PLUGIN_SOURCE_COMMIT,
     path,
   },
   surfaces: ["mcp"],
