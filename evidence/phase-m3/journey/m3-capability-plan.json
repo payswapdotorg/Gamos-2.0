@@ -1,0 +1,472 @@
+{
+  "schema": "gamos/m3-capability-plan@1",
+  "generatedAt": "2026-11-08T14:14:00.199Z",
+  "workspaceRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default",
+  "registryRecords": 13,
+  "enginePluginSourceCommit": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+  "capabilities": [
+    {
+      "id": "blender/scene.inspect",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "blender",
+      "providerIdentity": "plugin:blender-engine:engine",
+      "permissions": [
+        "command-execution:read-only"
+      ],
+      "availability": "conditional",
+      "prerequisitesSatisfied": [
+        "blender-installed"
+      ],
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/blender-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "output-schema",
+      "timeoutMs": 120000,
+      "cancellation": true
+    },
+    {
+      "id": "blender/scene.modify",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "blender",
+      "providerIdentity": "plugin:blender-engine:engine",
+      "permissions": [
+        "engine-headless:declared-workspace",
+        "filesystem-write:declared-workspace"
+      ],
+      "availability": "conditional",
+      "prerequisitesSatisfied": [
+        "blender-installed"
+      ],
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/blender-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "engine-query",
+      "timeoutMs": 300000,
+      "cancellation": true
+    },
+    {
+      "id": "blender/asset.export",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "blender",
+      "providerIdentity": "plugin:blender-engine:engine",
+      "permissions": [
+        "engine-headless:declared-workspace",
+        "filesystem-write:declared-workspace"
+      ],
+      "availability": "conditional",
+      "prerequisitesSatisfied": [
+        "blender-installed"
+      ],
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/blender-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "artifact-hash",
+      "timeoutMs": 300000,
+      "cancellation": true
+    },
+    {
+      "id": "core/asset.manifest-validate",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "core",
+      "providerIdentity": "builtin:files+export-result",
+      "permissions": [
+        "command-execution:read-only"
+      ],
+      "availability": "available",
+      "prerequisitesSatisfied": [],
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "0795a64c3effd1c75976fc115dc0d75d232a1d1a",
+          "path": "packages/gamos-domain/src/domain/cross-engine-plan.ts"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M3.3 cross-engine plan builder (TL-reviewed)"
+      },
+      "verification": "output-schema",
+      "timeoutMs": 30000,
+      "cancellation": true
+    },
+    {
+      "id": "babylon/asset.integrate",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "babylon",
+      "providerIdentity": "plugin:babylon-engine:engine",
+      "permissions": [
+        "filesystem-write:project-public-assets-staging"
+      ],
+      "availability": "conditional",
+      "prerequisitesSatisfied": [
+        "babylon-project-root"
+      ],
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/babylon-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "artifact-hash",
+      "timeoutMs": 60000,
+      "cancellation": true
+    },
+    {
+      "id": "babylon/project.build",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "babylon",
+      "providerIdentity": "plugin:babylon-engine:engine",
+      "permissions": [
+        "command-execution:declared-build-script"
+      ],
+      "availability": "conditional",
+      "prerequisitesSatisfied": [
+        "babylon-project-root",
+        "node-toolchain",
+        "network-for-dependencies"
+      ],
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/babylon-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "artifact-hash",
+      "timeoutMs": 600000,
+      "cancellation": true
+    },
+    {
+      "id": "babylon/project.run",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "babylon",
+      "providerIdentity": "plugin:babylon-engine:engine",
+      "permissions": [
+        "command-execution:declared-dev-script",
+        "network-access:loopback"
+      ],
+      "availability": "conditional",
+      "prerequisitesSatisfied": [
+        "babylon-project-root",
+        "node-toolchain"
+      ],
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/babylon-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "engine-query",
+      "timeoutMs": 120000,
+      "cancellation": true
+    },
+    {
+      "id": "unity/project.inspect",
+      "resolved": true,
+      "version": "1.0.0",
+      "engineFamily": "unity",
+      "providerIdentity": "plugin:unity-engine:engine",
+      "permissions": [
+        "command-execution:read-only"
+      ],
+      "availability": "conditional",
+      "prerequisitesSatisfied": [
+        "unity-project-root"
+      ],
+      "provenance": {
+        "publisher": "gamos-tl",
+        "source": {
+          "type": "repository",
+          "repo": "payswapdotorg/Gamos-2.0",
+          "commitSha": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+          "path": "apps/zcode-cli/packages/unity-engine-plugin"
+        },
+        "reviewedBy": "gamos-tl",
+        "reviewRef": "M2 engine plugin integration (TL-reviewed)"
+      },
+      "verification": "output-schema",
+      "timeoutMs": 60000,
+      "cancellation": true
+    },
+    {
+      "id": "unity/asset.import",
+      "resolved": false,
+      "error": {
+        "code": "missing-prerequisite",
+        "requestedId": "unity/asset.import",
+        "reason": "capability unity/asset.import requires prerequisites that are not satisfied: unity-editor-installed, unity-license-active",
+        "remediation": [
+          {
+            "capabilityId": "unity/asset.import",
+            "version": "1.0.0",
+            "difference": "remediation: satisfy prerequisite \"unity-editor-installed\" — real Unity Editor executable whose version matches the project's pinned version exactly (the version contract is exact, not a floor)"
+          },
+          {
+            "capabilityId": "unity/asset.import",
+            "version": "1.0.0",
+            "difference": "remediation: satisfy prerequisite \"unity-license-active\" — an activated Unity license (Unity Personal/Plus/Pro sign-in or a CI license file) — an external, user-controlled prerequisite"
+          }
+        ]
+      }
+    }
+  ],
+  "shippedPlugins": [
+    {
+      "pluginId": "unity-engine",
+      "engineFamily": "unity",
+      "engineVersions": ">=2022.3"
+    },
+    {
+      "pluginId": "blender-engine",
+      "engineFamily": "blender",
+      "engineVersions": ">=4.1"
+    },
+    {
+      "pluginId": "babylon-engine",
+      "engineFamily": "babylon",
+      "engineVersions": ">=18.0"
+    }
+  ],
+  "plan": {
+    "schemaId": "gamos/cross-engine-plan@1",
+    "planId": "gamos-m3-cross-engine",
+    "planSha256": "a813e23d8289070c23a40df0f09fd7514ea1384f55739a60ca27670d121b2fe5",
+    "request": {
+      "planId": "gamos-m3-cross-engine",
+      "conceptRef": {
+        "conceptId": "gamos-m3-journey-concept",
+        "conceptSha256": "bed21b8143e1391766f57097e16d902bb545826a550da8255012a39c8988158d"
+      },
+      "acceptanceRecord": {
+        "recordId": "gamos-m3-journey-acceptance",
+        "recordSha256": "da837dfa0cc1e4d8f199758f43a4f13fdec500655e43b56d6d0605b49917a384"
+      },
+      "workspaceRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default",
+      "source": {
+        "projectIdentity": "gamos-m3-blender",
+        "blendFile": "gamos-m3-blender/scene.blend"
+      },
+      "target": {
+        "engine": "babylon",
+        "projectIdentity": "gamos-m3-babylon-app",
+        "projectRoot": "gamos-m3-babylon-app"
+      },
+      "format": "glb",
+      "assetName": "gamos-asset",
+      "now": "2026-11-08T14:14:00Z"
+    },
+    "stepCount": 5,
+    "steps": [
+      {
+        "stepId": "export-asset",
+        "capabilityId": "blender/asset.export",
+        "capabilityVersion": "1.0.0",
+        "dependsOn": [],
+        "input": {
+          "blendFile": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-blender/scene.blend",
+          "outputPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
+          "format": "GLTF"
+        },
+        "resourceClaims": [
+          {
+            "access": "read",
+            "scope": "asset-path",
+            "path": "gamos-m3-blender/scene.blend"
+          },
+          {
+            "access": "write",
+            "scope": "generated-output",
+            "path": "staging/gamos-asset.glb"
+          }
+        ]
+      },
+      {
+        "stepId": "validate-export",
+        "capabilityId": "core/asset.manifest-validate",
+        "capabilityVersion": "1.0.0",
+        "dependsOn": [
+          "export-asset"
+        ],
+        "input": {
+          "manifestPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb.manifest.json",
+          "artifactPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb"
+        },
+        "resourceClaims": [
+          {
+            "access": "read",
+            "scope": "staging",
+            "path": "staging/gamos-asset.glb.manifest.json"
+          },
+          {
+            "access": "read",
+            "scope": "staging",
+            "path": "staging/gamos-asset.glb"
+          }
+        ]
+      },
+      {
+        "stepId": "integrate-asset",
+        "capabilityId": "babylon/asset.integrate",
+        "capabilityVersion": "1.0.0",
+        "dependsOn": [
+          "validate-export"
+        ],
+        "input": {
+          "projectRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
+          "artifactPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
+          "assetName": "gamos-asset"
+        },
+        "resourceClaims": [
+          {
+            "access": "read",
+            "scope": "staging",
+            "path": "staging/gamos-asset.glb"
+          },
+          {
+            "access": "write",
+            "scope": "generated-output",
+            "path": "gamos-m3-babylon-app/public/assets/gamos-asset.glb"
+          }
+        ]
+      },
+      {
+        "stepId": "build-project",
+        "capabilityId": "babylon/project.build",
+        "capabilityVersion": "1.0.0",
+        "dependsOn": [
+          "integrate-asset"
+        ],
+        "input": {
+          "projectRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app"
+        },
+        "resourceClaims": [
+          {
+            "access": "read",
+            "scope": "project",
+            "path": "gamos-m3-babylon-app"
+          },
+          {
+            "access": "write",
+            "scope": "generated-output",
+            "path": "gamos-m3-babylon-app/dist"
+          }
+        ]
+      },
+      {
+        "stepId": "verify-runtime",
+        "capabilityId": "babylon/project.run",
+        "capabilityVersion": "1.0.0",
+        "dependsOn": [
+          "build-project"
+        ],
+        "input": {
+          "projectRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app"
+        },
+        "resourceClaims": [
+          {
+            "access": "read",
+            "scope": "project",
+            "path": "gamos-m3-babylon-app"
+          }
+        ]
+      }
+    ],
+    "resourceClaimCount": 9,
+    "resourceClaims": [
+      {
+        "access": "read",
+        "scope": "asset-path",
+        "path": "gamos-m3-blender/scene.blend"
+      },
+      {
+        "access": "write",
+        "scope": "generated-output",
+        "path": "staging/gamos-asset.glb"
+      },
+      {
+        "access": "read",
+        "scope": "staging",
+        "path": "staging/gamos-asset.glb.manifest.json"
+      },
+      {
+        "access": "read",
+        "scope": "staging",
+        "path": "staging/gamos-asset.glb"
+      },
+      {
+        "access": "read",
+        "scope": "staging",
+        "path": "staging/gamos-asset.glb"
+      },
+      {
+        "access": "write",
+        "scope": "generated-output",
+        "path": "gamos-m3-babylon-app/public/assets/gamos-asset.glb"
+      },
+      {
+        "access": "read",
+        "scope": "project",
+        "path": "gamos-m3-babylon-app"
+      },
+      {
+        "access": "write",
+        "scope": "generated-output",
+        "path": "gamos-m3-babylon-app/dist"
+      },
+      {
+        "access": "read",
+        "scope": "project",
+        "path": "gamos-m3-babylon-app"
+      }
+    ],
+    "validatedByParseGamePlan": true,
+    "conflictGate": "parseGamePlan rejects unordered write/write (and read/write) overlaps on the same canonical claim path — the builder cannot hand out a plan the plan contract would reject"
+  },
+  "verdict": "ok",
+  "note": "unity/asset.import intentionally resolves as missing-prerequisite without a licensed editor — the honest negative path (contract 07 availability, never fabricated). The generated plan is the orchestration record the journey's in-app turns execute step-by-step."
+}

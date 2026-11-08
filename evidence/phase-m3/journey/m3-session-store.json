@@ -1,0 +1,243 @@
+{
+  "db_path": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/cli/db/db.sqlite",
+  "tables": [
+    "schema_migration",
+    "session",
+    "message",
+    "part",
+    "todo",
+    "session_entry",
+    "permission",
+    "input_history",
+    "local_setting",
+    "session_target",
+    "workflow_definition",
+    "workflow_run",
+    "workflow_activity",
+    "workflow_event",
+    "session_task_link",
+    "model_usage",
+    "turn_usage",
+    "tool_usage",
+    "session_input",
+    "dwf_run",
+    "dwf_actor",
+    "sqlite_sequence",
+    "dwf_node",
+    "dwf_event",
+    "zcode_database_identity"
+  ],
+  "session_rows": [
+    {
+      "sessionId": "sess_77ada983-3b7e-4e28-9551-2ba1c4dc708e",
+      "present": true
+    }
+  ],
+  "engine_tool_records": [
+    {
+      "table": "session",
+      "col": "title",
+      "marker": "asset_import",
+      "rows": 1
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "mcp__plugin_blender-engine",
+      "rows": 6
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "mcp__plugin_babylon-engine",
+      "rows": 6
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "mcp__plugin_unity-engine",
+      "rows": 6
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "GamosM3Cube",
+      "rows": 6
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "asset_export",
+      "rows": 10
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "asset_integrate",
+      "rows": 10
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "asset_import",
+      "rows": 10
+    },
+    {
+      "table": "message",
+      "col": "data",
+      "marker": "gamos-asset",
+      "rows": 8
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "mcp__plugin_blender-engine",
+      "rows": 9
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "mcp__plugin_babylon-engine",
+      "rows": 4
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "mcp__plugin_unity-engine",
+      "rows": 1
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "GamosM3Cube",
+      "rows": 19
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "asset_export",
+      "rows": 17
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "asset_integrate",
+      "rows": 7
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "asset_import",
+      "rows": 7
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "gamos-asset",
+      "rows": 14
+    },
+    {
+      "table": "part",
+      "col": "data",
+      "marker": "unity-editor-unavailable",
+      "rows": 2
+    },
+    {
+      "table": "input_history",
+      "col": "text",
+      "marker": "GamosM3Cube",
+      "rows": 1
+    },
+    {
+      "table": "input_history",
+      "col": "text",
+      "marker": "asset_export",
+      "rows": 1
+    },
+    {
+      "table": "input_history",
+      "col": "text",
+      "marker": "asset_integrate",
+      "rows": 1
+    },
+    {
+      "table": "input_history",
+      "col": "text",
+      "marker": "asset_import",
+      "rows": 1
+    },
+    {
+      "table": "input_history",
+      "col": "text",
+      "marker": "gamos-asset",
+      "rows": 3
+    },
+    {
+      "table": "tool_usage",
+      "col": "tool_name",
+      "marker": "mcp__plugin_blender-engine",
+      "rows": 9
+    },
+    {
+      "table": "tool_usage",
+      "col": "tool_name",
+      "marker": "mcp__plugin_babylon-engine",
+      "rows": 4
+    },
+    {
+      "table": "tool_usage",
+      "col": "tool_name",
+      "marker": "mcp__plugin_unity-engine",
+      "rows": 1
+    },
+    {
+      "table": "tool_usage",
+      "col": "tool_name",
+      "marker": "asset_export",
+      "rows": 3
+    },
+    {
+      "table": "tool_usage",
+      "col": "tool_name",
+      "marker": "asset_integrate",
+      "rows": 1
+    },
+    {
+      "table": "tool_usage",
+      "col": "tool_name",
+      "marker": "asset_import",
+      "rows": 1
+    },
+    {
+      "table": "session_input",
+      "col": "payload",
+      "marker": "GamosM3Cube",
+      "rows": 6
+    },
+    {
+      "table": "session_input",
+      "col": "payload",
+      "marker": "asset_export",
+      "rows": 6
+    },
+    {
+      "table": "session_input",
+      "col": "payload",
+      "marker": "asset_integrate",
+      "rows": 1
+    },
+    {
+      "table": "session_input",
+      "col": "payload",
+      "marker": "asset_import",
+      "rows": 1
+    },
+    {
+      "table": "session_input",
+      "col": "payload",
+      "marker": "gamos-asset",
+      "rows": 8
+    }
+  ],
+  "checked_at": "2026-11-08T14:22:01.982Z"
+}

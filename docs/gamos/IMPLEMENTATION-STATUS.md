@@ -1106,3 +1106,65 @@ bundle exists and none is fabricated.
       the M3 completion bundle additionally requires the M3.5 in-app
       journey and the M3 CI legs, and M3-G1 stays honestly blocked while
       no compliant Unity licensed runner exists.
+
+15. **M3.5 real end-to-end journey — the §11 cross-engine pipeline through the
+    original ZCode application (strict TDD evidence slice, branch
+    `gamos/m3-endtoend-journey`, verdict=pass M3J0–M3J6):** the final-closure
+    handoff §11 journey executes as CDP stages against the real desktop app
+    (prod-http renderer; deterministic local model endpoint disclosed — no
+    real-LLM authorship claimed):
+    - **M3J3 (§11 items 1–4):** the three engine plugins enabled through the
+      REAL Settings UI + on-disk verification + app restart; the bundled
+      `m3-capability-cli` (plan mode) resolves the pipeline's typed
+      capabilities through the CENTRAL registry (13 records incl.
+      `core/asset.manifest-validate`; `unity/asset.import` honestly
+      missing-prerequisite) and GENERATES the engine-aware GamePlan through
+      `buildCrossEngineAssetPlan` — 5 steps (export → manifest-validate →
+      integrate → build → run), 9 resource claims, validated through
+      `parseGamePlan` (plan sha256 recorded in
+      `evidence/phase-m3/journey/m3-capability-plan.json`).
+    - **M3J4 (§11 items 5–13):** permission DENIAL first (the source mutation
+      blocked at the existing gate — blend sha256 unchanged, no staging
+      artifact) → approved real `scene_modify` (GamosM3Cube) + `asset_export`
+      (GLB 1984 bytes, sha256 `7f15af95…`) through the app's MCP plugin path
+      → the interchange manifest persisted by the orchestration layer through
+      the REAL M3.4 facility (`buildExportedManifest` from the AUTHORITATIVE
+      session-store tool output; status "exported"; artifact integrity
+      matches) → the agent READS the manifest through the app's own `Read`
+      tool (the manifest-validate agent-tool pattern) and `asset_integrate`
+      verifies the manifest's `expectedIntegrity` fail-closed (staged GLB
+      sha256 === export sha256; the committed registry entry carries the
+      export hash) → real vite build (dist sha256 `85e4c9a1…`) + real
+      dev-server run → **THE ORIGINAL ZCODE BROWSER** loads the running
+      experience and the INTEGRATED Blender-authored asset is consumed
+      (in-guest reads: meshNames `[__root__, GamosM3Cube]`, 24 vertices,
+      `__GAMOS_BABYLON_ASSETS_READY__`, no import error) → `project_stop`
+      cancellation (port verified free).
+    - **M3J5 (§11 item 14):** the Unity `asset_import` attempt on the REAL
+      cross-engine artifact surfaces the structured `unity-editor-unavailable`
+      state — the meaningful failure path, honestly (M3-G1 stays blocked).
+    - **M3J6:** the session store (SQLite) records every engine tool
+      invocation (blender/babylon/unity markers + `asset_export`/
+      `asset_integrate`/`asset_import`/`GamosM3Cube` all found).
+    - **Strict TDD:** RED `347a1f0d`-class (the journey scripts committed
+      never-run-green) → GREEN (verdict=pass after five real fixes found by
+      the failing runs: chunked-run CDP attach at launch; `toolPartOutput`
+      restored; part-row disambiguation on chunk retries; manifest path
+      relativization — the contract stores canonical workspace-relative POSIX
+      paths; M3J3 hardened initial sidebar wait). Sandbox renderer build
+      disclosure: `vite build --sourcemap false` (the 4GB cgroup OOMs during
+      hidden-sourcemap chunk rendering; JS chunks identical, .map sidecars
+      omitted — no runtime effect; CI builds normally).
+    - Regression on this head: gamos-domain 24 files 383/383; dynamic-workflow
+      acceptance 8/8; architecture:check 0 violations; governance-check
+      compliant (GAMOS-AUTH-0011 + sanctioned rebaseline, new trust-anchor pin
+      `bb63ad81…`); roadmap-check valid (M2+M3 active). The M3 CI legs
+      (`gamos-m3-e2e.yml`: domain+contracts, G3/G4 runtime gates with real
+      Blender, the §11 journey job) wired.
+    - **No gate claim by this slice alone:** M3-G2 and M3-G5 now have real
+      in-app journey evidence (integrated-asset consumption verified in the
+      running Browser; NL request completed across engines without manual
+      repetition), and M3-G3/G4 carry the runtime-gate evidence from entry 14
+      — but the M3 completion bundle still requires the CI legs to run on the
+      pushed head, and M3-G1 stays honestly blocked while no compliant Unity
+      licensed runner exists. No `evidence/roadmap/M3.json` is claimed.

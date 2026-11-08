@@ -1,0 +1,231 @@
+{
+ "url": "http://127.0.0.1:5174/?restoreSession=true&supportsSettings=true&initialWorkspacePath=%2Fhome%2Fz%2Fmy-project%2Fgamos-2.0%2F.phaseb-m3-home%2F.zcode%2Fworkspace%2Fdefault&initialWorkspacePurpose=conversation&zcodeLaunchMarks=%7B%22createdAt%22%3A1794146748270%2C%22mainStart%22%3A1794146750317%2C%22appReady%22%3A1794146750428%2C%22loadUrl%22%3A1794146750609%7D",
+ "title": "ZCode",
+ "readyState": "complete",
+ "testIds": [
+  "sidebar",
+  "sidebar-primary-navigation",
+  "task-new-button",
+  "automations-open",
+  "plugin-store-sidebar-open",
+  "sidebar-task-list-region",
+  "sidebar-search-toolbar",
+  "sidebar-list-title",
+  "sidebar-search-open",
+  "sidebar-view-menu",
+  "project-section",
+  "virtual-project-toggle-all",
+  "virtual-project-add",
+  "conversation-section",
+  "virtual-project-new-task",
+  "project-no-tasks",
+  "login-trigger",
+  "task-settings-button",
+  "resizable-handle",
+  "_r_18_",
+  "conversation-column",
+  "side-pane-full-view-host",
+  "_r_1a_",
+  "conversation",
+  "workspace-header",
+  "workspace-help-menu-trigger",
+  "terminal-toggle",
+  "side-pane-toggle",
+  "desktop-window-controls",
+  "window-control-minimize",
+  "window-control-maximize",
+  "window-control-close",
+  "v4-pane-shell-workspace-main",
+  "v4-session-pane-workspace-main",
+  "v4-session-title",
+  "v4-timeline",
+  "chat-empty",
+  "conversation-bottom-dock-transition",
+  "conversation-bottom-dock-transition-layer",
+  "v4-composer",
+  "chat-error-banner",
+  "composer-workspace-trigger",
+  "v4-composer-input",
+  "chat-attachment-button",
+  "chat-mode-select-trigger",
+  "v4-model-config",
+  "chat-model-select-trigger",
+  "v4-composer-send",
+  "terminal",
+  "browser",
+  "desktop-top-logo-sidebar-toggle",
+  "desktop-top-nav-back"
+ ],
+ "buttons": [
+  {
+   "text": "Automations",
+   "tid": "automations-open",
+   "disabled": false
+  },
+  {
+   "text": "Plugin Marketplace",
+   "tid": "plugin-store-sidebar-open",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "sidebar-search-open",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "sidebar-view-menu",
+   "disabled": false
+  },
+  {
+   "text": "Projects",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "virtual-project-toggle-all",
+   "disabled": true
+  },
+  {
+   "text": "",
+   "tid": "virtual-project-add",
+   "disabled": false
+  },
+  {
+   "text": "Tasks",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "virtual-project-new-task",
+   "disabled": false
+  },
+  {
+   "text": "Connect",
+   "tid": "login-trigger",
+   "disabled": false
+  },
+  {
+   "text": "Mobile remote control",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "task-settings-button",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "workspace-help-menu-trigger",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "terminal-toggle",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "side-pane-toggle",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "window-control-minimize",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "window-control-maximize",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "window-control-close",
+   "disabled": false
+  },
+  {
+   "text": "Upgrade",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Set",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Select project",
+   "tid": "composer-workspace-trigger",
+   "disabled": false
+  },
+  {
+   "text": "Add context",
+   "tid": "chat-attachment-button",
+   "disabled": false
+  },
+  {
+   "text": "Ask before changes",
+   "tid": "chat-mode-select-trigger",
+   "disabled": false
+  },
+  {
+   "text": "Manage models",
+   "tid": "chat-model-select-trigger",
+   "disabled": false
+  },
+  {
+   "text": "Send",
+   "tid": "v4-composer-send",
+   "disabled": true
+  },
+  {
+   "text": "Weekly Summary",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Error Fix",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "PPT Creation",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Idle-time task",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "desktop-top-logo-sidebar-toggle",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "desktop-top-nav-back",
+   "disabled": true
+  },
+  {
+   "text": "",
+   "tid": null,
+   "disabled": true
+  },
+  {
+   "text": "",
+   "tid": null,
+   "disabled": false
+  }
+ ]
+}

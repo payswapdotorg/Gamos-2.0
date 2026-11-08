@@ -1,0 +1,46 @@
+{
+ "url": "http://127.0.0.1:5174/?restoreSession=true&supportsSettings=true&initialWorkspacePath=%2Fhome%2Fz%2Fmy-project%2Fgamos-2.0%2F.phaseb-m3-home%2F.zcode%2Fworkspace%2Fdefault&initialWorkspacePurpose=conversation&zcodeLaunchMarks=%7B%22createdAt%22%3A1794146748270%2C%22mainStart%22%3A1794146750317%2C%22appReady%22%3A1794146750428%2C%22loadUrl%22%3A1794146750609%7D",
+ "title": "ZCode",
+ "readyState": "complete",
+ "testIds": [
+  "desktop-window-controls",
+  "window-control-minimize",
+  "window-control-maximize",
+  "window-control-close",
+  "oauth-login-button-zai",
+  "oauth-login-button",
+  "login-use-api-key-button"
+ ],
+ "buttons": [
+  {
+   "text": "",
+   "tid": "window-control-minimize",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "window-control-maximize",
+   "disabled": false
+  },
+  {
+   "text": "",
+   "tid": "window-control-close",
+   "disabled": false
+  },
+  {
+   "text": "Connect to Z.ai\nGlobal",
+   "tid": "oauth-login-button-zai",
+   "disabled": false
+  },
+  {
+   "text": "Connect to BigModel\nCN",
+   "tid": "oauth-login-button",
+   "disabled": false
+  },
+  {
+   "text": "Use API key",
+   "tid": "login-use-api-key-button",
+   "disabled": false
+  }
+ ]
+}

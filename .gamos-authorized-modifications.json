@@ -1,7 +1,7 @@
 {
   "version": 2,
   "schema": "gamos/authorization@2",
-  "description": "Authorized modifications to protected (baseline) surfaces and governance controls. Schema v2: every entry must be COMPLETE \u2014 id, phase, dates, requester {login,role}, rationale, risk, affected_functionality, new_functionality, regression_tests, evidence {summary,links}, changes[] with per-file content_sha256, and a structured tl_approval {approved:true, approver, date, decision_ref} whose approver is a baseline.governance.approvers login. A truthy tl_approval value alone is rejected by the governance gate. Entries that fail any schema check grant no authorization at all. Workers must not self-serve entries.",
+  "description": "Authorized modifications to protected (baseline) surfaces and governance controls. Schema v2: every entry must be COMPLETE — id, phase, dates, requester {login,role}, rationale, risk, affected_functionality, new_functionality, regression_tests, evidence {summary,links}, changes[] with per-file content_sha256, and a structured tl_approval {approved:true, approver, date, decision_ref} whose approver is a baseline.governance.approvers login. A truthy tl_approval value alone is rejected by the governance gate. Entries that fail any schema check grant no authorization at all. Workers must not self-serve entries.",
   "entries": [
     {
       "id": "GAMOS-AUTH-0001",
@@ -11,7 +11,7 @@
         "login": "payswapdotorg",
         "role": "tech-lead"
       },
-      "rationale": "Architect review (Phase A \u2014 repair governance): upgrade the M0 governance gate to v2. Hash-protected governance control files, complete authorization schema with content-bound hashes, tamper-rejection self-tests, workflow trust-anchor pin, CODEOWNERS and branch rulesets. The v1 gate accepted a truthy tl_approval field alone, which is insufficient.",
+      "rationale": "Architect review (Phase A — repair governance): upgrade the M0 governance gate to v2. Hash-protected governance control files, complete authorization schema with content-bound hashes, tamper-rejection self-tests, workflow trust-anchor pin, CODEOWNERS and branch rulesets. The v1 gate accepted a truthy tl_approval field alone, which is insufficient.",
       "risk": "medium",
       "affected_functionality": "Gamos governance gate only: verifier script, self-tests, re-baselining tool, protected-surfaces policy, authorization ledger, governance CI workflow, CODEOWNERS. No ZCode application surface is touched.",
       "new_functionality": "scripts/gamos/governance-check.mjs v2 (control-file hash verification, trust-anchor pin, tag cross-check, authorization schema v2 with content binding); scripts/gamos/governance-self-test.mjs (13 tamper-rejection scenarios); scripts/gamos/governance-rebaseline.mjs (sanctioned re-baselining); workflow self-test job + daily schedule; CODEOWNERS + rulesets.",
@@ -222,7 +222,7 @@
         "approved": true,
         "approver": "payswapdotorg",
         "date": "2026-11-05T00:05:00Z",
-        "decision_ref": "Architect re-review 'Gamos-2.0 \u2014 Architect Re-review and M0 Closure Directive' section 2 (Revise the Phase-0 contracts, corrections A-E, via the approved governance authorization/re-baselining process); recorded as ADR-0005"
+        "decision_ref": "Architect re-review 'Gamos-2.0 — Architect Re-review and M0 Closure Directive' section 2 (Revise the Phase-0 contracts, corrections A-E, via the approved governance authorization/re-baselining process); recorded as ADR-0005"
       }
     },
     {
@@ -288,10 +288,10 @@
         "login": "payswapdotorg",
         "role": "tech-lead"
       },
-      "rationale": "Roadmap M1.1/M1.2 (directive 'Autonomous M0 Closure and M1 Implementation' Part III/\u00a78-\u00a79, TDD RED commit 70c6352f): create the additive pure gaming-domain package packages/gamos-domain with the vendored pinned PlayLiquid GameIR kernel. Two baseline-tracked files require a minimal additive modification: (1) architecture-policy.yaml \u2014 register the new managed module gamos-domain (layer domain, owner gamos-tl, requires []) through the sanctioned 'pnpm architecture:adopt' tool, which is the only mechanical guarantee that new source files fall under the architecture rules (newFilesRequireManagedModule); the registration adds one module block (layered domain/vendor/adapters per the repo layering rules: pure domain logic, byte-exact upstream vendor kernel, node:crypto-backed hashing adapters) plus the test/ root registration (module tests), a vitest.config.ts unmanaged-new-file exception following the zcode-cua precedent, and one disable-count exception documenting that the vendored upstream file packages/gamos-domain/src/vendor/playliquid-gameos/src/game-contracts/git.ts carries an upstream eslint-disable comment that must not be edited (byte-exact pin, PROVENANCE.md); (2b) pnpm-lock.yaml \u2014 register the new package's single devDependency (typescript@^6.0.2, same range the workspace root pins) via 'pnpm install --lockfile-only' so the frozen-lockfile CI install can resolve the new workspace project; (2) vitest.config.ts \u2014 append 'packages/gamos-domain/vitest.config.ts' to the root test projects so the new package's tests are discovered by the existing engineering test entry, mirroring the existing zcode-cua project registration. Per directive Part I \u00a73 (mandatory autonomy), the TL owns implementation details within the frozen contracts; the TL is the repository decision authority for M1 (architect-approval checkpoints are explicitly removed between M0 and M1).",
+      "rationale": "Roadmap M1.1/M1.2 (directive 'Autonomous M0 Closure and M1 Implementation' Part III/§8-§9, TDD RED commit 70c6352f): create the additive pure gaming-domain package packages/gamos-domain with the vendored pinned PlayLiquid GameIR kernel. Two baseline-tracked files require a minimal additive modification: (1) architecture-policy.yaml — register the new managed module gamos-domain (layer domain, owner gamos-tl, requires []) through the sanctioned 'pnpm architecture:adopt' tool, which is the only mechanical guarantee that new source files fall under the architecture rules (newFilesRequireManagedModule); the registration adds one module block (layered domain/vendor/adapters per the repo layering rules: pure domain logic, byte-exact upstream vendor kernel, node:crypto-backed hashing adapters) plus the test/ root registration (module tests), a vitest.config.ts unmanaged-new-file exception following the zcode-cua precedent, and one disable-count exception documenting that the vendored upstream file packages/gamos-domain/src/vendor/playliquid-gameos/src/game-contracts/git.ts carries an upstream eslint-disable comment that must not be edited (byte-exact pin, PROVENANCE.md); (2b) pnpm-lock.yaml — register the new package's single devDependency (typescript@^6.0.2, same range the workspace root pins) via 'pnpm install --lockfile-only' so the frozen-lockfile CI install can resolve the new workspace project; (2) vitest.config.ts — append 'packages/gamos-domain/vitest.config.ts' to the root test projects so the new package's tests are discovered by the existing engineering test entry, mirroring the existing zcode-cua project registration. Per directive Part I §3 (mandatory autonomy), the TL owns implementation details within the frozen contracts; the TL is the repository decision authority for M1 (architect-approval checkpoints are explicitly removed between M0 and M1).",
       "risk": "low",
       "affected_functionality": "None at runtime. architecture-policy.yaml governs the static architecture gate: the added module registration only brings the NEW package under the managed-module rules (public entrypoints, layer order, contract docs). vitest.config.ts discovers tests: the added project runs packages/gamos-domain/test (pure data/validation tests; no app surface, no process spawning, no network). No ZCode application surface, no runtime code path, no IPC/RPC channel is touched.",
-      "new_functionality": "packages/gamos-domain \u2014 pure gaming-domain package: GameConcept, GameSpec (= PlayLiquid GameIRDocument exact compatibility, contract 01 rev 2), GamePlan, AcceptanceRecord, GameArtifact, gamos/capability@2 registry with fail-closed resolution (contract 02 rev 1), vendored GameIR kernel pinned at 196b305e75decfeaa162d3da479dc125cff1521a with PROVENANCE.md. Pure data/validation/deterministic resolution only: no process spawning, no sockets, no engines, no second UI/task/session runtime/workflow engine (contract 01 package boundary, M1.1 acceptance).",
+      "new_functionality": "packages/gamos-domain — pure gaming-domain package: GameConcept, GameSpec (= PlayLiquid GameIRDocument exact compatibility, contract 01 rev 2), GamePlan, AcceptanceRecord, GameArtifact, gamos/capability@2 registry with fail-closed resolution (contract 02 rev 1), vendored GameIR kernel pinned at 196b305e75decfeaa162d3da479dc125cff1521a with PROVENANCE.md. Pure data/validation/deterministic resolution only: no process spawning, no sockets, no engines, no second UI/task/session runtime/workflow engine (contract 01 package boundary, M1.1 acceptance).",
       "regression_tests": [
         "npx vitest run --project gamos-domain (93/93)",
         "npx tsc --noEmit -p packages/gamos-domain/tsconfig.json",
@@ -301,7 +301,7 @@
         "node scripts/gamos/roadmap-check.mjs"
       ],
       "evidence": {
-        "summary": "TDD RED commit 70c6352f proves the behavior was missing (34 failing tests); this GREEN commit implements the smallest change that passes (93/93 incl. 23 HARDEN adversarial cases). The vendored GameIR is byte-exact against the pinned upstream commit, enforced by a 21-entry sha256 manifest test that fails closed on drift (contract 01 \u00a72 rule 4).",
+        "summary": "TDD RED commit 70c6352f proves the behavior was missing (34 failing tests); this GREEN commit implements the smallest change that passes (93/93 incl. 23 HARDEN adversarial cases). The vendored GameIR is byte-exact against the pinned upstream commit, enforced by a 21-entry sha256 manifest test that fails closed on drift (contract 01 §2 rule 4).",
         "links": [
           "packages/gamos-domain/",
           "packages/gamos-domain/src/vendor/playliquid-gameos/PROVENANCE.md",
@@ -330,7 +330,7 @@
         "approved": true,
         "approver": "payswapdotorg",
         "date": "2026-11-05T20:50:00Z",
-        "decision_ref": "M1 directive Part I \u00a73 (TL autonomy for M1 implementation within frozen contracts) + TDD RED evidence 70c6352f; reviewed on gamos/roadmap-integration"
+        "decision_ref": "M1 directive Part I §3 (TL autonomy for M1 implementation within frozen contracts) + TDD RED evidence 70c6352f; reviewed on gamos/roadmap-integration"
       }
     },
     {
@@ -341,7 +341,7 @@
         "login": "payswapdotorg",
         "role": "tech-lead"
       },
-      "rationale": "Roadmap M2.5/TL integration (directive 'Gamos M2 \u2014 Unity, Blender and Babylon Real Engine Integrations' \u00a75 M2.5 + \u00a711; branch gamos/roadmap-m2-integration): register the three first-party engine plugins (unity-engine/blender-engine/babylon-engine, contract 03 \u00a72 gamos/engine-plugin@2, all purely additive packages) into the EXISTING ZCode plugin lifecycle. Four baseline-tracked files require minimal additive modification: (1) official-plugin-definitions.ts \u2014 three new OfficialPluginDefinition entries (default-off like android-emulator/ios-simulator, listings, no dist-pinned requiredSeedPaths) so the plugins seed through the standard bundled-plugins path and the marketplace/settings surfaces see them; (2) sea-official-plugin-assets.mjs \u2014 three officialSeaPlugins entries with dist/mcp/server.js runtime paths so SEA builds embed and mechanically validate the engine MCP servers; (3) scripts/build-desktop-agent-cli.mjs \u2014 three requiredDevPluginRuntimeBuilds entries enforcing the file's own declared rule 'every official plugin whose plugin.json declares mcpServers must be registered here', so the agent CLI chain builds the engine MCP servers and verifies the real entry files before the agent bundle starts; (4) pnpm-lock.yaml \u2014 regenerated via pnpm install --lockfile-only so the frozen-lockfile CI install resolves the three new workspace packages (M1 GAMOS-AUTH-0005 precedent for registering a new workspace package in the lockfile). No governance control file, frozen contract or protected upstream behavior is altered; the additive engine-plugin packages themselves are new files (additive allowed).",
+      "rationale": "Roadmap M2.5/TL integration (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §5 M2.5 + §11; branch gamos/roadmap-m2-integration): register the three first-party engine plugins (unity-engine/blender-engine/babylon-engine, contract 03 §2 gamos/engine-plugin@2, all purely additive packages) into the EXISTING ZCode plugin lifecycle. Four baseline-tracked files require minimal additive modification: (1) official-plugin-definitions.ts — three new OfficialPluginDefinition entries (default-off like android-emulator/ios-simulator, listings, no dist-pinned requiredSeedPaths) so the plugins seed through the standard bundled-plugins path and the marketplace/settings surfaces see them; (2) sea-official-plugin-assets.mjs — three officialSeaPlugins entries with dist/mcp/server.js runtime paths so SEA builds embed and mechanically validate the engine MCP servers; (3) scripts/build-desktop-agent-cli.mjs — three requiredDevPluginRuntimeBuilds entries enforcing the file's own declared rule 'every official plugin whose plugin.json declares mcpServers must be registered here', so the agent CLI chain builds the engine MCP servers and verifies the real entry files before the agent bundle starts; (4) pnpm-lock.yaml — regenerated via pnpm install --lockfile-only so the frozen-lockfile CI install resolves the three new workspace packages (M1 GAMOS-AUTH-0005 precedent for registering a new workspace package in the lockfile). No governance control file, frozen contract or protected upstream behavior is altered; the additive engine-plugin packages themselves are new files (additive allowed).",
       "risk": "medium",
       "affected_functionality": "Plugin lifecycle registration surfaces only: official plugin definitions/seed listings, SEA asset collection, desktop agent CLI build chain, pnpm lockfile. No existing plugin's definition, seeding or build is changed (additions only); the ZCode application runtime behavior for existing plugins is untouched.",
       "new_functionality": "The three engine plugins become first-class official plugins: seeded via bundled-plugins, listed in settings/marketplace surfaces (default-off), built + runtime-verified by the agent CLI chain, embedded in SEA builds, and resolvable by the frozen-lockfile workspace install.",
@@ -355,7 +355,7 @@
         "apps/zcode-cli/packages/cli/tests/build-sea.test.mjs ('keeps SEA official plugin versions aligned with package and plugin manifests')"
       ],
       "evidence": {
-        "summary": "TL-reviewed engine-plugin integration: Worker A RED->GREEN vertical slices (blender 58560e20/34fcd448 26/26 incl. 6 real-Blender-4.1.1 integration tests; babylon 4f35882c/6983152d 35/35 incl. 6 real-Node/Vite integration tests; unity 58885430/e330bbc9 54/54 with honest no-editor skip per directive \u00a78); Worker C adversarial package validator 251/251 domain tests incl. the three SHIPPED manifests INTEGRATE-validated; gamos-m2-e2e CI workflow with REQUIRED real-engine jobs. All alignment invariants verified (definition == manifest == package versions; SEA entries aligned; agent-CLI runtime artifacts verified post-build).",
+        "summary": "TL-reviewed engine-plugin integration: Worker A RED->GREEN vertical slices (blender 58560e20/34fcd448 26/26 incl. 6 real-Blender-4.1.1 integration tests; babylon 4f35882c/6983152d 35/35 incl. 6 real-Node/Vite integration tests; unity 58885430/e330bbc9 54/54 with honest no-editor skip per directive §8); Worker C adversarial package validator 251/251 domain tests incl. the three SHIPPED manifests INTEGRATE-validated; gamos-m2-e2e CI workflow with REQUIRED real-engine jobs. All alignment invariants verified (definition == manifest == package versions; SEA entries aligned; agent-CLI runtime artifacts verified post-build).",
         "links": [
           "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
           "docs/gamos/IMPLEMENTATION-STATUS.md",
@@ -388,7 +388,7 @@
         "approved": true,
         "approver": "payswapdotorg",
         "date": "2026-11-07T08:30:00Z",
-        "decision_ref": "M2 directive \u00a75 M2.5/\u00a711 + TL integration review of PR #5 (engine-plugin lifecycle registration; three additive packages, four minimal additive modifications to baseline-tracked registration surfaces)"
+        "decision_ref": "M2 directive §5 M2.5/§11 + TL integration review of PR #5 (engine-plugin lifecycle registration; three additive packages, four minimal additive modifications to baseline-tracked registration surfaces)"
       }
     },
     {
@@ -399,7 +399,7 @@
         "login": "payswapdotorg",
         "role": "tech-lead"
       },
-      "rationale": "M2 handoff audit (directive 'Gamos M2 \u2014 Unity, Blender and Babylon Real Engine Integrations' \u00a75 M2.5: 'Prove the three plugins are handled by the existing plugin lifecycle' / \u00a712 audit-and-close): GAMOS-AUTH-0006 registered the three engine plugins in the official definitions, SEA asset manifests and the agent-CLI build chain, but the DESKTOP PACKAGING staging list (packages/desktop/scripts/prepare-agent-node-bundle.mjs officialPluginPackages \u2014 the chain that copies plugin packages next to the agent bundle for Electron production builds, and the only delivery path for first-party zcode-official seeded plugins in the packaged desktop app) still omits them: without this entry a packaged desktop app cannot seed unity-engine/blender-engine/babylon-engine at all (the exact 'restore-legacy-sessions registered but not staged' defect class that file already documents). The fix is three additive entries following the established android-emulator/ios-simulator pattern (requiresRuntime + dist/mcp/server.js + scripts/build-mcp.mjs + stagedPath packages/<name>); no existing plugin's entry, ordering or staging behavior is changed.",
+      "rationale": "M2 handoff audit (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §5 M2.5: 'Prove the three plugins are handled by the existing plugin lifecycle' / §12 audit-and-close): GAMOS-AUTH-0006 registered the three engine plugins in the official definitions, SEA asset manifests and the agent-CLI build chain, but the DESKTOP PACKAGING staging list (packages/desktop/scripts/prepare-agent-node-bundle.mjs officialPluginPackages — the chain that copies plugin packages next to the agent bundle for Electron production builds, and the only delivery path for first-party zcode-official seeded plugins in the packaged desktop app) still omits them: without this entry a packaged desktop app cannot seed unity-engine/blender-engine/babylon-engine at all (the exact 'restore-legacy-sessions registered but not staged' defect class that file already documents). The fix is three additive entries following the established android-emulator/ios-simulator pattern (requiresRuntime + dist/mcp/server.js + scripts/build-mcp.mjs + stagedPath packages/<name>); no existing plugin's entry, ordering or staging behavior is changed.",
       "risk": "medium",
       "affected_functionality": "Desktop packaging staging list only (officialPluginPackages in prepare-agent-node-bundle.mjs): three additive entries for the engine plugins. No existing plugin's staging, entry or behavior is modified; no governance control file, frozen contract or protected upstream behavior is altered.",
       "new_functionality": "The packaged (Electron production) desktop app carries the three engine plugins next to the agent bundle so the bundled-plugins filesystem seed stages them into the official plugin cache (default-off), completing the lifecycle registration across ALL delivery surfaces: definitions (AUTH-0006), SEA CLI assets (AUTH-0006), agent-CLI builds (AUTH-0006), and now the desktop packaging chain.",
@@ -412,11 +412,11 @@
         "apps/zcode-cli/packages/cli/tests/build-sea.test.mjs ('keeps SEA official plugin versions aligned with package and plugin manifests')"
       ],
       "evidence": {
-        "summary": "M2 handoff audit finding: officialPluginPackages omitted the engine plugins (27 staged packages, none engine). RED: the m2 \u00a79 journey cannot seed the plugins through the dev agent without them staged next to the bundle; the packaged desktop app would never carry them. GREEN: three additive android-emulator-pattern entries; the m2 journey stages the same packages for the dev agent (build-output staging, journey-side) and proves enable/disable + MCP invocation end-to-end.",
+        "summary": "M2 handoff audit finding: officialPluginPackages omitted the engine plugins (27 staged packages, none engine). RED: the m2 §9 journey cannot seed the plugins through the dev agent without them staged next to the bundle; the packaged desktop app would never carry them. GREEN: three additive android-emulator-pattern entries; the m2 journey stages the same packages for the dev agent (build-output staging, journey-side) and proves enable/disable + MCP invocation end-to-end.",
         "links": [
           "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
           "docs/gamos/IMPLEMENTATION-STATUS.md",
-          "PR (gamos/roadmap-m2-journeys): M2 \u00a79 journeys + audit closure"
+          "PR (gamos/roadmap-m2-journeys): M2 §9 journeys + audit closure"
         ]
       },
       "changes": [
@@ -430,7 +430,7 @@
         "approved": true,
         "approver": "payswapdotorg",
         "date": "2026-11-07T10:30:00Z",
-        "decision_ref": "M2 directive \u00a75 M2.5/\u00a712 (audit and close remaining soft spots) + TL review of the packaging-chain gap (engine plugins registered in definitions/SEA/build-chain but absent from officialPluginPackages \u2014 the packaged-app delivery path)"
+        "decision_ref": "M2 directive §5 M2.5/§12 (audit and close remaining soft spots) + TL review of the packaging-chain gap (engine plugins registered in definitions/SEA/build-chain but absent from officialPluginPackages — the packaged-app delivery path)"
       }
     },
     {
@@ -441,20 +441,20 @@
         "login": "payswapdotorg",
         "role": "tech-lead"
       },
-      "rationale": "M2 \u00a79 journey support (directive 'Gamos M2 \u2014 Unity, Blender and Babylon Real Engine Integrations' \u00a79/\u00a712 audit-and-close): scripts/gamos/m2-ui-journey.mjs runs the original ZCode application against an isolated home (PHASEB_HOME default .phaseb-m2-home under the repo), a staged dev app dir (.phaseb-m2-app) and a debug home used by the renderer-diagnosis probes (.phaseb-m2-debug-home). These are build/test runtime outputs that must never be committed (the same treatment the M1 journey's .phaseb-home staging receives via untracked paths); without the ignore entries a git add -A sweeps isolated app state (including locally generated cert material) into the tree \u2014 exactly what the first GREEN commit did before the amend. Three additive ignore lines only; no existing ignore rule is changed or removed.",
+      "rationale": "M2 §9 journey support (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §9/§12 audit-and-close): scripts/gamos/m2-ui-journey.mjs runs the original ZCode application against an isolated home (PHASEB_HOME default .phaseb-m2-home under the repo), a staged dev app dir (.phaseb-m2-app) and a debug home used by the renderer-diagnosis probes (.phaseb-m2-debug-home). These are build/test runtime outputs that must never be committed (the same treatment the M1 journey's .phaseb-home staging receives via untracked paths); without the ignore entries a git add -A sweeps isolated app state (including locally generated cert material) into the tree — exactly what the first GREEN commit did before the amend. Three additive ignore lines only; no existing ignore rule is changed or removed.",
       "risk": "low",
       "affected_functionality": "Repository ignore list only: three additive directory patterns for the M2 journey's runtime output dirs. No source, build or behavior change.",
-      "new_functionality": "The M2 \u00a79 journey's isolated app homes are kept out of the working-tree status, keeping evidence commits clean.",
+      "new_functionality": "The M2 §9 journey's isolated app homes are kept out of the working-tree status, keeping evidence commits clean.",
       "regression_tests": [
         "node scripts/gamos/governance-check.mjs --pin $GAMOS_BASELINE_SHA256",
         "node scripts/gamos/governance-self-test.mjs",
         "pnpm run architecture:check"
       ],
       "evidence": {
-        "summary": "M2 \u00a79 journey GREEN commit initially included .phaseb-m2-debug-home app state; amended out and the ignore entries added so the class of accident cannot recur.",
+        "summary": "M2 §9 journey GREEN commit initially included .phaseb-m2-debug-home app state; amended out and the ignore entries added so the class of accident cannot recur.",
         "links": [
           "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
-          "PR (gamos/roadmap-m2-journeys): M2 \u00a79 journeys + audit closure"
+          "PR (gamos/roadmap-m2-journeys): M2 §9 journeys + audit closure"
         ]
       },
       "changes": [
@@ -468,7 +468,7 @@
         "approved": true,
         "approver": "payswapdotorg",
         "date": "2026-11-07T13:45:00Z",
-        "decision_ref": "M2 directive \u00a712 (audit and close remaining soft spots) + TL review of the journey-runtime-dirs ignore need"
+        "decision_ref": "M2 directive §12 (audit and close remaining soft spots) + TL review of the journey-runtime-dirs ignore need"
       }
     },
     {
@@ -479,10 +479,10 @@
         "login": "payswapdotorg",
         "role": "tech-lead"
       },
-      "rationale": "M2 \u00a79 journey branch push (directive 'Gamos M2 \u2014 Unity, Blender and Babylon Real Engine Integrations' \u00a711 CI/regression requirements): the repository's pre-push verification chain (verify:pre-push \u2192 architecture:check --changed, base merge-base origin/main) flags every engine-plugin source file as unmanaged-new-file \u2014 the three first-party engine plugin packages (unity/blender/babylon-engine-plugin, contract 03 \u00a72 gamos/engine-plugin@2) entered the repo in PR #5 after the newFilesEnforcedSince gate timestamp and live under the unmanaged zcode-cli scope without an architecture exception. One additive exceptions entry (gamos-engine-plugins-unmanaged-new-files) registers the three packages' src/**, test/** and vitest.config.ts paths with the exact zcode-cua-unmanaged-new-files precedent (74780b9b registered gamos-domain's configs the same way; the zcode-cua package registered its whole src tree). A dedicated architecture-adoption pass (managed-module split of the plugin packages) remains out of scope for this branch, exactly as documented for zcode-cua. No module, rule, gate timestamp or existing exception is changed.",
+      "rationale": "M2 §9 journey branch push (directive 'Gamos M2 — Unity, Blender and Babylon Real Engine Integrations' §11 CI/regression requirements): the repository's pre-push verification chain (verify:pre-push → architecture:check --changed, base merge-base origin/main) flags every engine-plugin source file as unmanaged-new-file — the three first-party engine plugin packages (unity/blender/babylon-engine-plugin, contract 03 §2 gamos/engine-plugin@2) entered the repo in PR #5 after the newFilesEnforcedSince gate timestamp and live under the unmanaged zcode-cli scope without an architecture exception. One additive exceptions entry (gamos-engine-plugins-unmanaged-new-files) registers the three packages' src/**, test/** and vitest.config.ts paths with the exact zcode-cua-unmanaged-new-files precedent (74780b9b registered gamos-domain's configs the same way; the zcode-cua package registered its whole src tree). A dedicated architecture-adoption pass (managed-module split of the plugin packages) remains out of scope for this branch, exactly as documented for zcode-cua. No module, rule, gate timestamp or existing exception is changed.",
       "risk": "low",
       "affected_functionality": "architecture-policy.yaml exceptions list only: one additive entry covering the three engine plugin packages' files for the unmanaged-new-file rule. No module definition, dependency rule, gate timestamp or existing exception is modified.",
-      "new_functionality": "The M2 \u00a79 journey branch passes the repository's pre-push architecture verification (verify:pre-push), keeping the established push discipline intact for the engine-plugin delivery.",
+      "new_functionality": "The M2 §9 journey branch passes the repository's pre-push architecture verification (verify:pre-push), keeping the established push discipline intact for the engine-plugin delivery.",
       "regression_tests": [
         "node scripts/gamos/governance-check.mjs --pin $GAMOS_BASELINE_SHA256",
         "node scripts/gamos/governance-self-test.mjs",
@@ -494,7 +494,7 @@
         "summary": "Pre-push architecture check on the journey branch flagged 20 unmanaged-new-file violations, all engine-plugin files (PR #5 additions). The additive exception follows the zcode-cua precedent; architecture:check (full and --changed) now reports 0 violations.",
         "links": [
           "docs/gamos/handoffs/2026-11-07-m2-engine-integrations.md",
-          "PR (gamos/roadmap-m2-journeys): M2 \u00a79 journeys + audit closure"
+          "PR (gamos/roadmap-m2-journeys): M2 §9 journeys + audit closure"
         ]
       },
       "changes": [
@@ -508,7 +508,7 @@
         "approved": true,
         "approver": "payswapdotorg",
         "date": "2026-11-07T13:55:00Z",
-        "decision_ref": "M2 directive \u00a711 (CI and regression requirements \u2014 the new CI must not weaken existing checks; the pre-push chain is part of the repo's verification discipline) + TL review of the zcode-cua-precedent exception"
+        "decision_ref": "M2 directive §11 (CI and regression requirements — the new CI must not weaken existing checks; the pre-push chain is part of the repo's verification discipline) + TL review of the zcode-cua-precedent exception"
       }
     },
     {
@@ -519,7 +519,7 @@
         "login": "payswapdotorg",
         "role": "tech-lead"
       },
-      "rationale": "M2-E (final-closure directive 'Gamos \u2014 Final M2 Closure and M3 Implementation Handoff' \u00a72 M2-E: 'original ZCode build and affected inherited application journeys' must pass): the inherited bootstrap plugin suite's two hardcoded official-marketplace pluginCount assertions (15) drifted when M2's PR #5 additively registered the three first-party engine plugins into OFFICIAL_PLUGIN_DEFINITIONS / the merged official marketplace (15+3=18). The bootstrap suite is not on the M2 CI path, so the drift was invisible until the final-closure regression run. This is the minimal, cause-annotated repair of the stale inherited assertion \u2014 two numeric literals updated 15 -> 18 with a comment naming the cause; no assertion is weakened, removed or skipped.",
+      "rationale": "M2-E (final-closure directive 'Gamos — Final M2 Closure and M3 Implementation Handoff' §2 M2-E: 'original ZCode build and affected inherited application journeys' must pass): the inherited bootstrap plugin suite's two hardcoded official-marketplace pluginCount assertions (15) drifted when M2's PR #5 additively registered the three first-party engine plugins into OFFICIAL_PLUGIN_DEFINITIONS / the merged official marketplace (15+3=18). The bootstrap suite is not on the M2 CI path, so the drift was invisible until the final-closure regression run. This is the minimal, cause-annotated repair of the stale inherited assertion — two numeric literals updated 15 -> 18 with a comment naming the cause; no assertion is weakened, removed or skipped.",
       "risk": "low",
       "affected_functionality": "Two count literals in apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts assertions only ('includes the merged ZCode official marketplace and Claude marketplace for empty storage' and 'keeps official marketplace projection when User declares a reserved id'). No production source, no plugin code, no contracts, no gate definitions.",
       "new_functionality": "The inherited bootstrap plugin suites pass again on the M2 development head (71/71 across plugins.test.ts + plugins-protocol.test.ts + the new engine-plugin-lifecycle.test.ts), restoring the inherited-regression leg of M2-G5 evidence.",
@@ -530,7 +530,7 @@
         "node scripts/gamos/roadmap-check.mjs"
       ],
       "evidence": {
-        "summary": "Pre-repair run on the same commit: 2 failed | 45 passed with 'expected pluginCount 15, received 18' in both tests (the other two pre-existing failures were build-state only \u2014 node-repl-host/browser-use-plugin dist artifacts \u2014 fixed by building those packages, no source change). Post-repair: 71/71 green. Evidence recorded in evidence/phase-m2/regression/m2-regression-evidence.json.",
+        "summary": "Pre-repair run on the same commit: 2 failed | 45 passed with 'expected pluginCount 15, received 18' in both tests (the other two pre-existing failures were build-state only — node-repl-host/browser-use-plugin dist artifacts — fixed by building those packages, no source change). Post-repair: 71/71 green. Evidence recorded in evidence/phase-m2/regression/m2-regression-evidence.json.",
         "links": [
           "docs/gamos/handoffs/2026-11-07-m2-final-closure-and-m3-handoff.md",
           "evidence/phase-m2/regression/m2-regression-evidence.json"
@@ -547,7 +547,45 @@
         "approved": true,
         "approver": "payswapdotorg",
         "date": "2026-11-08T01:30:00Z",
-        "decision_ref": "Final-closure directive \u00a72 M2-E ('Complete cross-plugin and inherited regression ... verify ... original ZCode build and affected inherited application journeys') + \u00a72 M2-F rule 11 (verify main remains the pristine upstream baseline \u2014 no production surface touched). TL-reviewed: the count drift is a factual consequence of the M2 additive engine-plugin registration recorded in PR #5; updating the inherited literal to the true count (18) is the honest repair, not a weakening."
+        "decision_ref": "Final-closure directive §2 M2-E ('Complete cross-plugin and inherited regression ... verify ... original ZCode build and affected inherited application journeys') + §2 M2-F rule 11 (verify main remains the pristine upstream baseline — no production surface touched). TL-reviewed: the count drift is a factual consequence of the M2 additive engine-plugin registration recorded in PR #5; updating the inherited literal to the true count (18) is the honest repair, not a weakening."
+      }
+    },
+    {
+      "id": "GAMOS-AUTH-0011",
+      "date": "2026-11-08T14:25:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "Two additive .gitignore entries for the M3 journey runtime dirs (.phaseb-m3-home/, .phaseb-m3-app/): the journey's isolated home and staged app dir are runtime state, never evidence — the exact treatment the M1/M2 journey dirs already receive (directive: large artifacts stay out of Git; committed evidence goes to evidence/phase-m3/).",
+      "risk": "low",
+      "affected_functionality": "None — ignore rules only; the M3 journey evidence (evidence/phase-m3/journey/) is explicitly NOT ignored and stays committed.",
+      "new_functionality": "The M3 cross-engine journey's runtime directories are excluded from Git tracking, preventing accidental commits of the isolated app home, staged build output and engine workspaces.",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin <new baseline pin>",
+        "node scripts/gamos/governance-self-test.mjs",
+        "node scripts/gamos/roadmap-check.mjs",
+        "git status --short (the M3 journey evidence under evidence/phase-m3/ remains tracked and committed)"
+      ],
+      "evidence": {
+        "summary": "M3.5 journey slice (gamos/m3-endtoend-journey): the GREEN commit ignores the journey's runtime dirs exactly as the M2 journey's (GAMOS-AUTH-0007 precedent class); evidence itself stays committed.",
+        "links": [
+          "evidence/phase-m3/journey/m3-journey-evidence.json",
+          "scripts/gamos/m3-ui-journey.mjs"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": ".gitignore",
+          "content_sha256": "95d10d1cb7c270d4334ac69e9b6ea719ef90858efb3bf2ad070b33c9e6eb987a"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-08T14:25:00Z",
+        "decision_ref": "Final-closure directive §12 (large generated outputs stay out of Git; committed evidence carries manifests/hashes/records) + the M2 journey's identical GAMOS-AUTH-0007 precedent (.phaseb-m2-* entries). TL-reviewed: additive ignore entries only; no tracked surface changes."
       }
     }
   ]
