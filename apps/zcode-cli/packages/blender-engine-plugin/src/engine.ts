@@ -717,6 +717,57 @@ function resolutionAxis(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+/**
+ * Re-verify bridge-reported dependent files against the filesystem (trust but
+ * verify): every record must exist, be non-empty, and its recomputed size and
+ * sha256 must match the bridge report exactly. Exported for failure-path tests.
+ */
+export async function verifyExportDependentFileRecords(
+  records: readonly unknown[],
+): Promise<{ ok: true; records: readonly ExportDependentFileRecord[] } | EngineFailure> {
+  const verified: ExportDependentFileRecord[] = [];
+  for (const entry of records) {
+    if (!entry || typeof entry !== "object" || typeof (entry as Record<string, unknown>).path !== "string" || typeof (entry as Record<string, unknown>).sha256 !== "string") {
+      return {
+        ok: false,
+        code: "export-dependent-file-invalid",
+        message: `bridge reported a malformed dependent file record: ${JSON.stringify(entry)}`,
+      };
+    }
+    const record = entry as { path: string; sha256: string; bytes?: unknown };
+    if (!existsSync(record.path)) {
+      return {
+        ok: false,
+        code: "export-dependent-file-missing",
+        message: `dependent file reported by the bridge is missing: ${record.path}`,
+      };
+    }
+    const dependentBytes = (await stat(record.path)).size;
+    if (dependentBytes <= 0) {
+      return {
+        ok: false,
+        code: "export-dependent-file-empty",
+        message: `dependent file is empty: ${record.path}`,
+      };
+    }
+    const dependentSha = await sha256File(record.path);
+    if (dependentSha !== record.sha256 || dependentBytes !== record.bytes) {
+      return {
+        ok: false,
+        code: "export-dependent-file-hash-mismatch",
+        message: `dependent file integrity mismatch (reported bytes=${String(record.bytes)} sha256=${record.sha256}, observed bytes=${dependentBytes} sha256=${dependentSha}): ${record.path}`,
+      };
+    }
+    verified.push({
+      path: record.path,
+      mediaType: dependentFileMediaType(record.path),
+      byteLength: dependentBytes,
+      sha256: dependentSha,
+    });
+  }
+  return { ok: true, records: verified };
+}
+
 export async function assetExport(
   executable: string,
   input: unknown,
@@ -782,45 +833,13 @@ export async function assetExport(
     }
 
     // Dependent files: trust but verify — re-hash every bridge-reported sidecar.
-    const dependentFiles: ExportDependentFileRecord[] = [];
-    for (const entry of Array.isArray(report?.dependentFiles) ? report.dependentFiles : []) {
-      if (!entry || typeof entry.path !== "string" || typeof entry.sha256 !== "string") {
-        return {
-          ok: false,
-          code: "export-dependent-file-invalid",
-          message: `bridge reported a malformed dependent file record: ${JSON.stringify(entry)}`,
-        };
-      }
-      if (!existsSync(entry.path)) {
-        return {
-          ok: false,
-          code: "export-dependent-file-missing",
-          message: `dependent file reported by the bridge is missing: ${entry.path}`,
-        };
-      }
-      const dependentBytes = (await stat(entry.path)).size;
-      if (dependentBytes <= 0) {
-        return {
-          ok: false,
-          code: "export-dependent-file-empty",
-          message: `dependent file is empty: ${entry.path}`,
-        };
-      }
-      const dependentSha = await sha256File(entry.path);
-      if (dependentSha !== entry.sha256 || dependentBytes !== entry.bytes) {
-        return {
-          ok: false,
-          code: "export-dependent-file-hash-mismatch",
-          message: `dependent file integrity mismatch (reported bytes=${entry.bytes} sha256=${entry.sha256}, observed bytes=${dependentBytes} sha256=${dependentSha}): ${entry.path}`,
-        };
-      }
-      dependentFiles.push({
-        path: entry.path,
-        mediaType: dependentFileMediaType(entry.path),
-        byteLength: dependentBytes,
-        sha256: dependentSha,
-      });
+    const dependent = await verifyExportDependentFileRecords(
+      Array.isArray(report?.dependentFiles) ? report.dependentFiles : [],
+    );
+    if (!dependent.ok) {
+      return dependent;
     }
+    const dependentFiles = dependent.records;
 
     const blenderVersion =
       report && typeof report.blenderVersion === "string" && report.blenderVersion.length > 0
