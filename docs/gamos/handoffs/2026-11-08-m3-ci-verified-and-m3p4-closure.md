@@ -90,6 +90,36 @@ handoff-record bundle, with their CI leg). Status ledger entry 16 in
    editor, run the M2-G1 evidence chain, close M2, then the M3 closure
    decision per the roadmap validator).
 
+## Post-closure stability audit (same day, follow-up "go")
+
+With no new maintainer activity (0 open PRs, 0 open issues) and the closed
+state unchanged, this session ran a full integrity sweep and reconfirmed
+stability rather than inventing work:
+
+- **CI on the closure head `eac626ac`:** governance run `42503227111`
+  success; m3-e2e correctly not triggered (docs-only change, path filters
+  exclude `docs/**` by design).
+- **Evidence-chain integrity (full cross-file sweep, first post-closure):**
+  phase-m2 investigation manifest 9/9 files hash-verified; phase-m3
+  reproducibility verdict=reproducible (digests equal ×2, internally
+  consistent); phase-m3 journey verdict=pass (M3J0–M3J6); phase-m3 handoff
+  bundle verdict=handoff-chain-verified (9 verified + unity-import
+  honestly-unavailable hops; hash chain anchored on the export digest
+  `7f15af95…` with manifest/staged/registry all matching; **all three
+  derivedFrom inputs re-hash-verified against the current committed
+  files**).
+- **Full local suite on the head:** dynamic-workflow-runtime 100 passed + 7
+  honest Blender skips (CI re-proves those with real Blender); governance
+  pinned compliant `631f3383…`; architecture 0 violations.
+- **Sandbox re-measured for the M2-G1 feasibility record:** 3.5 GB free /
+  9.9 GB total, 3.9 GB RAM — unchanged from the recorded §2 infeasibility
+  (Unity 6 editor needs ~13 GB peak); the blocker analysis stands.
+
+**Conclusion: the repository is in its designed steady state.** All
+autonomous work closed and green; the single remaining transition
+(M2-G1 → M2 closure → M3 closure → M4 activation) is maintainer-side by
+design.
+
 ## Environment notes (sandbox)
 
 - **The sandbox was RESET mid-session (after the PR #19 merge):** the clone,
