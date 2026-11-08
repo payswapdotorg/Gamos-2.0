@@ -116,6 +116,8 @@ export interface AssetInterchangeManifest {
   readonly source: AssetSourceProvenance;
   readonly interchange: InterchangeSemantics;
   readonly artifact: AssetFileIntegrity;
+  /** Dependent texture/material files with hashes (handoff §6 file integrity). */
+  readonly dependencies?: readonly AssetFileIntegrity[];
   readonly target?: TargetVerification;
   readonly createdAt: string;
 }
@@ -221,7 +223,7 @@ function statusRequiresTarget(status: AssetInterchangeStatus): boolean {
  */
 export function parseAssetInterchangeManifest(input: unknown): AssetInterchangeManifest {
   if (!isRecord(input)) fail("manifest", "must be a non-null object");
-  exactFields(input, ["schema", "manifestId", "status", "source", "interchange", "artifact", "target", "createdAt"], "manifest");
+  exactFields(input, ["schema", "manifestId", "status", "source", "interchange", "artifact", "dependencies", "target", "createdAt"], "manifest");
 
   if (input.schema !== ASSET_INTERCHANGE_SCHEMA_ID) {
     fail("manifest.schema", `must be exactly "${ASSET_INTERCHANGE_SCHEMA_ID}" — unknown schema versions fail closed`);
@@ -315,6 +317,16 @@ export function parseAssetInterchangeManifest(input: unknown): AssetInterchangeM
   // Artifact integrity.
   const artifact = parseFileIntegrity(input.artifact, "manifest.artifact");
 
+  // Dependent files (handoff §6: dependent texture/material files with hashes).
+  let dependencies: readonly AssetFileIntegrity[] | undefined;
+  if (input.dependencies !== undefined) {
+    if (!Array.isArray(input.dependencies)) fail("manifest.dependencies", "must be an array");
+    const records = (input.dependencies as unknown[]).map((entry, index) =>
+      parseFileIntegrity(entry, `manifest.dependencies[${index}]`),
+    );
+    dependencies = records.length > 0 ? records : undefined;
+  }
+
   // Target verification.
   let target: TargetVerification | undefined;
   if (input.target !== undefined) {
@@ -406,6 +418,7 @@ export function parseAssetInterchangeManifest(input: unknown): AssetInterchangeM
     },
     interchange: input.interchange as unknown as InterchangeSemantics,
     artifact,
+    ...(dependencies !== undefined ? { dependencies } : {}),
     ...(target !== undefined ? { target } : {}),
     createdAt: input.createdAt as string,
   };
