@@ -295,7 +295,8 @@ export function registryFileOf(projectRoot: string): string {
  * Resolve where a registry file is staged: `<projectRoot>/public/assets/<file>`.
  * The same path-safety semantics as `resolveWorkspacePath`, applied to the
  * staging root: no traversal, no separators, no absolute file names — a
- * registry file is always a plain `.glb` filename.
+ * registry file is always a plain `.glb` filename. Symlinked staging
+ * directories that redirect the path out of the project are rejected.
  */
 export function resolveStagedAssetPath(projectRoot: string, file: string): string {
   if (typeof projectRoot !== "string" || projectRoot.length === 0 || !path.isAbsolute(projectRoot)) {
@@ -319,5 +320,20 @@ export function resolveStagedAssetPath(projectRoot: string, file: string): strin
   if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
     throw new PathSafetyError(`staged asset path escapes the public/assets staging root: ${staged}`);
   }
+  assertPathWithinProject(staged, projectRoot);
   return staged;
+}
+
+/**
+ * Assert that a project-relative target path cannot have been redirected by a
+ * symlink: the deepest existing ancestor of `candidate` must realpath inside
+ * (or equal) the realpath of `projectRoot`. This is the project-scoped
+ * counterpart of `resolveWorkspacePath`'s symlink guard — it rejects e.g. a
+ * `public/assets` or `src` directory swapped for a symlink out of the project,
+ * even when the redirect target still lies inside the workspace.
+ */
+export function assertPathWithinProject(candidate: string, projectRoot: string): void {
+  const realRoot = realPathOfExisting(projectRoot);
+  const realAncestor = realPathOfExisting(candidate);
+  assertInsideRoot(realAncestor, realRoot, "symlink escape out of the project root");
 }

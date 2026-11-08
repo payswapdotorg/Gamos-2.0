@@ -13,6 +13,7 @@ import {
   ProjectBuildInput,
   ProjectInspectInput,
   ProjectRunInput,
+  assertPathWithinProject,
   buildAssetRegistryEntry,
   detectHtmlMount,
   parseAssetRegistry,
@@ -1007,6 +1008,20 @@ export async function assetIntegrate(
     return { ok: false, code: "path-safety", reason: messageOf(error) };
   }
   const registryPath = registryFileOf(projectRoot);
+
+  // Output-path containment (HARDEN): a symlinked staging or registry
+  // directory must not redirect the engine's writes. The workspace-level
+  // guard (resolveWorkspacePath) rejects escapes out of the workspace; the
+  // project-level guard (assertPathWithinProject) rejects redirects into
+  // other workspace locations. Both run before any mutation.
+  try {
+    resolveWorkspacePath(stagedPath, workspaceRoot);
+    resolveWorkspacePath(registryPath, workspaceRoot);
+    assertPathWithinProject(stagedPath, projectRoot);
+    assertPathWithinProject(registryPath, projectRoot);
+  } catch (error) {
+    return { ok: false, code: "path-safety", reason: messageOf(error) };
+  }
 
   // An existing staged file under the same name: identical content is an
   // idempotent replace; different content fails closed.
