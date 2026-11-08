@@ -163,9 +163,44 @@ local Blender install (recorded above as "NOT re-provisioned this slice").
 surfaces, which remain honestly unavailable). No gate claims changed; the
 M2-G1 external blocker and the fail-closed completion chain are unchanged.
 
+## Second sandbox reset — recovery + direct head verification (same day, fourth "go")
+
+**The sandbox was reset a second time** (after the local-gates-parity push):
+the clone, node_modules, the local Blender install and /tmp state were wiped
+again. Recovery followed the recorded runbook and was verified end-to-end:
+re-clone with the PAT (head `7aa217bc` intact, tree clean), `npm i -g
+pnpm@10.33.2`, `ELECTRON_SKIP_BINARY_DOWNLOAD=1 pnpm install
+--frozen-lockfile` (59s), `pnpm --filter @zcode/dynamic-workflow build`.
+
+- **Full chain re-verified on the recovered clone:** governance-check pinned
+  compliant `631f3383…`, self-test 14/14, roadmap-check valid (M2/M3 active,
+  M4–M7 blocked), architecture:check 0 violations, gamos-domain 383/383,
+  plan acceptance 8/8.
+- **Blender re-provisioned again (CI-recipe-exact):** sha256 `ab2ea3fe…`
+  strict-checked OK, `Blender 4.1.1 build 2024-04-15`, `/home/z/engines`
+  symlink restored, tarball deleted (2.0 GB free). Full runtime suite back
+  to **107/107 passed, 0 skipped**; both M3.4 scripts re-run on the
+  recovered environment (reproducible — digests `55665e6c…` identical again;
+  handoff-chain-verified) with the committed canonical evidence restored
+  byte-exact after.
+- **Direct full-suite verification of the exact current head:** the two
+  docs-only commits after `d8403205` had (correctly) not triggered m3-e2e,
+  so the head's full-suite status was inference. Closed with a
+  `workflow_dispatch` run `42512664248` on `7aa217bc`: **all four jobs
+  success** (domain+contracts; §11 cross-engine journey with the original
+  app + ZCode Browser integrated-asset verification; M3-G3/G4 real-runtime
+  gates with real Blender; M3.4 reproducibility + handoff bundle).
+- **Maintainer-action check (unchanged):** 0 self-hosted runners, 0 repo
+  variables, no new events — the M2-G1 runbook remains unactioned.
+
+The current development head is now directly verified by the complete CI
+matrix (not inference), the local environment is at full parity again, and
+the external M2-G1 blocker is unchanged.
+
 ## Environment notes (sandbox)
 
-- **The sandbox was RESET mid-session (after the PR #19 merge):** the clone,
+- **Sandbox resets (now 2×):** first after the PR #19 merge, second after
+   the local-gates-parity push. In both cases the clone,
    node_modules and the local Blender install were wiped. Recovery was clean
    because every artifact was already pushed: re-clone with the PAT, `corepack`
    or `npm i -g pnpm@10.33.2`, `pnpm install --frozen-lockfile`, `pnpm
