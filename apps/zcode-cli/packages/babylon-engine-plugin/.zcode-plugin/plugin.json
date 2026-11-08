@@ -27,7 +27,8 @@
   "capabilities": [
     "babylon/project.inspect",
     "babylon/project.build",
-    "babylon/project.run"
+    "babylon/project.run",
+    "babylon/asset.integrate"
   ],
   "headlessSupport": "full",
   "requiresDisplayServer": false,

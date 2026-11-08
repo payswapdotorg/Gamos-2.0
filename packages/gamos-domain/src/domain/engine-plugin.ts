@@ -602,6 +602,64 @@ const babylonCapabilities: readonly CapabilityRecord[] = [
     cancellation: { supported: true, semantics: "cooperative (recorded pid is terminated; port is re-checked free)" },
     verification: { method: "engine-query", spec: "the running runtime's URL must respond to a real HTTP request before success is reported" },
   },
+  {
+    id: "babylon/asset.integrate",
+    version: "1.0.0",
+    title: "Integrate asset into Babylon project",
+    description: "Integrates a verified GLB artifact (the Blender export leg's output) into a real Babylon project without spawning an engine binary: hash-verifies the artifact against the authoritative cross-engine manifest integrity record, stages a byte-identical copy under the project's public/assets directory, and appends/replaces the committed asset registry entry (src/gamos-assets.json).",
+    engineFamily: "babylon",
+    input: {
+      type: "object",
+      properties: {
+        projectRoot: { type: "string" },
+        artifactPath: { type: "string" },
+        assetName: { type: "string", description: "Registry asset name (lowercase alphanumeric plus dashes, max 64 chars); defaults to the artifact filename stem." },
+        expectedIntegrity: {
+          type: "object",
+          description: "Authoritative integrity record from the cross-engine asset-interchange manifest; a mismatch fails closed.",
+          properties: { byteLength: { type: "number" }, sha256: { type: "string" } },
+          required: ["byteLength", "sha256"],
+        },
+      },
+      required: ["projectRoot", "artifactPath"],
+    },
+    output: {
+      type: "object",
+      properties: {
+        integrated: { type: "boolean" },
+        assetName: { type: "string" },
+        stagedPath: { type: "string" },
+        bytes: { type: "number" },
+        sha256: { type: "string" },
+        registryEntry: {
+          type: "object",
+          description: "The committed registry entry: the frozen {assetName, file, sha256} triple.",
+          properties: { assetName: { type: "string" }, file: { type: "string" }, sha256: { type: "string" } },
+        },
+        registryPath: { type: "string" },
+      },
+      required: ["integrated", "sha256"],
+    },
+    permissions: [
+      {
+        kind: "filesystem-write",
+        scope: "project-public-assets-staging",
+        rationale: "stages the hash-verified GLB artifact into the project's public/assets staging directory and updates the committed asset registry (src/gamos-assets.json); no engine binary is ever spawned",
+      },
+    ],
+    availability: { state: "conditional", reason: "requires a real Babylon project root and an existing GLB artifact inside the workspace (the source engine's export output)", prerequisites: ["babylon-project-root"] },
+    provenance: enginePluginProvenance("apps/zcode-cli/packages/babylon-engine-plugin"),
+    provider: mcpProvider("babylon-engine"),
+    prerequisites: [
+      { id: "babylon-project-root", description: "real Babylon project root (package.json declaring @babylonjs/* dependencies)" },
+    ],
+    compatibility: { engineVersions: ">=18.0", notes: "executableless typed file operation; the staged asset is consumed by the project's reviewed loader (@babylonjs/loaders, same major as @babylonjs/core) — registry-driven imports only, never model-authored URLs" },
+    reversibility: { kind: "reversible", notes: "additive artifact + registry entry — removing the staged file and the registry row restores the prior state" },
+    idempotency: { repeatable: true, dedupeKey: "projectRoot+artifactPath+assetName" },
+    timeout: { defaultMs: 60000, maxMs: 300000 },
+    cancellation: { supported: true, semantics: "cooperative (bounded local file operations; the registry write is an atomic tmp+rename, so an interruption leaves either the pre-state or the fully integrated state)" },
+    verification: { method: "artifact-hash", spec: "the staged file's sha256 must equal the source artifact's sha256 (re-verified after the copy); a declared expectedIntegrity record is authoritative and any mismatch fails closed" },
+  },
 ];
 
 /** The canonical M2 capability records for the three engine plugins (append-only). */
@@ -651,7 +709,7 @@ export const ENGINE_PLUGIN_METAS: readonly EnginePluginMeta[] = [
     engineFamily: "babylon",
     engineVersions: ">=18.0",
     executable: { kind: "server", command: "node" },
-    capabilities: ["babylon/project.inspect", "babylon/project.build", "babylon/project.run"],
+    capabilities: ["babylon/project.inspect", "babylon/project.build", "babylon/project.run", "babylon/asset.integrate"],
     headlessSupport: "full",
     requiresDisplayServer: false,
     provenance: enginePluginProvenance("apps/zcode-cli/packages/babylon-engine-plugin"),

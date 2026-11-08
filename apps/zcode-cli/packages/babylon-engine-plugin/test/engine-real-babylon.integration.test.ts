@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { cp, copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { get as httpGet } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { discoverNode } from "../src/discovery.js";
 import {
+  assetIntegrate,
   listRuntimes,
   projectBuild,
   projectInspect,
@@ -20,6 +21,10 @@ import {
 } from "../src/engine.js";
 
 const FIXTURE_DIR = fileURLToPath(new URL("./fixture/babylon-app", import.meta.url));
+
+/** The committed real-Blender-4.1.1 GLB fixture (a cube named GamosTestCube) — the cross-engine manifest's integrity record. */
+const GAMOS_CUBE_GLB = fileURLToPath(new URL("./fixture/gamos-cube.glb", import.meta.url));
+const GAMOS_CUBE_GLB_SHA256 = "b8acd9cf2ce3f5e55cc0ae07566e13b2221043ff5b3e27a953905748983bd1f1";
 
 // Real-toolchain gate: these tests only mean something against an actual Node
 // runtime, a working npm, and network access for the declared dependency fetch
@@ -57,6 +62,28 @@ function httpGetUrl(url: string, timeoutMs = 5_000): Promise<{ status: number; b
       });
       response.on("end", () => {
         resolve({ status: response.statusCode ?? 0, body: Buffer.concat(chunks).toString("utf8") });
+      });
+    });
+    request.on("timeout", () => {
+      request.destroy(new Error(`HTTP GET ${url} timed out after ${timeoutMs}ms`));
+    });
+    request.on("error", (error) => {
+      reject(error instanceof Error ? error : new Error(String(error)));
+    });
+  });
+}
+
+/** Binary-safe HTTP GET — the staged GLB must be byte-identical over the wire (never lossily utf8-decoded). */
+function httpGetBufferUrl(url: string, timeoutMs = 5_000): Promise<{ status: number; body: Buffer; byteLength: number }> {
+  return new Promise((resolve, reject) => {
+    const request = httpGet(url, { timeout: timeoutMs }, (response) => {
+      const chunks: Buffer[] = [];
+      response.on("data", (chunk) => {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)));
+      });
+      response.on("end", () => {
+        const body = Buffer.concat(chunks);
+        resolve({ status: response.statusCode ?? 0, body, byteLength: body.length });
       });
     });
     request.on("timeout", () => {
@@ -312,5 +339,97 @@ describe.skipIf(!realToolchainFound)("babylon-engine plugin real-Node/Vite/Babyl
       }
     },
     60_000,
+  );
+
+  test(
+    "asset_integrate stages the committed Blender GLB, the build bakes the registry, and the dev server serves the asset byte-identically",
+    async () => {
+      // The declared dependency fetch stays reproducible with the loaders dep present.
+      expect(lockShaAfterCi).toBe(lockShaCommitted);
+
+      // The cross-engine manifest's integrity record for the committed fixture.
+      expect(existsSync(GAMOS_CUBE_GLB)).toBe(true);
+      const fixtureBytes = statSync(GAMOS_CUBE_GLB).size;
+      const fixtureSha256 = sha256Of(GAMOS_CUBE_GLB);
+      expect(fixtureSha256).toBe(GAMOS_CUBE_GLB_SHA256);
+
+      // The Blender export leg's artifact lands inside the workspace (path
+      // safety: the artifact must resolve inside the workspace root).
+      const artifactPath = path.join(workspace, "exports", "gamos-cube.glb");
+      await mkdir(path.dirname(artifactPath), { recursive: true });
+      await copyFile(GAMOS_CUBE_GLB, artifactPath);
+      expect(sha256Of(artifactPath)).toBe(fixtureSha256);
+
+      const outcome = await assetIntegrate(
+        {
+          projectRoot,
+          artifactPath,
+          expectedIntegrity: { byteLength: fixtureBytes, sha256: GAMOS_CUBE_GLB_SHA256 },
+        },
+        workspace,
+      );
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok) return;
+      expect(outcome.integrated).toBe(true);
+      expect(outcome.assetName).toBe("gamos-cube"); // defaults to the artifact filename stem
+      expect(outcome.stagedPath).toBe(path.join(projectRoot, "public", "assets", "gamos-cube.glb"));
+      expect(outcome.bytes).toBe(fixtureBytes);
+      expect(outcome.sha256).toBe(fixtureSha256);
+      expect(outcome.registryEntry).toEqual({
+        assetName: "gamos-cube",
+        file: "gamos-cube.glb",
+        sha256: fixtureSha256,
+      });
+      expect(outcome.registryPath).toBe(path.join(projectRoot, "src", "gamos-assets.json"));
+
+      // Trust but verify: the staged copy hashes identical to the source artifact,
+      // and the registry holds exactly the appended entry.
+      expect(existsSync(outcome.stagedPath)).toBe(true);
+      expect(sha256Of(outcome.stagedPath)).toBe(fixtureSha256);
+      expect(JSON.parse(readFileSync(outcome.registryPath, "utf8"))).toEqual({
+        schema: "gamos/babylon-assets@1",
+        assets: [{ assetName: "gamos-cube", file: "gamos-cube.glb", sha256: fixtureSha256 }],
+      });
+      console.log(
+        `[gamos-evidence] asset_integrate: staged ${outcome.stagedPath} (${outcome.bytes} bytes, ` +
+          `sha256=${outcome.sha256}) registry=${outcome.registryPath}`,
+      );
+
+      // The registry is baked into the build: vite bundles the JSON import in
+      // main.js and copies public/assets into the outDir.
+      const build = await projectBuild(nodeExe as string, { projectRoot }, workspace, { timeoutMs: 300_000 });
+      expect(build.ok).toBe(true);
+      if (!build.ok) return;
+      expect(build.exitStatus).toBe(0);
+      const distAsset = path.join(projectRoot, "dist", "assets", "gamos-cube.glb");
+      expect(existsSync(distAsset)).toBe(true);
+      expect(sha256Of(distAsset)).toBe(fixtureSha256);
+      console.log(
+        `[gamos-evidence] baked build: dist/assets/gamos-cube.glb byte-identical ` +
+          `(dist/index.html ${build.artifact.bytes} bytes, sha256=${build.artifact.sha256})`,
+      );
+
+      // The running dev server serves the staged asset byte-identically.
+      const run = await projectRun(nodeExe as string, { projectRoot }, workspace);
+      expect(run.ok).toBe(true);
+      if (!run.ok) return;
+      const response = await httpGetBufferUrl(`http://127.0.0.1:${run.port}/assets/gamos-cube.glb`);
+      expect(response.status).toBe(200);
+      expect(response.byteLength).toBe(fixtureBytes);
+      expect(createHash("sha256").update(response.body).digest("hex")).toBe(fixtureSha256);
+      console.log(
+        `[gamos-evidence] runtime asset: HTTP 200 /assets/gamos-cube.glb ${response.byteLength} bytes ` +
+          `byte-identical (sha256=${fixtureSha256}) on ${run.runtimeUrl}`,
+      );
+
+      const stop = await stopRuntime(run.pid);
+      expect(stop.ok).toBe(true);
+      if (stop.ok) {
+        expect(stop.stopped).toBe(true);
+        expect(stop.portFreed).toBe(true);
+      }
+      expect(await canBind(run.port)).toBe(true);
+    },
+    300_000,
   );
 });
