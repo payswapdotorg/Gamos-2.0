@@ -90,7 +90,7 @@ server.registerTool(
   {
     title: "Blender Asset Export",
     description:
-      "Writes an OBJ, GLTF (binary .glb), or FBX export artifact for the whole scene or a named selection, then verifies the artifact exists and records its sha256.",
+      "Writes an OBJ, GLTF (binary .glb), or FBX export artifact for the whole scene or a named selection, verifies the artifact and dependent sidecar files (sha256), and returns the cross-engine manifest ingredients: exact Blender version, source .blend sha256, and the applied interchange settings (upAxis/globalScale declared through the optional interchange block).",
     inputSchema: AssetExportInput.shape,
   },
   async (args) => withBlender((exe) => assetExport(exe, args, process.cwd())),

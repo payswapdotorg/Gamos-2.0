@@ -222,6 +222,9 @@ describe.skipIf(!realBlenderFound)("blender-engine plugin real-Blender integrati
         workspace,
         { timeoutMs: 180_000 },
       );
+      if (!outcome.ok) {
+        console.log(`[gamos-evidence] FBX manifest-ingredient export FAILED: ${JSON.stringify(outcome)}`);
+      }
       expect(outcome.ok).toBe(true);
       if (!outcome.ok) return;
 
@@ -298,6 +301,9 @@ describe.skipIf(!realBlenderFound)("blender-engine plugin real-Blender integrati
         workspace,
         { timeoutMs: 180_000 },
       );
+      if (!outcome.ok) {
+        console.log(`[gamos-evidence] OBJ dependent-sidecar export FAILED: ${JSON.stringify(outcome)}`);
+      }
       expect(outcome.ok).toBe(true);
       if (!outcome.ok) return;
       expect(outcome.appliedInterchange.format).toBe("obj");
@@ -332,6 +338,9 @@ describe.skipIf(!realBlenderFound)("blender-engine plugin real-Blender integrati
         workspace,
         { timeoutMs: 180_000 },
       );
+      if (!outcome.ok) {
+        console.log(`[gamos-evidence] GLB embedded-materials export FAILED: ${JSON.stringify(outcome)}`);
+      }
       expect(outcome.ok).toBe(true);
       if (!outcome.ok) return;
       expect(outcome.appliedInterchange.format).toBe("glb");
@@ -340,7 +349,7 @@ describe.skipIf(!realBlenderFound)("blender-engine plugin real-Blender integrati
       expect(outcome.dependentFiles ?? []).toHaveLength(0);
       const glb = await readFile(outputPath);
       expect(glb.length).toBeGreaterThan(0);
-      expect(glb.subarray(0, 4).toString("hex")).toBe("676c5466"); // 'glTF' magic
+      expect(glb.subarray(0, 4).toString("hex")).toBe("676c5446"); // 'glTF' magic (0x67 0x6c 0x54 0x46)
       console.log(`[gamos-evidence] GLB embedded-materials export: sha256=${outcome.sha256}`);
     },
     240_000,
