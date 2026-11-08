@@ -185,7 +185,7 @@ describe("asset interchange manifest validation (gamos/asset-interchange@1, fail
     expect(() => withTarget({ ...runtimeVerifiedManifest.target, importedSha256: "short" })).toThrow(/importedSha256|sha256/i);
     expect(() => withTarget({ ...runtimeVerifiedManifest.target, validation: "maybe" })).toThrow(/validation/i);
     expect(() => withTarget({ ...runtimeVerifiedManifest.target, evidence: ["../../etc/passwd"] })).toThrow(/evidence|path/i);
-    expect(() => withTarget({ ...runtimeVerifiedManifest.target, buildArtifact: { path: "x", mediaType: "a/b", byteLength: 1, sha256: sha("e") } })).toThrow(/path/i);
+    expect(() => withTarget({ ...runtimeVerifiedManifest.target, buildArtifact: { path: "../escape.html", mediaType: "text/html", byteLength: 1, sha256: sha("e") } })).toThrow(/path/i);
   });
 
   it("enforces status coupling: import-pending and beyond require the target record", () => {

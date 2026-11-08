@@ -66,6 +66,26 @@ export {
 } from "./domain/resource-claims.js";
 
 export type {
+  AssetInterchangeStatus,
+  AssetEngine,
+  AssetFileIntegrity,
+  AssetSourceProvenance,
+  InterchangeSemantics,
+  TargetVerification,
+  AssetInterchangeManifest,
+} from "./domain/asset-interchange.js";
+export {
+  ASSET_INTERCHANGE_SCHEMA_ID,
+  ASSET_STATUS_CHAIN,
+  parseAssetInterchangeManifest,
+  serializeAssetInterchangeManifest,
+  hashAssetInterchangeManifest,
+  canTransitionAssetStatus,
+  isTerminalAssetStatus,
+  matchesIntegrity,
+} from "./domain/asset-interchange.js";
+
+export type {
   AcceptanceCriterion,
   AcceptanceCriterionResult,
   AcceptanceRecord,
