@@ -109,32 +109,50 @@ eligibility is assumed by this investigation.
 | **Software Terms §2.4 Build License**: a PAID special arrangement — "one (1) subscription to use Unity Pro … install that copy of Unity Pro on up to ten (10) internal build machines … for the sole purposes of publishing and distributing, but not creating, your Projects" (Pro-only; not a Personal path) | **VERIFIED 2026-11-08 (retrieved)** | `software-terms-excerpt.txt` §2.4 |
 | **Software Terms §2.5 Unity Build Server**: "You may not use Unity Build Server with the Unity Personal tier of the Unity Software." | **VERIFIED 2026-11-08 (retrieved)** | `software-terms-excerpt.txt` §2.5 |
 
-**Task 3 conclusion (updated 2026-11-08 — the clause is now recorded
-verbatim):** the Software Terms contain **no general grant permitting an
+**Task 3 conclusion (corrected 2026-11-08 per the maintainer's §5 review
+directive):** the Software Terms contain **no general grant permitting an
 unattended build/CI machine to use a Personal license**. The only
 build-machine-specific provisions are paid offerings (§2.4 Build License —
 Pro-only; §2.5 Unity Build Server — explicitly excluding the Personal tier).
 What §2.8 grants instead is installation "on both a primary and a secondary
 computer or operating system … only for use by a single person", one
-instance at a time per seat — and §2.8's cloud-execution clause prohibits
-third-party service providers from running the editor on cloud/remote
-servers **except where they are acting on your behalf as an Authorized
-User**. Practical consequences:
+instance at a time per seat — **and that primary/secondary installation
+clause does not, by itself, settle the separate-build-machine question.**
+The distinction that matters:
 
+* **A separate build machine requires a separate license** — Unity's
+  official compliance FAQ position, as recorded by the maintainer's 2026-11-08
+  review directive. A dedicated or unattended build/CI machine is NOT
+  automatically covered by the Personal primary/secondary grant.
+* **Unity Build Server cannot be used with Unity Personal** (Software Terms
+  §2.5, recorded verbatim above).
 * **GitHub-hosted runners are third-party cloud VMs**, not identified
   Authorized Users — running the editor there is NOT clearly permitted by
   §2.8 for a Personal seat. The community GameCI practice (generate a
-  Personal `.ulf`, install it on ephemeral CI) remains a THIRD-PARTY
-  mechanism with no authorization in the recorded official text
+  Personal `.ulf`, install it on ephemeral CI) is a THIRD-PARTY mechanism
+  with no authorization in the recorded official text — **a community CI
+  guide describing a technical mechanism is not licensing authority**
   (`gameci-community-reference.txt`, marked third-party, not Unity terms).
-* **A self-hosted runner on an existing machine of the eligible single
-  user, activated through the Unity Hub by that user** (the §6 runbook's
-  Option A), fits the §2.8 primary/secondary-computer model and remains
-  the documented compliant free path.
+* **The Gamos use model is first-party development** (see §2.5 below):
+  Unity would run locally for the eligible account holder developing the
+  Gamos organization's own game project — not offered as a service to end
+  users, no platform/SaaS/service-provider distribution of the editor. The
+  Software Terms' first-party-project versus platform/service-provider
+  distinction therefore does not disqualify the use model itself; the open
+  question is solely the **machine arrangement**.
+* **Preferred zero-cost arrangement:** the PRIMARY developer workstation of
+  the eligible single user, attended and license-holder-operated (Unity Hub
+  sign-in), where that is permitted and technically feasible — the machine
+  the §2.8 grant most clearly covers. A dedicated or unattended build
+  machine (including a self-hosted runner on a secondary machine) requires
+  **Unity Compliance written clarification BEFORE any use** (§6 step 0).
 
-This is the agent's honest reading of the now-recorded official text; the
-maintainer remains the licensing authority and should read
-`software-terms-excerpt.txt` (or the live page) before activating anything.
+This is the agent's honest reading of the now-recorded official text as
+corrected by the maintainer's review directive; the maintainer remains the
+licensing authority and should read `software-terms-excerpt.txt` (or the
+live page) — and obtain Unity Compliance's written clarification where the
+terms do not clearly authorize the proposed arrangement — before
+activating anything.
 
 ### 1.4 Least-expensive compliant provisioning (task 2)
 
@@ -153,7 +171,6 @@ directive, no Pro/Enterprise/paid license will be bought):
 3. Runner hardware: existing machines only (task 4) — see §5.
 
 ## 2. Why the existing dev sandbox cannot host the editor (task 4)
-
 Recorded honestly in `sandbox-capability.txt`: the sandbox's only persistent
 filesystem has **3.7 GB free** (9.9 GB total) and 3.9 GB RAM; the Unity 6
 Linux editor needs ~4 GB (tarball) + ~9–10 GB (extracted) ≈ **13 GB peak**,
@@ -171,9 +188,39 @@ Remaining existing-runner options:
   clearly permit a third-party hosted cloud VM to run the editor for a
   Personal seat (see §1.3). The CI therefore continues to record the honest
   `unavailable-license` / `editor-present-unlicensed` states.
-* **A maintainer-provisioned self-hosted runner** (any existing persistent
-  machine where the maintainer can run Unity Hub once): the compliant free
-  path per the recorded §2.8 primary/secondary-computer grant — §6 runbook.
+* **A maintainer-provisioned runner on the PRIMARY workstation (attended,
+  license-holder-operated)**: the preferred zero-cost path — the arrangement
+  the recorded §2.8 grant most clearly covers. A runner on any OTHER
+  dedicated/unattended machine is a separate build machine (compliance FAQ:
+  separate license) and stays blocked on Unity Compliance's written
+  clarification — §6 runbook.
+
+### 2.5 The Gamos use and execution model (recorded for licensing clarity)
+
+The TL's honest record of how Unity would actually be used, per the
+maintainer's §5 review directive (2026-11-08):
+
+* **Who:** the eligible single user / account holder developing the Gamos
+  organization's own first-party game project (the repository's fixtures and
+  the M2-G1 evidence chain are that project's artifacts).
+* **How:** Unity runs LOCALLY, on machines the account holder controls, for
+  the account holder's own development, build and verification of that
+  project. The editor is never offered as a service to end users; there is
+  no platform, SaaS or service-provider distribution of the editor; no
+  third party executes the editor on Gamos's behalf.
+* **Machine arrangement (the open licensing question):** the **primary
+  developer workstation** — attended, license-holder-operated — is the
+  arrangement the §2.8 grant most clearly covers and is therefore the
+  preferred zero-cost path. Any **dedicated or unattended build machine**
+  (a separate box used only for CI/builds, including a self-hosted GitHub
+  runner on a secondary machine) is a *separate build machine* in Unity's
+  terms — which the compliance FAQ says requires a separate license — and
+  is therefore NOT used until Unity Compliance provides written
+  clarification that the proposed arrangement is covered by Personal.
+* **Credentials and license material:** the Unity ID, Hub session and the
+  `Unity_lic.ulf` file stay local to the authorized user's machine — never
+  committed, never in repository secrets/variables, never in CI artifacts
+  (directive rule 5, unchanged).
 
 ## 3. What this document records (and what the related commits change)
 
@@ -241,12 +288,28 @@ Before any activation, the maintainer must attest ALL of:
 | Option | Cost | Editor binary | Activation | Compliant? | Status |
 |---|---|---|---|---|---|
 | Existing dev sandbox | $0 | ❌ disk-infeasible (3.7G/9.9G free) | — | — | Rejected on capability (§2) |
-| GitHub-hosted `ubuntu-latest` | $0 | ✅ (Blender precedent) | ❌ no credentials; §2.8 cloud-execution clause does not clearly permit third-party hosted VMs for a Personal seat (recorded 2026-11-08) | Not clearly permitted | Stays honest-unavailable (default) |
-| Maintainer self-hosted runner (existing machine) | $0 | ✅ | ✅ Unity Hub sign-in by the eligible account | Yes — fits the recorded §2.8 primary/secondary-computer grant | **The documented path** (§6) |
+| GitHub-hosted `ubuntu-latest` | $0 | ✅ (Blender precedent) | ❌ no credentials; §2.8 cloud-execution clause does not clearly permit third-party hosted VMs for a Personal seat — and a community CI guide describing the mechanism is not licensing authority | **Not permitted** for a Personal seat on the recorded text | Stays honest-unavailable (default) |
+| Maintainer's PRIMARY workstation (attended, license-holder-operated) | $0 | ✅ (direct download) | ✅ Unity Hub sign-in by the eligible account | The arrangement §2.8 most clearly covers (primary computer, single person, one instance) | **Preferred zero-cost path** (§6) |
+| Dedicated/unattended build machine (incl. self-hosted runner on a secondary machine) | $0 | ✅ | ✅ Hub sign-in possible | **NOT settled by §2.8 alone** — a separate build machine requires a separate license per the compliance FAQ; needs Unity Compliance WRITTEN clarification BEFORE use | Blocked on the clarification (§6 step 0) |
 
 ## 6. Unblock runbook (exact steps for the maintainer)
 
 0. Complete the §4 attestation. Do **not** proceed if any answer fails.
+   **Machine-arrangement gate (added 2026-11-08):** decide which machine the
+   editor will run on —
+   * **Preferred:** the **primary developer workstation**, attended and
+     license-holder-operated (the arrangement §2.8 most clearly covers). No
+     further licensing input is needed for this arrangement beyond the §4
+     attestation and the maintainer's own reading of the recorded terms.
+   * **Any dedicated or unattended build machine** (including a self-hosted
+     GitHub runner on a secondary machine): **ask Unity Compliance for
+     written clarification FIRST** that a Unity Personal seat may be used on
+     a separate build machine in the proposed arrangement, and keep the
+     answer with the evidence. The primary/secondary installation clause
+     does not by itself authorize it (§1.3). Until such written
+     clarification exists, this arrangement stays blocked — do not use it.
+   * **Never** a GitHub-hosted runner with a Personal license merely because
+     a community CI guide describes the technical mechanism.
 1. On the chosen **existing, persistent machine** (Linux; ~15 GB free disk,
    desktop or Xvfb available for Unity Hub):
    * Install Unity Hub (official Linux package), sign in with the Unity ID of
@@ -303,11 +366,19 @@ a filesystem path — no secrets).
    on the chosen runner machine. **No credentials exist in this environment,
    and none may be fabricated** (also directive rule 5: they must stay out of
    Git/CI artifacts).
-4. **A licensed runner**: the existing sandbox is disk-infeasible (§2);
-   GitHub-hosted runners have no editor/credentials by default and the
-   recorded §2.8 cloud clause does not clearly permit them for a Personal
-   seat. A maintainer-provisioned existing machine per the §6 runbook is
-   required.
+4. **A licensed machine arrangement**: the existing sandbox is
+   disk-infeasible (§2); GitHub-hosted runners are not permitted for a
+   Personal seat on the recorded text (§1.3 — a community CI guide is not
+   licensing authority). The **primary workstation** (attended,
+   license-holder-operated) is the preferred zero-cost path and needs only
+   the §4 attestation; any **dedicated or unattended build machine**
+   (including a self-hosted runner on a secondary machine) additionally
+   requires **Unity Compliance's written clarification that a Personal seat
+   covers a separate build machine in the proposed arrangement** (§1.3,
+   compliance-FAQ position recorded by the maintainer's 2026-11-08 review
+   directive; §6 step 0) — until that exists, that arrangement stays
+   blocked. Unity Build Server is not available with Personal (§2.5 of the
+   Software Terms) and no paid license will be bought (standing directive).
 
 The invocation layer itself is implemented and exercised (54/54 package tests
 including scratch-verified conforming-editor emulation paths; discovery and
