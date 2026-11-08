@@ -900,4 +900,69 @@ bundle exists and none is fabricated.
       Browser experience consuming the asset with in-guest verification —
       that is the M3.5 journey's evidence, not yet run. No gate result is
       recorded; M3-G1 stays honestly blocked while no compliant Unity
-      licensed runner exists.
+      licensed runner exists. Merged as PR #12 (`41c18c58`) with fully green
+      branch CI on the tested head `23e66afe`.
+
+12. **M3.1 target leg — the Unity typed asset import (strict TDD, branch
+    `gamos/m3-unity-asset-import`, stacked on the merged PR #12 head):**
+    the second cross-engine TARGET operation (handoff §7 steps 8–12: "Add a
+    reviewed, typed Unity Editor import operation… use Unity's real
+    asset-import facilities… verify the imported mesh/object/material/
+    texture through an actual Unity Editor query… integrate the imported
+    asset into a real Unity scene"):
+    - **New capability `unity/asset.import` v1.0.0** (append-only across the
+      three agreeing surfaces): the engine resolves the project + artifact
+      (workspace path safety), hash-verifies the artifact against the
+      authoritative cross-engine manifest integrity record
+      (`asset-integrity-mismatch` fail closed), gates
+      `not-a-unity-project` and the **exact project/editor version
+      contract** (`asset-import-project-version-mismatch` — the fixture
+      pins `6000.0.23f1`+revision), stages the artifact bytes into
+      `<projectRoot>/<targetAssetPath>` (byte-identical re-hash;
+      idempotent-replace; `asset-name-collision` fail closed), then runs
+      the REAL editor batch `-executeMethod Gamos.AssetImport.ImportAsset`.
+      `unity-editor-unavailable` remains its honest structured failure when
+      no editor is discoverable — never a fabricated import.
+    - **Reviewed C# bridge `GamosAssetImport.cs`** (committed template,
+      344 lines): copies nothing itself (the TS engine stages the bytes
+      BEFORE the batch — the staged path must equal the target path),
+      imports through `AssetDatabase.ImportAsset(ForceUpdate)` and VERIFIES
+      via `LoadAssetAtPath<GameObject>` + `LoadAllAssetsAtPath` (GUID
+      non-empty + meshCount>0 + vertex/material counts + sub-asset names —
+      "a staged file alone does not prove an import"); optional
+      `placeInScene` instantiates the loaded prefab into the scene
+      (open-or-new, save, `sceneSaved` verified); `IsSafeRelativeAssetPath`
+      mirrored in C# (defense in depth), safe argv pair-matching, JsonUtility
+      DTOs, no Process/DllImport/Reflection — pinned by 6 new
+      bridge-content review tests.
+    - **Cross-engine fixture:** `test/fixture/gamos-cube.fbx` (15228 bytes,
+      sha256 `ce346618c7df43efc2496ed4c5cd2f0f35c5e2be2f7a40ec34e8a9b51fe3d78d`)
+      — a REAL Blender 4.1.1 FBX export (materials embedded, zero
+      dependent files), generated through the blender plugin's reviewed
+      bridge and committed as the artifact-under-test.
+    - **Strict TDD:** RED `acbf7aea` (20 failed: 10 typed TypeErrors + 8
+      bridge-shape failures + 2 grown pins + the domain id list; 61
+      pre-existing green, 4 honest skips) → GREEN `736bdcf2` (10/10 typed +
+      16/16 bridge review) → HARDEN `d77055a6` — the same class of genuine
+      fix as the Babylon leg: symlink-redirected `Assets/…` output paths
+      are rejected (a swapped staging directory cannot redirect the
+      engine's writes), and the honest unavailable failure carries the
+      staged evidence (17/17).
+    - **Honest Unity state (unchanged):** the real-editor `asset_import`
+      test lives inside the existing editor-gated describe and has NEVER
+      executed against a licensed editor — none exists here and none was
+      mocked. The licensed path is fully wired (`UNITY_EDITOR_PATH` →
+      exact version contract → batch → loaded-asset verification); the
+      suite machine-evidence JSON gains the additive `asset_import` record
+      (`null` = honestly not run); the M2-A gate-status classifier is
+      untouched and skipped real-editor tests remain non-passing.
+    - Regression on this head: unity plugin 8 files 98 passed + 4 honest
+      skips (102) + `tsc --noEmit` + `pnpm run build` clean (all three
+      bridge templates ship in `dist/bridge` + `dist/mcp/bridge`; bundled
+      MCP server module loads); gamos-domain 23 files 338/338;
+      architecture:check 0 violations; governance-check compliant (pin
+      `46c14c90…` unchanged — additive surfaces only); roadmap-check valid
+      (M2+M3 active). TL re-verified the full chain.
+    - **No gate claim:** M3-G1 remains honestly blocked (licensed
+      runner external prerequisite — same as M2-G1); the M3.3
+      generator/runtime integration and the M3.5 journey remain open.

@@ -3,8 +3,9 @@ import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { json, fail } from "../lib/result.js";
 import { discoverUnityEditor } from "../discovery.js";
-import { projectBuild, projectInspect, sceneModify } from "../engine.js";
+import { assetImport, projectBuild, projectInspect, sceneModify } from "../engine.js";
 import {
+  AssetImportInput,
   ProjectBuildInput,
   ProjectInspectInput,
   SceneModifyInput,
@@ -16,11 +17,11 @@ import {
  *
  * Every handler validates its input against the frozen typed-operation
  * schemas and returns structured JSON outcomes. `project_inspect` works
- * WITHOUT an editor (pure project-marker inspection); `scene_modify` and
- * `project_build` require a discovered Unity Editor and fail with an
- * explicit unavailable JSON error (status + reason) when none is found —
- * an honest miss is never a silent success, and a license failure is
- * reported as the structured `license-required` external-prerequisite state.
+ * WITHOUT an editor (pure project-marker inspection); `scene_modify`,
+ * `project_build` and `asset_import` require a discovered Unity Editor and
+ * fail with an explicit unavailable JSON error (status + reason) when none
+ * is found — an honest miss is never a silent success, and a license failure
+ * is reported as the structured `license-required` external-prerequisite state.
  */
 
 const server = new McpServer({
@@ -97,6 +98,17 @@ server.registerTool(
     inputSchema: ProjectBuildInput.shape,
   },
   async (args) => withUnity((exe) => projectBuild(exe, args, process.cwd())),
+);
+
+server.registerTool(
+  "asset_import",
+  {
+    title: "Unity Asset Import",
+    description:
+      "Mutating: imports a verified FBX/GLB export artifact (the Blender export leg's output) into a real Unity project through the Unity Editor in batch mode (reviewed C# bridge Gamos.AssetImport.ImportAsset). The engine hash-verifies the artifact against the authoritative cross-engine manifest integrity record (a mismatch fails closed), stages a byte-identical copy under Assets/ (idempotent for identical content, collision fail-closed otherwise), then imports through AssetDatabase and verifies the LOADED asset: non-empty GUID and meshCount>0 — a staged file alone does not prove an import. Optionally places the imported asset into a scene at the origin (named GamosImported) and saves it. Requires a discovered Unity Editor matching the project's pinned version exactly; an unlicensed editor returns the structured license-required failure (an external, user-controlled prerequisite — never fabricated).",
+    inputSchema: AssetImportInput.shape,
+  },
+  async (args) => withUnity((exe) => assetImport(exe, args, process.cwd())),
 );
 
 export async function main(): Promise<void> {

@@ -189,6 +189,7 @@ describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
       "blender/scene.inspect",
       "blender/scene.modify",
       "blender/scene.render",
+      "unity/asset.import",
       "unity/project.build",
       "unity/project.inspect",
       "unity/scene.modify",

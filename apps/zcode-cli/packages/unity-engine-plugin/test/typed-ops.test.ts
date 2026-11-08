@@ -211,13 +211,14 @@ describe("workspace path safety", () => {
 
 describe("bridge file plan (fixed committed templates)", () => {
   test("BRIDGE_FILES is the complete, committed C# bridge set", () => {
-    expect([...BRIDGE_FILES].sort()).toEqual(["GamosBuild.cs", "GamosMarker.cs"]);
+    expect([...BRIDGE_FILES].sort()).toEqual(["GamosAssetImport.cs", "GamosBuild.cs", "GamosMarker.cs"]);
   });
 
   test("UNITY_EXECUTE_METHODS maps every frozen operation to its reviewed entry point", () => {
     expect(UNITY_EXECUTE_METHODS["scene.add-cube"]).toBe("Gamos.Marker.AddCube");
     expect(UNITY_EXECUTE_METHODS["scene.set-active-build-target"]).toBe("Gamos.Build.SetActiveBuildTarget");
     expect(UNITY_EXECUTE_METHODS["project.build"]).toBe("Gamos.Build.BuildStandalone");
+    expect(UNITY_EXECUTE_METHODS["asset.import"]).toBe("Gamos.AssetImport.ImportAsset");
   });
 
   test("resolveBridgeRoot points at the committed bridge directory containing the templates", () => {

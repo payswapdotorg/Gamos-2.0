@@ -434,6 +434,109 @@ export const ProjectBuildInput = z.object({
 export type ProjectBuildInput = z.infer<typeof ProjectBuildInput>;
 
 // ---------------------------------------------------------------------------
+// Asset import (M3.1 target leg — the Blender→Unity interchange leg)
+// ---------------------------------------------------------------------------
+
+/** The only interchange artifact extensions this operation will ever import. */
+export const ASSET_IMPORT_EXTENSIONS = [".fbx", ".glb"] as const;
+export type AssetImportExtension = (typeof ASSET_IMPORT_EXTENSIONS)[number];
+
+/**
+ * The default staged asset path under `Assets/` (extension mirrors the
+ * artifact's, derived at the engine layer):
+ * `Assets/Gamos/gamos-asset<.fbx|.glb>`.
+ */
+export function defaultTargetAssetPath(artifactExtension: AssetImportExtension): string {
+  return `Assets/Gamos/gamos-asset${artifactExtension}`;
+}
+
+/**
+ * The authoritative integrity record carried from the cross-engine
+ * asset-interchange manifest (the export leg's verified output).
+ */
+const ExpectedIntegrity = z.object({
+  byteLength: z
+    .number()
+    .int()
+    .positive()
+    .describe("Expected artifact byteLength (a mismatch fails closed)."),
+  sha256: z
+    .string()
+    .regex(/^[0-9a-f]{64}$/)
+    .describe("Expected artifact sha256 (64 lowercase hex chars; a mismatch fails closed)."),
+});
+
+export const AssetImportInput = z
+  .object({
+    projectRoot: z.string().min(1).describe("Absolute path to the Unity project root inside the workspace."),
+    artifactPath: z
+      .string()
+      .min(1)
+      .describe(
+        "Absolute path to the FBX/GLB export artifact inside the workspace (the source engine's verified output).",
+      ),
+    targetAssetPath: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Relative target path under Assets/ the artifact is staged to (default: "Assets/Gamos/gamos-asset<ext>" derived from the artifact extension); must be a relative "Assets/…" path without ".." and its extension must match the artifact\'s (.fbx or .glb).',
+      ),
+    expectedIntegrity: ExpectedIntegrity.optional().describe(
+      "Authoritative integrity record carried from the cross-engine asset-interchange manifest; when present, the artifact must match byteLength and sha256 exactly.",
+    ),
+    placeInScene: z
+      .object({
+        scenePath: z
+          .string()
+          .min(1)
+          .optional()
+          .describe(
+            `Relative scene path under Assets/ the imported asset is placed into (default: ${DEFAULT_SCENE_PATH}).`,
+          ),
+      })
+      .optional()
+      .describe("Place the imported asset into the scene at the origin (named GamosImported) and save the scene."),
+  })
+  .superRefine((input, ctx) => {
+    const artifactExtension = path.extname(input.artifactPath);
+    if (!(ASSET_IMPORT_EXTENSIONS as readonly string[]).includes(artifactExtension)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["artifactPath"],
+        message: `artifactPath must point at a .fbx or .glb interchange artifact (the export legs' output), got extension "${artifactExtension}"`,
+      });
+      return; // the target-extension comparison is meaningless without a valid artifact extension
+    }
+    if (input.targetAssetPath !== undefined) {
+      if (!isSafeRelativeAssetPath(input.targetAssetPath)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["targetAssetPath"],
+          message: `targetAssetPath must be a relative "Assets/…" path without ".." (default: ${defaultTargetAssetPath(artifactExtension as AssetImportExtension)})`,
+        });
+      } else if (path.posix.extname(input.targetAssetPath.replace(/\\/g, "/")) !== artifactExtension) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["targetAssetPath"],
+          message: `targetAssetPath extension must match the artifact's (${artifactExtension})`,
+        });
+      }
+    }
+    if (input.placeInScene?.scenePath !== undefined && !isSafeRelativeAssetPath(input.placeInScene.scenePath)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["placeInScene", "scenePath"],
+        message: `scenePath must be a relative "Assets/…" scene path without ".." (default: ${DEFAULT_SCENE_PATH})`,
+      });
+    }
+  })
+  .describe(
+    "Import a verified FBX/GLB export artifact into a real Unity project: stage it byte-identical under Assets/, import it through the real Unity Editor's AssetDatabase and verify the loaded asset.",
+  );
+export type AssetImportInput = z.infer<typeof AssetImportInput>;
+
+// ---------------------------------------------------------------------------
 // Relative asset path safety (pure)
 // ---------------------------------------------------------------------------
 
@@ -465,7 +568,7 @@ export function isSafeRelativeAssetPath(candidate: string): boolean {
 // ---------------------------------------------------------------------------
 
 /** The complete, committed set of C# Editor bridge templates. Nothing else is executed. */
-export const BRIDGE_FILES = ["GamosMarker.cs", "GamosBuild.cs"] as const;
+export const BRIDGE_FILES = ["GamosMarker.cs", "GamosBuild.cs", "GamosAssetImport.cs"] as const;
 export type BridgeFile = (typeof BRIDGE_FILES)[number];
 
 /** The `-executeMethod` entry points inside the committed bridges (frozen map). */
@@ -473,6 +576,7 @@ export const UNITY_EXECUTE_METHODS = {
   "scene.add-cube": "Gamos.Marker.AddCube",
   "scene.set-active-build-target": "Gamos.Build.SetActiveBuildTarget",
   "project.build": "Gamos.Build.BuildStandalone",
+  "asset.import": "Gamos.AssetImport.ImportAsset",
 } as const;
 
 /**

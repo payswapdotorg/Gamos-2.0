@@ -1,20 +1,27 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ZodError } from "zod";
 import {
+  ASSET_IMPORT_EXTENSIONS,
+  AssetImportInput,
   BRIDGE_FILES,
   DEFAULT_SCENE_PATH,
+  PathSafetyError,
   ProjectBuildInput,
   ProjectInspectInput,
+  REQUIRED_UNITY_EDITOR_REVISION,
+  REQUIRED_UNITY_EDITOR_VERSION,
   SceneModifyInput,
   SUPPORTED_BUILD_TARGETS,
   UNITY_EXECUTE_METHODS,
+  defaultTargetAssetPath,
   parseUnityVersionOutput,
   resolveBridgeRoot,
   resolveWorkspacePath,
+  type AssetImportExtension,
   type SceneOperation,
   type StructuredFailure,
 } from "./typed-ops.js";
@@ -324,6 +331,36 @@ function resolveProjectRoot(inputPath: string, workspaceRoot: string): ProjectRo
     return { projectRoot: resolveWorkspacePath(inputPath, workspaceRoot) };
   } catch (error) {
     return { failure: pathFailure(error) };
+  }
+}
+
+/** Deepest existing ancestor realpath (lexical join below the filesystem root). */
+function realPathOfExistingPath(candidate: string): string {
+  if (existsSync(candidate)) {
+    return realpathSync(candidate);
+  }
+  const parent = path.dirname(candidate);
+  if (parent === candidate) {
+    return candidate;
+  }
+  return path.join(realPathOfExistingPath(parent), path.basename(candidate));
+}
+
+/**
+ * Output-path containment (asset.import HARDEN): the engine's own writes must
+ * stay inside the project root — a symlinked `Assets/…` directory swapped to
+ * redirect into another workspace location (or out of the workspace entirely)
+ * cannot relocate the staged asset or the bridge params/result files. The
+ * workspace-level guard on the input paths only rejects escapes out of the
+ * workspace; this check rejects escapes out of the PROJECT, applied to every
+ * path the operation is about to write before any mutation happens.
+ */
+function assertPathWithinProject(candidate: string, projectRoot: string): void {
+  const realProjectRoot = realPathOfExistingPath(projectRoot);
+  const realAncestor = realPathOfExistingPath(candidate);
+  const relative = path.relative(realProjectRoot, realAncestor);
+  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new PathSafetyError(`path escapes the project root: ${candidate} (real: ${realAncestor})`);
   }
 }
 
@@ -816,6 +853,380 @@ export async function projectBuild(
     scenes: metadata.sceneFiles,
     buildDir,
     artifact,
+    bridgeFiles,
+    exitStatus: run.exitStatus,
+    resultReport: report,
+    durationMs: run.durationMs,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// asset_import (M3.1 target leg — the Blender→Unity interchange leg)
+// ---------------------------------------------------------------------------
+
+export interface AssetImportSuccess {
+  ok: true;
+  imported: true;
+  projectRoot: string;
+  executeMethod: string;
+  invocation: string[];
+  editor: { executable: string; rawVersion: string | null };
+  /** Project-relative staged/imported asset path (posix separators). */
+  targetAssetPath: string;
+  /** Absolute path the artifact was staged to (the file the editor imported). */
+  stagedPath: string;
+  /** The imported asset's AssetDatabase GUID (non-empty — verified). */
+  guid: string;
+  /** The loaded main asset's type (GameObject by construction). */
+  assetType: string;
+  meshCount: number;
+  vertexCount: number;
+  materialCount: number;
+  subAssetNames: string[];
+  sceneIntegrated: boolean;
+  scenePath: string | null;
+  stagedSha256: string;
+  stagedBytes: number;
+  bridgeFiles: Array<{ name: string; sha256: string }>;
+  exitStatus: number | null;
+  resultReport: Record<string, unknown> | null;
+  durationMs: number;
+}
+
+/** Params JSON shape the reviewed GamosAssetImport.cs bridge deserializes. */
+interface AssetImportParamsFile {
+  artifactStagedPath: string;
+  targetAssetPath: string;
+  placeInScene: boolean;
+  scenePath: string;
+}
+
+/**
+ * Import a verified FBX/GLB export artifact into a real Unity project.
+ *
+ * Pipeline (the order is load-bearing — every pre-editor stage is honestly
+ * testable without an editor): parse → artifact existence + authoritative
+ * integrity → project inspection (not-a-unity-project) → exact project/editor
+ * version contract → staging (idempotent-replace for identical content,
+ * asset-name-collision for different content; the copy is re-hashed) →
+ * bridge/params preparation → honest editor gate → real batch invocation →
+ * engine-side verification of the bridge's loaded-asset record.
+ *
+ * Fail-closed rules (beyond runUnityOperation's own precedence):
+ * - `artifact-missing` / `artifact-invalid` / `artifact-empty` — the artifact
+ *   must exist as a non-empty regular file inside the workspace;
+ * - `asset-integrity-mismatch` — a declared expectedIntegrity record is
+ *   authoritative (the cross-engine manifest is the record);
+ * - `asset-import-project-version-mismatch` — the project's pinned editor
+ *   version must match REQUIRED_UNITY_EDITOR_VERSION exactly;
+ * - `asset-name-collision` — a different file already staged at the target;
+ * - `staged-asset-hash-mismatch` — the staged copy must hash identical to the
+ *   source (verified after the copy, never assumed);
+ * - `unity-editor-unavailable` — without a real editor executable the
+ *   operation reports the honest unavailable failure AFTER staging (never a
+ *   fabricated import result);
+ * - `verification-failed` — the bridge's report must name the staged path,
+ *   carry a non-empty GUID and meshCount>0 (a staged file alone does not
+ *   prove an import), and sceneSaved=true when placeInScene was requested.
+ */
+export async function assetImport(
+  exe: string,
+  input: unknown,
+  workspaceRoot: string,
+  options: RunUnityOptions = {},
+): Promise<AssetImportSuccess | StructuredFailure> {
+  const parsed = AssetImportInput.safeParse(input);
+  if (!parsed.success) {
+    return invalidInput(parsed.error);
+  }
+  let projectRoot: string;
+  let artifactPath: string;
+  try {
+    projectRoot = resolveWorkspacePath(parsed.data.projectRoot, workspaceRoot);
+    artifactPath = resolveWorkspacePath(parsed.data.artifactPath, workspaceRoot);
+  } catch (error) {
+    return pathFailure(error);
+  }
+
+  // The artifact must exist as a non-empty regular file.
+  if (!existsSync(artifactPath)) {
+    return { ok: false, code: "artifact-missing", reason: `artifact not found: ${artifactPath}` };
+  }
+  let artifactStat;
+  try {
+    artifactStat = await stat(artifactPath);
+  } catch (error) {
+    return {
+      ok: false,
+      code: "artifact-missing",
+      reason: `cannot stat artifact ${artifactPath}: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+  if (!artifactStat.isFile()) {
+    return { ok: false, code: "artifact-invalid", reason: `artifact is not a regular file: ${artifactPath}` };
+  }
+  if (artifactStat.size <= 0) {
+    return { ok: false, code: "artifact-empty", reason: `artifact is empty: ${artifactPath}` };
+  }
+  const artifactBytes = artifactStat.size;
+  const artifactSha256 = await sha256File(artifactPath);
+
+  // The cross-engine manifest's integrity record is authoritative.
+  const expected = parsed.data.expectedIntegrity;
+  if (expected !== undefined && (expected.byteLength !== artifactBytes || expected.sha256 !== artifactSha256)) {
+    return {
+      ok: false,
+      code: "asset-integrity-mismatch",
+      reason:
+        `artifact does not match the authoritative integrity record (expected bytes=${expected.byteLength} ` +
+        `sha256=${expected.sha256}, observed bytes=${artifactBytes} sha256=${artifactSha256}): ${artifactPath}`,
+      details: {
+        expected,
+        observed: { byteLength: artifactBytes, sha256: artifactSha256 },
+        artifactPath,
+      },
+    };
+  }
+
+  // fail closed: only operate on directories that ARE Unity projects
+  const metadata = inspectUnityProject(projectRoot);
+  if (!metadata.ok) {
+    return metadata;
+  }
+
+  // The project's pinned editor version must match the exact version contract
+  // (the committed fixture pins it — an importing editor must agree exactly).
+  if (metadata.projectVersion.raw !== REQUIRED_UNITY_EDITOR_VERSION) {
+    return {
+      ok: false,
+      code: "asset-import-project-version-mismatch",
+      reason:
+        `the project's pinned Unity version ${metadata.projectVersion.raw} does not match the required editor ` +
+        `contract ${REQUIRED_UNITY_EDITOR_VERSION} exactly (the version contract is exact, not a floor)`,
+      details: {
+        projectVersion: metadata.projectVersion.raw,
+        projectRevision: metadata.projectVersion.revision,
+        requiredVersion: REQUIRED_UNITY_EDITOR_VERSION,
+        requiredRevision: REQUIRED_UNITY_EDITOR_REVISION,
+        projectRoot,
+      },
+    };
+  }
+
+  // Resolve the staged target: explicit (schema-validated) or the derived
+  // default "Assets/Gamos/gamos-asset<ext>".
+  const artifactExtension = path.extname(artifactPath) as AssetImportExtension;
+  if (!(ASSET_IMPORT_EXTENSIONS as readonly string[]).includes(artifactExtension)) {
+    // unreachable through the frozen schema; kept as a fail-closed barrier
+    return {
+      ok: false,
+      code: "invalid-input",
+      reason: `artifactPath extension must be one of [${ASSET_IMPORT_EXTENSIONS.join(", ")}]: ${artifactPath}`,
+    };
+  }
+  const targetAssetPath = (parsed.data.targetAssetPath ?? defaultTargetAssetPath(artifactExtension)).replace(
+    /\\/g,
+    "/",
+  );
+  const stagedPath = path.join(projectRoot, ...targetAssetPath.split("/"));
+  const gamosDir = path.join(projectRoot, "Gamos");
+  const paramsPath = path.join(gamosDir, "params.json");
+  const resultPath = path.join(gamosDir, "result.json");
+
+  // Output-path containment (HARDEN, fail before mutate): every path this
+  // operation writes — the staged artifact AND the bridge params/result
+  // files — must stay inside the workspace AND the project. A symlinked
+  // Assets/… or Gamos directory swapped to redirect the writes is rejected
+  // before anything is staged.
+  try {
+    resolveWorkspacePath(stagedPath, workspaceRoot);
+    resolveWorkspacePath(paramsPath, workspaceRoot);
+    resolveWorkspacePath(resultPath, workspaceRoot);
+    assertPathWithinProject(stagedPath, projectRoot);
+    assertPathWithinProject(paramsPath, projectRoot);
+    assertPathWithinProject(resultPath, projectRoot);
+  } catch (error) {
+    return pathFailure(error);
+  }
+
+  // Collision handling: an existing staged file with IDENTICAL content is an
+  // idempotent replace; different content fails closed.
+  if (existsSync(stagedPath)) {
+    let stagedStat;
+    try {
+      stagedStat = await stat(stagedPath);
+    } catch (error) {
+      return {
+        ok: false,
+        code: "asset-name-collision",
+        reason:
+          `cannot inspect the file already staged at ${targetAssetPath} (${stagedPath}): ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+    if (!stagedStat.isFile() || stagedStat.size <= 0) {
+      return {
+        ok: false,
+        code: "asset-name-collision",
+        reason: `the path staged for ${targetAssetPath} exists and is not a non-empty regular file: ${stagedPath}`,
+      };
+    }
+    const existingStagedSha256 = await sha256File(stagedPath);
+    if (existingStagedSha256 !== artifactSha256) {
+      return {
+        ok: false,
+        code: "asset-name-collision",
+        reason:
+          `a different file is already staged at ${targetAssetPath} (staged sha256=${existingStagedSha256}, ` +
+          `artifact sha256=${artifactSha256}): ${stagedPath}`,
+        details: {
+          surface: "staged-asset",
+          targetAssetPath,
+          stagedPath,
+          stagedSha256: existingStagedSha256,
+          artifactSha256,
+        },
+      };
+    }
+  }
+
+  // Stage the artifact (mkdir recursive; the copy is verified by re-hash).
+  try {
+    await mkdir(path.dirname(stagedPath), { recursive: true });
+    await copyFile(artifactPath, stagedPath);
+  } catch (error) {
+    return {
+      ok: false,
+      code: "asset-staging-failure",
+      reason: `failed to stage ${artifactPath} -> ${stagedPath}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    };
+  }
+  if (!existsSync(stagedPath)) {
+    return { ok: false, code: "asset-staging-failure", reason: `staged asset missing after copy: ${stagedPath}` };
+  }
+  const stagedBytes = (await stat(stagedPath)).size;
+  const stagedSha256 = await sha256File(stagedPath);
+  if (stagedSha256 !== artifactSha256 || stagedBytes !== artifactBytes) {
+    return {
+      ok: false,
+      code: "staged-asset-hash-mismatch",
+      reason:
+        `staged copy does not hash identical to the source artifact (source bytes=${artifactBytes} ` +
+        `sha256=${artifactSha256}, staged bytes=${stagedBytes} sha256=${stagedSha256}): ${stagedPath}`,
+      details: {
+        source: { byteLength: artifactBytes, sha256: artifactSha256 },
+        staged: { byteLength: stagedBytes, sha256: stagedSha256 },
+      },
+    };
+  }
+
+  // 1. copy the reviewed bridge templates into the project (idempotent)
+  const bridgeFiles = await copyBridgeScripts(projectRoot);
+
+  // 2. write the typed params JSON (data-only bridge communication)
+  await mkdir(gamosDir, { recursive: true });
+  const placeInScene = parsed.data.placeInScene;
+  const scenePathRelative = placeInScene?.scenePath?.replace(/\\/g, "/") ?? DEFAULT_SCENE_PATH;
+  const paramsFile: AssetImportParamsFile = {
+    artifactStagedPath: stagedPath,
+    targetAssetPath,
+    placeInScene: placeInScene !== undefined,
+    scenePath: scenePathRelative,
+  };
+  await writeFile(paramsPath, JSON.stringify(paramsFile, null, 2));
+
+  // 3. HONEST editor gate: staging and preparation happened above; without a
+  //    real editor executable the operation reports the honest unavailable
+  //    failure — never a fabricated import result.
+  if (typeof exe !== "string" || exe.length === 0 || !existsSync(exe)) {
+    return {
+      ok: false,
+      code: "unity-editor-unavailable",
+      reason:
+        `no real Unity Editor executable to import through: ${typeof exe === "string" ? exe : String(exe)} — ` +
+        `the verified artifact is staged at ${targetAssetPath}, but importing it through AssetDatabase requires ` +
+        `the licensed editor (set UNITY_EDITOR_PATH; an honest unavailable state, never a fabricated import result)`,
+      details: {
+        executable: typeof exe === "string" ? exe : null,
+        targetAssetPath,
+        stagedPath,
+        stagedSha256,
+        stagedBytes,
+      },
+    };
+  }
+  const editorVersion = probeEditorVersionSync(exe);
+  const executeMethod = UNITY_EXECUTE_METHODS["asset.import"];
+
+  // 4. run the real editor in batch mode with the reviewed executeMethod
+  const args = [
+    "-quit",
+    "-executeMethod",
+    executeMethod,
+    "-gamosParams",
+    paramsPath,
+    "-gamosResult",
+    resultPath,
+  ];
+  const label = `asset import (${targetAssetPath})`;
+  const { failure, run, report } = await runUnityOperation(exe, projectRoot, args, resultPath, options, label);
+  if (failure) {
+    return failure;
+  }
+
+  // 5. VERIFICATION (honest, engine-side): the executed method's loaded-asset
+  //    record — the imported path must be the staged path, the GUID non-empty
+  //    and meshCount>0 (a staged file alone does not prove an import).
+  const reportedImportedPath = typeof report?.importedPath === "string" ? report.importedPath : "";
+  const reportedGuid = typeof report?.guid === "string" ? report.guid : "";
+  const reportedMeshCount = typeof report?.meshCount === "number" ? report.meshCount : 0;
+  const reportedVertexCount = typeof report?.vertexCount === "number" ? report.vertexCount : 0;
+  const reportedMaterialCount = typeof report?.materialCount === "number" ? report.materialCount : 0;
+  const reportedAssetType = typeof report?.assetType === "string" ? report.assetType : "";
+  const reportedSubAssetNames = Array.isArray(report?.subAssetNames)
+    ? (report.subAssetNames as unknown[]).filter((name): name is string => typeof name === "string")
+    : [];
+
+  if (reportedImportedPath !== stagedPath || reportedGuid.length === 0 || reportedMeshCount <= 0) {
+    return {
+      ok: false,
+      code: "verification-failed",
+      reason:
+        `the executed import method did not verify the imported asset (importedPath must be the staged path ` +
+        `${stagedPath}, the GUID non-empty and meshCount>0 — a staged file alone does not prove an import)`,
+      details: { report, stagedPath, targetAssetPath },
+    };
+  }
+  if (placeInScene !== undefined && report?.sceneSaved !== true) {
+    return {
+      ok: false,
+      code: "verification-failed",
+      reason: `the executed import method did not save the scene after placing the asset: ${scenePathRelative}`,
+      details: { report, scenePath: scenePathRelative },
+    };
+  }
+
+  return {
+    ok: true,
+    imported: true,
+    projectRoot,
+    executeMethod,
+    invocation: unityBatchInvocation(exe, projectRoot, args),
+    editor: { executable: exe, rawVersion: editorVersion },
+    targetAssetPath,
+    stagedPath,
+    guid: reportedGuid,
+    assetType: reportedAssetType,
+    meshCount: reportedMeshCount,
+    vertexCount: reportedVertexCount,
+    materialCount: reportedMaterialCount,
+    subAssetNames: reportedSubAssetNames,
+    sceneIntegrated: placeInScene !== undefined,
+    scenePath: placeInScene !== undefined ? scenePathRelative : null,
+    stagedSha256,
+    stagedBytes,
     bridgeFiles,
     exitStatus: run.exitStatus,
     resultReport: report,
