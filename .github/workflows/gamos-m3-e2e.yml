@@ -103,6 +103,11 @@ jobs:
           assert unresolved == ['unity/asset.import'], unresolved
           print('M3 plan-mode smoke: verdict ok, 5 steps, 9 claims, unity/asset.import honestly unresolved')
           PY
+        env:
+          # The CLI validates that the app conversation workspace is an absolute
+          # POSIX path (same contract the journey's in-app turns rely on); the
+          # checkout root is that workspace in CI.
+          GAMOS_M3_WORKSPACE_ROOT: ${{ github.workspace }}
 
   m3-runtime-gates:
     name: M3-G3/G4 real-runtime engine gates (real Blender under the real runtime)
@@ -239,10 +244,15 @@ jobs:
           print('M3 journey verdict: pass — integrated asset consumed in the running browser, manifest integrity chain intact, cancellation verified, Unity honestly unavailable')
           PY
           # The journey uses no external credential (local deterministic model
-          # endpoint) — scan the evidence for accidental key material.
-          if grep -r -l -E "ghp_|sk-or-v1|vcp_|napi_|ck_|e2b_" evidence/phase-m3/journey-ci/ > /dev/null 2>&1; then
+          # endpoint) — scan the evidence for accidental key material. Each
+          # provider prefix is followed by an entropy qualifier (16+ chars of
+          # key body) so plain identifiers that merely contain a prefix
+          # substring (e.g. the boolean field name "back_used" containing
+          # "ck_") cannot false-positive the scan; real leaked keys always
+          # carry the long high-entropy body and still match.
+          if grep -r -l -E "ghp_[A-Za-z0-9]{30,}|sk-or-v1-[A-Za-z0-9-]{16,}|vcp_[A-Za-z0-9]{20,}|napi_[A-Za-z0-9]{20,}|ck_[A-Za-z0-9]{16,}|e2b_[A-Za-z0-9]{20,}" evidence/phase-m3/journey-ci/ > /dev/null 2>&1; then
             echo "::error::key-like material found in the journey evidence"
-            grep -r -l -E "ghp_|sk-or-v1|vcp_|napi_|ck_|e2b_" evidence/phase-m3/journey-ci/ || true
+            grep -r -l -E "ghp_[A-Za-z0-9]{30,}|sk-or-v1-[A-Za-z0-9-]{16,}|vcp_[A-Za-z0-9]{20,}|napi_[A-Za-z0-9]{20,}|ck_[A-Za-z0-9]{16,}|e2b_[A-Za-z0-9]{20,}" evidence/phase-m3/journey-ci/ || true
             exit 1
           fi
       - name: Write the M3-G2/M3-G5 journey-leg gate statuses
