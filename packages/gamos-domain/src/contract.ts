@@ -54,6 +54,7 @@ export type {
   ResourceClaimScope,
   ResourceClaim,
   StepResourceClaims,
+  ClaimableStep,
   ClaimConflict,
 } from "./domain/resource-claims.js";
 export {

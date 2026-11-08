@@ -25,9 +25,22 @@
  * confinement (symlink resolution, workspace jail) is an executor
  * responsibility recorded here as declared, canonical, workspace-relative
  * paths only.
+ *
+ * Module direction: game-plan.ts imports THIS module (never the reverse —
+ * the architecture check forbids the cycle); conflict analysis accepts a
+ * structural step view instead of importing the GamePlanStep type.
  */
 
-import type { GamePlanStep } from "./game-plan.js";
+/**
+ * Structural step view for conflict analysis. `GamePlanStep` is structurally
+ * assignable to this shape, so plans analyze without a module-level import
+ * back into game-plan.ts (which would create a dependency cycle).
+ */
+export interface ClaimableStep {
+  readonly stepId: string;
+  readonly dependsOn: readonly string[];
+  readonly resourceClaims?: StepResourceClaims;
+}
 
 export const RESOURCE_CLAIMS_SCHEMA_ID = "gamos/resource-claims@1";
 export const RESOURCE_CLAIMS_SCHEMA_VERSION = 1;
@@ -213,12 +226,12 @@ export function claimsOverlap(a: ResourceClaim, b: ResourceClaim): boolean {
  * (stepA, stepB, path); each conflict carries a remediation reason naming the
  * explicit serialization decision (no silent race resolution).
  */
-export function findClaimConflicts(steps: readonly GamePlanStep[]): readonly ClaimConflict[] {
+export function findClaimConflicts(steps: readonly ClaimableStep[]): readonly ClaimConflict[] {
   const claimSets = new Map<string, readonly ResourceClaim[]>();
   const dependsOn = new Map<string, readonly string[]>();
   for (const step of steps) {
     dependsOn.set(step.stepId, step.dependsOn);
-    const claims = (step as { resourceClaims?: StepResourceClaims }).resourceClaims?.claims;
+    const claims = step.resourceClaims?.claims;
     if (claims !== undefined) claimSets.set(step.stepId, claims);
   }
 
