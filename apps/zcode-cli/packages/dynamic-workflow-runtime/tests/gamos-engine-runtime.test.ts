@@ -624,4 +624,97 @@ describe.skipIf(!realBlenderFound)("gamos M3-RUNTIME — real engine operations 
     },
     120_000,
   );
+
+  it(
+    "aborting before any dispatch stops the run with zero engine operations and no completed nodes",
+    async () => {
+      const script = [
+        OBJECT_SUMMARY_IFACE,
+        SCENE_IFACE,
+        INSPECT_IFACE,
+        'const scout = agent("scout", "Inspects blend A.");',
+        'const outcome = await scout.ask<SceneInspectOutcome>("Inspect blend A.");',
+        "return { inspected: outcome.sceneCount };",
+      ].join("\n");
+      const journal = new InMemoryJournalStore();
+      const controller = new AbortController();
+      controller.abort(); // 中止先于一切派发。
+      const driver = new GamosEngineDriver(journal, {
+        handlers: {
+          "ask#1": () => {
+            throw new Error("ask#1 must never dispatch when the run is pre-aborted");
+          },
+        },
+      });
+      const { settlement } = await runEngineScript(script, driver, {
+        runId: "g4-immediate-cancel",
+        signal: controller.signal,
+      });
+      expect(settlement).toEqual({ status: "stopped", reason: "user" });
+      expect(journal.getRun("g4-immediate-cancel")?.status).toBe("stopped");
+      expect(driver.startAskCount()).toBe(0);
+      expect(journal.getNode("g4-immediate-cancel", "ask#1", 1)).toBeUndefined();
+      console.log("[gamos-evidence] G4 immediate cancel: zero dispatches, zero completed nodes, honest stopped settlement");
+    },
+    60_000,
+  );
+
+  it(
+    "the conflict-gate negative matrix: case-aliased and read/write unordered overlaps fail; ordered read-then-write passes",
+    () => {
+      const claim = (access: "read" | "write", path: string, scope: "asset-path" | "generated-output" = "asset-path") => ({
+        schemaVersion: 1,
+        claims: [{ access, scope, path }],
+      });
+      const planWith = (claimsByStep: unknown[], dependsOn: string[][]) => ({
+        planId: "plan-g3-matrix",
+        conceptRef: { conceptId: "concept-g3", conceptSha256: "a".repeat(64) },
+        permissions: [{ kind: "engine-headless" as const, scope: "workspace", rationale: "headless blender ops" }],
+        acceptanceRecord: { recordId: "record-g3", recordSha256: "b".repeat(64) },
+        artifactExpectations: [{ artifactKind: "scene" as const, verificationMethod: "engine-query" as const }],
+        executionConstraints: { maxConcurrency: 2 },
+        createdAt: "2026-11-08T00:00:00+00:00",
+        provenance: { authoredBy: "tl" as const },
+        steps: claimsByStep.map((resourceClaims, index) => ({
+          stepId: `step-${index + 1}`,
+          capability: { capabilityId: "blender/scene.modify", capabilityVersion: "1.0.0", input: {} },
+          dependsOn: dependsOn[index] ?? [],
+          resourceClaims,
+        })),
+      });
+
+      // 大小写别名（case-fold aliasing）指向同一资产的 write/write：被拒。
+      expect(() =>
+        parseGamePlan(
+          planWith([claim("write", "assets/Scene.blend"), claim("write", "assets/scene.blend")], [[], []]),
+        ),
+      ).toThrow(/ambiguous-alias|conflicting unordered claims/i);
+
+      // 无序 read/write 重叠：被拒（write 不得与重叠的 read 并发）。
+      expect(() =>
+        parseGamePlan(
+          planWith([claim("read", "assets/scene.blend"), claim("write", "assets/scene.blend")], [[], []]),
+        ),
+      ).toThrow(/conflicting unordered claims/);
+
+      // 有序 read → write（显式 dependsOn）：通过。
+      const ordered = parseGamePlan(
+        planWith(
+          [claim("read", "assets/scene.blend"), claim("write", "assets/scene.blend")],
+          [[], ["step-1"]],
+        ),
+      );
+      expect(ordered.steps[1]?.dependsOn).toEqual(["step-1"]);
+
+      // 不同资产的 write/write（互不重叠）：通过——独立工作可并发。
+      const independent = parseGamePlan(
+        planWith([claim("write", "assets/a.blend"), claim("write", "assets/b.blend")], [[], []]),
+      );
+      expect(independent.steps).toHaveLength(2);
+      console.log(
+        "[gamos-evidence] G3 conflict matrix: case-aliased write/write rejected; unordered read/write rejected; ordered read-then-write accepted; independent writes accepted",
+      );
+    },
+    60_000,
+  );
 });
