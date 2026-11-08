@@ -1,0 +1,108 @@
+{
+  "schema": "gamos/m3-repeat-export-reproducibility@1",
+  "recordedAt": "2026-11-08T15:18:52Z",
+  "facility": {
+    "exporter": "blender-engine-plugin asset_export (the REAL Blender execution layer; spawn, no shell)",
+    "manifestBuilder": "gamos-domain buildExportedManifest (gamos/asset-interchange@1) via the bundled m3-capability-cli build-manifest mode — the §11 journey's exact persistence facility",
+    "capabilityCliPath": "/tmp/m3-capability-cli.mjs",
+    "capabilityCliSha256": "6f764898fbf14db3d27f0caa2c28b86c651a4ac402f65a4bb4d3b4cbab8ec95d",
+    "blenderExecutable": "/home/z/my-project/engines/blender-4.1.1-linux-x64/blender",
+    "blenderRawVersion": "4.1.1",
+    "blenderVersion": "4.1.1"
+  },
+  "input": {
+    "sourceAsset": {
+      "path": "scene.blend",
+      "byteLength": 817928,
+      "sha256": "67a7231994dd6ec39b3dc172326d05e0312bb3baad0a44b9bc7694c34b334ea4",
+      "objectSelection": [
+        "GamosM3Cube"
+      ],
+      "creation": "bootstrapEmptyScene + sceneModify(add_primitive cube GamosM3Cube) — one fixed source consumed by BOTH runs"
+    },
+    "exportSettings": {
+      "format": "GLTF",
+      "interchange": {
+        "upAxis": "y"
+      },
+      "note": "identical settings for both runs — the only difference is the output path"
+    },
+    "manifestSettings": {
+      "planId": "gamos-m3-reproducibility",
+      "projectIdentity": "gamos-m3-repro",
+      "createdAt": "2026-11-08T00:00:00Z"
+    }
+  },
+  "runs": [
+    {
+      "run": 1,
+      "blenderVersion": "4.1.1",
+      "artifact": {
+        "byteLength": 1736,
+        "sha256": "55665e6c52c70db949d759f0c3b7e7028bcee908af1d1a9f033bc098303160ea",
+        "mediaType": "model/gltf-binary"
+      },
+      "appliedInterchange": {
+        "format": "glb",
+        "handedness": "right",
+        "upAxis": "y",
+        "forwardAxis": "z",
+        "units": "meter",
+        "scaleFactor": 1,
+        "appliedTransforms": "blender-native z-up converted to y-up (z forward); global scale 1 applied",
+        "materials": {
+          "referenced": [],
+          "embedded": true
+        }
+      },
+      "dependentFileCount": 0,
+      "manifest": {
+        "manifestId": "gamos-m3-reproducibility-manifest",
+        "status": "exported",
+        "artifactSha256": "55665e6c52c70db949d759f0c3b7e7028bcee908af1d1a9f033bc098303160ea",
+        "manifestSha256": "b11704b3ada713ae76ebf42f2ce35a7546b53cf8101f21e021a7cc7903c939b7"
+      },
+      "manifestFileSha256": "d3349899217a126e9fd1991170c7cd9adb94a580261c7722044b4fbb91c0a600"
+    },
+    {
+      "run": 2,
+      "blenderVersion": "4.1.1",
+      "artifact": {
+        "byteLength": 1736,
+        "sha256": "55665e6c52c70db949d759f0c3b7e7028bcee908af1d1a9f033bc098303160ea",
+        "mediaType": "model/gltf-binary"
+      },
+      "appliedInterchange": {
+        "format": "glb",
+        "handedness": "right",
+        "upAxis": "y",
+        "forwardAxis": "z",
+        "units": "meter",
+        "scaleFactor": 1,
+        "appliedTransforms": "blender-native z-up converted to y-up (z forward); global scale 1 applied",
+        "materials": {
+          "referenced": [],
+          "embedded": true
+        }
+      },
+      "dependentFileCount": 0,
+      "manifest": {
+        "manifestId": "gamos-m3-reproducibility-manifest",
+        "status": "exported",
+        "artifactSha256": "55665e6c52c70db949d759f0c3b7e7028bcee908af1d1a9f033bc098303160ea",
+        "manifestSha256": "b11704b3ada713ae76ebf42f2ce35a7546b53cf8101f21e021a7cc7903c939b7"
+      },
+      "manifestFileSha256": "d3349899217a126e9fd1991170c7cd9adb94a580261c7722044b4fbb91c0a600"
+    }
+  ],
+  "comparison": {
+    "sameOutputPath": true,
+    "artifactDigestsEqual": true,
+    "artifactByteLengthsEqual": true,
+    "manifestFilesEqual": true,
+    "manifestFieldDiff": [],
+    "firstDifferingByteOffset": null,
+    "differenceReason": null
+  },
+  "verdict": "reproducible"
+}

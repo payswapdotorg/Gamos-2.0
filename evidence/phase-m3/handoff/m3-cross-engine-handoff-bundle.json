@@ -1,0 +1,182 @@
+{
+  "schema": "gamos/m3-cross-engine-handoff-bundle@1",
+  "recordedAt": "2026-11-08T15:21:58Z",
+  "derivedFrom": [
+    {
+      "path": "evidence/phase-m3/journey/m3-journey-evidence.json",
+      "sha256": "53d88f7167f054d9978bd16224594c163810bf4e402b1126e9d050ca4e6670bc"
+    },
+    {
+      "path": "evidence/phase-m3/journey/m3-capability-plan.json",
+      "sha256": "e69524e8c401932461a784e1fbb3b36ce19dfbd42d81103e64509ce55da2aea9"
+    },
+    {
+      "path": "evidence/phase-m3/reproducibility/m3-repeat-export-reproducibility.json",
+      "sha256": "2990d801d0b123a1406e9c67ad5ed7efbc40bf2a712466cfbc88181b6fa5f24f"
+    }
+  ],
+  "journeyVerdict": "pass",
+  "hops": [
+    {
+      "id": "plan",
+      "engine": "core",
+      "record": {
+        "evidenceFile": "evidence/phase-m3/journey/m3-capability-plan.json",
+        "evidenceSha256": "e69524e8c401932461a784e1fbb3b36ce19dfbd42d81103e64509ce55da2aea9",
+        "planVerdict": "ok",
+        "planStepCount": 5,
+        "planResourceClaimCount": 9,
+        "validatedByParseGamePlan": true
+      },
+      "status": "verified",
+      "verifiedBy": "the bundled m3-capability-cli plan mode (registry resolution + engine-aware GamePlan; evidence/phase-m3/journey/m3-capability-plan.json)"
+    },
+    {
+      "id": "permission-gate",
+      "engine": "blender",
+      "record": {
+        "denial_blocked_mutation": true,
+        "export_artifact_absent_after_denial": true,
+        "baseline_blend_sha256": "48327468592dd466873d1068d1ca2393abefb8424893ea17f33cb389170acb16"
+      },
+      "status": "verified",
+      "verifiedBy": "the M3J4 denial leg: the source mutation was blocked at the existing permission gate (blend sha256 unchanged, no staging artifact)"
+    },
+    {
+      "id": "source",
+      "engine": "blender",
+      "record": {
+        "saved_blend_sha256": "6e1257d61d86138cf80ce0de7a70e1ffc1bb292786d74bd1da86083a3bf7911a",
+        "blend_mutated_by_approved_scene_modify": true
+      },
+      "status": "verified",
+      "verifiedBy": "the approved real scene_modify (GamosM3Cube) — the saved .blend digest recorded pre-export"
+    },
+    {
+      "id": "export",
+      "engine": "blender",
+      "record": {
+        "artifact": {
+          "path": "gamos-asset.glb",
+          "byteLength": 1984,
+          "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6",
+          "mediaType": "model/gltf-binary"
+        }
+      },
+      "status": "verified",
+      "verifiedBy": "the real asset_export through the app's MCP plugin path (REAL Blender 4.1.1 execution layer)"
+    },
+    {
+      "id": "manifest",
+      "engine": "core",
+      "record": {
+        "manifestId": "gamos-m3-cross-engine-manifest",
+        "status": "exported",
+        "manifest_sha256": "9f544b92ebd30eccae67fdbff2e789dd2b7a39b78354abb025d61791b7b47fd3",
+        "artifact": {
+          "path": "staging/gamos-asset.glb",
+          "mediaType": "model/gltf-binary",
+          "byteLength": 1984,
+          "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6"
+        },
+        "builtFrom": "the authoritative session-store asset_export part output, through buildExportedManifest (the M3.4 fail-closed facility)"
+      },
+      "status": "verified",
+      "verifiedBy": "the M3.4 facility (buildExportedManifest, gamos/asset-interchange@1) from the AUTHORITATIVE session-store tool output; artifact integrity must match the export digest"
+    },
+    {
+      "id": "integration",
+      "engine": "babylon",
+      "record": {
+        "manifest_read_through_app_read_tool": true,
+        "integrated": true,
+        "staged_asset": {
+          "assetName": "gamos-asset",
+          "file": "gamos-asset.glb",
+          "byteLength": 1984,
+          "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6",
+          "matches_export": true
+        },
+        "registry_entry": {
+          "assetName": "gamos-asset",
+          "file": "gamos-asset.glb",
+          "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6"
+        }
+      },
+      "status": "verified",
+      "verifiedBy": "the in-app manifest Read + asset_integrate fail-closed expectedIntegrity (staged GLB sha256 === export sha256; the committed registry entry carries the export hash)"
+    },
+    {
+      "id": "build",
+      "engine": "babylon",
+      "record": {
+        "dist": {
+          "file": "index.html",
+          "sha256": "85e4c9a140b4df9e5e2ee2ea0302a83394cb7471fd2944b162dc32e91aed66d1"
+        }
+      },
+      "status": "verified",
+      "verifiedBy": "the real vite build of the Babylon project consuming the integrated asset"
+    },
+    {
+      "id": "runtime-verification",
+      "engine": "babylon",
+      "record": {
+        "runtime_url": "http://127.0.0.1:33655/",
+        "assertions": {
+          "url_matches_runtime": true,
+          "babylon_ready_flag": true,
+          "integrated_asset_loaded": true,
+          "integrated_assets_ready": true,
+          "integrated_asset_no_error": true
+        },
+        "integrated_asset": {
+          "assetName": "gamos-asset",
+          "meshNames": [
+            "__root__",
+            "GamosM3Cube"
+          ],
+          "vertices": 24
+        }
+      },
+      "status": "verified",
+      "verifiedBy": "THE ORIGINAL ZCODE BROWSER in-guest reads on the running experience (meshNames + vertices of the INTEGRATED Blender-authored asset)"
+    },
+    {
+      "id": "cancellation",
+      "engine": "babylon",
+      "record": {
+        "stop_submitted": true,
+        "stop_verified": true
+      },
+      "status": "verified",
+      "verifiedBy": "project_stop cancellation (the runtime URL verified dead after stop)"
+    },
+    {
+      "id": "unity-import",
+      "engine": "unity",
+      "record": {
+        "outcome": "honest-unavailable (no licensed Unity Editor on this machine — never fabricated)",
+        "honest_unavailable_seen": true
+      },
+      "status": "honestly-unavailable",
+      "verifiedBy": "the structured unity-editor-unavailable state surfaced by the typed asset_import attempt on the REAL cross-engine artifact (M3-G1 stays blocked — never fabricated)"
+    }
+  ],
+  "hashChain": {
+    "anchor": "the exported artifact digest (blender/asset.export)",
+    "exportArtifactSha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6",
+    "manifestArtifactSha256MatchesExport": true,
+    "stagedAssetSha256MatchesExport": true,
+    "registryEntrySha256MatchesExport": true,
+    "integratedAssetConsumedInRunningBrowser": true
+  },
+  "reproducibility": {
+    "path": "evidence/phase-m3/reproducibility/m3-repeat-export-reproducibility.json",
+    "sha256": "2990d801d0b123a1406e9c67ad5ed7efbc40bf2a712466cfbc88181b6fa5f24f",
+    "verdict": "reproducible",
+    "sameSourceToolSettings": true,
+    "differenceReason": null
+  },
+  "verdict": "handoff-chain-verified"
+}
