@@ -1,0 +1,125 @@
+Unity Editor Software Terms — verbatim excerpts (M2-C, final-closure directive §2)
+=================================================================================
+
+Retrieved 2026-11-08 (UTC) from the official Unity legal site via plain
+HTTPS GET (curl -L, Firefox user-agent; no browser automation needed).
+
+Canonical URLs (both serve the BYTE-IDENTICAL document; md5 of the served
+HTML: 5b5913a5e9211be2daad8fb8356860dc, 610761 bytes):
+  - https://unity.com/legal/editor-terms-of-service/software
+  - https://unity.com/legal/terms-of-service/software  (linked from the
+    Additional Terms index as "Unity Editor Software Additional Terms")
+
+Discovery note: the URL recorded as blocked during the 2026-11-07
+investigation (https://unity.com/legal/software-terms) serves a 404
+bot-protection shell from this network. The LIVE canonical location of the
+Unity Editor Software Terms is the URL above, discovered via the official
+"Legal Information" index at https://unity.com/legal/eula. The previously
+unverifiable clauses are therefore now recorded verbatim below.
+
+Document title (as served): "Unity Editor Software Terms"
+
+The five sections below are the provisions the M2-G1 provisioning
+investigation depends on: tier eligibility/financial thresholds (§1.1),
+the Unity Editor license grant (§2.1), the paid-only Build License
+(§2.4), the Build Server tier restriction (§2.5), and the machine-count /
+concurrent-use / cloud-execution clause (§2.8). Excerpts are verbatim,
+including their section headings; whitespace is normalized (HTML -> text).
+
+--------------------------------------------------------------------------------
+### Unity Editor Software Terms §1.1 — Tier Eligibility; Financial Thresholds (the Personal $200K eligibility clause)
+
+1.1 Tier Eligibility; Financial Thresholds
+ You and your Authorized Users, if applicable, must be Tier Eligible at all times to use any Unity Software. “Tier Eligible” means that your Total Finances cannot exceed the defined Financial Thresholds for the tier of Unity Software you (or those providing services to you) are using, and you have satisfied and continue to satisfy any minimum pricing or spending commitments associated with that tier of Unity Software. For clarity, you do not need to be Tier Eligible to purchase or use a higher tier Offering. Tier Eligibility is measured each date you use the Unity Software for the most recent twelve (12) trailing month period. Immediately upon your Total Finances exceeding the Financial Threshold of the Unity Software tier you are using, you must upgrade your Unity Plan. You may not (i) use Unity Software tiers within different Financial Thresholds at the same time, (ii) have different Authorized Users or members of your Unity Organization use Unity Software tiers within different Financial Thresholds at the same time, and/or (iii) combine or integrate any of your Projects developed with one tier of the Unity Software with any of your Projects developed simultaneously with another tier.
+ Total Finances are measured as follows:
+ If you are a legal entity using the Unity Software, then your Total Finances are: (a) if you are providing services to a third party, your customers’ or clients’ gross revenues and/or funding (no matter what the source); or (b) if you are not providing services to a third party, your aggregate gross revenues and funding.
+ If you are a governmental entity, non-profit, educational or academic institution using the Unity Software, then your Total Finances are your budget for the entire entity or institution.
+ If you are an individual using the Unity Software, then your Total Finances are: (a) if you are providing service(s) to a third party, your customer’s or client’s gross revenues and/or funding (no matter what the source); or (b) if you are not providing service(s) to a third party, the amount generated in connection with your use of the Software.
+ Financial Thresholds: 
+ The Financial Threshold for Unity Personal is $200,000 USD for the most recent twelve (12) month period. To be Tier Eligible to use Unity Personal, your Total Finances may not exceed $200,000 USD. If your Total Finances exceed $200,000 USD you may not use Unity Personal at all, even for internal projects or prototyping.
+ The Financial Threshold for Unity Pro is from $200,001 to $24,999,999 USD for the most recent twelve (12) month period. To be Tier Eligible to use Unity Pro, your Total Finances may not exceed $24,999,999 USD. If your Total Finances equal or exceed $25,000,000 USD, you may only use Unity Enterprise.
+ The Financial Threshold for Unity Enterprise is $25,000,000 USD and over for the most recent twelve (12) month period. If your Total Finances equal or exceed $25,000,000 USD, you may only use Unity Enterprise.
+ Notwithstanding the foregoing, the Financial Threshold for Industry Customers is $1,000,000 USD for the most recent twelve (12) month period. If your Total Finances exceed $1,000,000 USD, you may only use Unity Industry.
+ The Financial Threshold for Unity Student Plan is $1,000,000 USD for the most recent twelve (12) month period. If your Total Finances exceed $1,000,000 USD, you may only use Unity Pro or Unity Enterprise versions of the Unity Editor.
+ For clarity, unless otherwise set forth above, these Financial Thresholds apply whether or not you use the Unity Software as part of a Unity Plan.
+ By using the Unity Software, you represent and warrant that you are Tier Eligible to use the tier of Unity Software you are using and those being used on your behalf. You understand that it is your responsibility to maintain complete records establishing your Tier Eligibility and you bear the burden of proving your Tier Eligibility if we ask.
+ 2. Use Rights 
+ The scope and limitations of your right to access and use the Unity Editor and Unity Runtime may depend on whether you are an Industry Customer and are as set forth in this Section 2. For clarity, the license grants in Sections 2.1 and 2.2 are primarily for creators creating first-party content (e.g., a game maker making their own games); if that’s not you, rather you’re a service provider, Platform, agency, reseller or otherwise, you may need a separate grant of rights from Unity and/or written authorization. Please reach out to your Unity salesperson for partnership opportunities.
+ Unity may restrict your Unity Editor Rights to the Unity Editor versions available at https://unity.cn/releases, based on your location, residency, or principal place of business.
+
+--------------------------------------------------------------------------------
+### Unity Editor Software Terms §2.1 — Unity Editor (the license grant: Authorized Users, internal use)
+
+2.1 Unity Editor
+ Conditioned upon your compliance with these Software Terms and the Terms, and payment of all applicable fees, Unity grants you a non-exclusive, non-transferable right to install and execute the Unity Editor solely for internal use by the number of Authorized Users as set forth in your Offering Identification to develop your Projects during the applicable term (the “ Unity Editor Rights ”).
+ You may not distribute (within the Unity Package Manager, on Unity Forums or otherwise) User Modifications to enable access to, or optimize for, a Platform that is not a Unity Supported Platform without a separate grant of rights from Unity. You may create such User Modifications for your individual/own Project(s) for use by you and your Authorized Users, provided that neither you nor any of your Affiliates are the owner or controller of the Platform that is not a Unity Supported Platform that such User Modifications enable access to or optimize for.
+ You may not make available all or any part of the Unity Editor or its functionality, nor process data using the Unity Editor, in each case to or for End Users, other than to your Authorized Users, through any cloud, hosting, application services provider, service bureau, software-as-a-service (SaaS) or any other technology or service or otherwise, without a separate grant of rights from Unity.
+
+--------------------------------------------------------------------------------
+### Unity Editor Software Terms §2.4 — Build License (the build-machine subscription — Pro-only, PAID)
+
+2.4 Build License
+ The following applies if you purchase Unity’s “Build License” subscription through special arrangement with Unity:
+ Your Build License subscription includes one (1) subscription to use Unity Pro. Conditioned upon your compliance with these Software Terms and the Terms, and payment of all applicable subscription fees, Unity grants you a limited, worldwide, non-exclusive, non-transferable, non-sublicensable right during the applicable subscription term to install that copy of Unity Pro on up to ten (10) internal build machines, and you may use that copy for the sole purposes of publishing and distributing, but not creating, your Projects. Your use of Unity Pro as part of your Build License subscription is subject to all rights and restrictions set forth herein with respect to Unity Pro, unless explicitly modified by this Section.
+ For clarity, you must purchase a separate "Unity Build Server" subscription in order to use Unity Build Server, subject to the Unity Build Server Terms.
+
+--------------------------------------------------------------------------------
+### Unity Editor Software Terms §2.5 — Unity Build Server (explicitly NOT usable with the Personal tier)
+
+2.5 Unity Build Server
+ The following applies if you purchase, download, install or use Unity Build Server:
+ Conditioned upon your compliance with these Software Terms and the Terms, and payment of all applicable subscription fees, Unity grants you a limited, worldwide, non-exclusive, non-transferable, non-sublicensable right during the applicable subscription term to use Unity Build Server to manage the use of the Unity Software, installed on a specified number of concurrent Machines (as permitted by your Unity Build Server subscription), for the sole purpose of generating “builds” of your Projects.
+Your Unity Build Server subscription tier (e.g., Unity Pro Build Server) must match the Unity Software subscription tier used to create your Projects (e.g., Unity Pro). You may not use Unity Build Server with the Unity Personal tier of the Unity Software.
+
+--------------------------------------------------------------------------------
+### Unity Editor Software Terms §2.8 — Concurrent use; Copies of Unity Software (THE machine-count clause)
+
+2.8 Concurrent use; Copies of Unity Software.
+ Unless we make available and you have purchased floating licenses for a Plan that includes the Unity Editor, you (and your Authorized Users) may install the Unity Editor on both a primary and a secondary computer or operating system, solely for your convenience, but only for use by a single person. You may make a single copy of the Unity Editor solely for backup or archival purposes. For the sake of clarity, you (or your Authorized User) may only use one instance at any given time per seat. Unity may in its sole discretion authorize you to install the Unity Editor on additional computers or operating systems upon deactivation of the Unity Editor installed on existing computers. For clarity, in no event may third party service providers directly or indirectly distribute, run or use the Unity Editor so that it is executed on or simulated by the cloud or a remote server and transmitted over the Internet or other network except where they are acting on your behalf as an Authorized User in accordance with this Section.
+
+--------------------------------------------------------------------------------
+
+Honest reading notes (analysis, clearly separated from the verbatim text above)
+=================================================================================
+
+1. Personal on a build/CI machine: the Software Terms contain NO general
+   grant permitting an unattended build machine to use a Personal license.
+   The only build-machine-specific provisions are §2.4 (Build License — a
+   PAID special arrangement, Pro-only: "up to ten (10) internal build
+   machines ... for the sole purposes of publishing and distributing, but
+   not creating, your Projects") and §2.5 (Unity Build Server — paid, tier-
+   matched, and "You may not use Unity Build Server with the Unity Personal
+   tier of the Unity Software").
+
+2. What §2.8 actually grants: installation "on both a primary and a
+   secondary computer or operating system, solely for your convenience,
+   but only for use by a single person", "only ... one instance at any
+   given time per seat", with discretionary additional installs "upon
+   deactivation of the Unity Editor installed on existing computers".
+
+3. Cloud/remote execution: "in no event may third party service providers
+   directly or indirectly distribute, run or use the Unity Editor so that
+   it is executed on or simulated by the cloud or a remote server and
+   transmitted over the Internet or other network except where they are
+   acting on your behalf as an Authorized User in accordance with this
+   Section." A GitHub-HOSTED runner is a third-party cloud VM, not an
+   identified Authorized User — running the editor there is therefore NOT
+   clearly permitted by §2.8 for a Personal seat. A SELF-HOSTED runner on
+   an existing machine of the eligible single user, activated through the
+   Unity Hub by that user (the §6 runbook's Option A), fits the
+   primary/secondary-computer model of §2.8 and remains the compliant free
+   path. This is the agent's honest reading; the maintainer remains the
+   licensing authority and should read these excerpts (or the live page)
+   before activating anything.
+
+4. §1.1 confirms the eligibility mechanics already recorded from the
+   pricing page: Personal requires Total Finances <= $200,000 USD for the
+   trailing 12 months (measured per use date), with the service-provider
+   client test folded into the Total Finances definition.
+
+5. These excerpts are recorded to close the M2-C verification gap
+   ("the decisive Software-Terms build-machine/machine-count clause was
+   bot/geo-blocked from this network"). M2-G1 remains BLOCKED: the
+   maintainer attestation (§4 of the provisioning doc), an eligible Unity
+   account + Hub activation, and a compliant runner are still missing —
+   no license exists in this environment and none may be fabricated.
