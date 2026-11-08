@@ -410,10 +410,14 @@ describe("e2e — Promise.race with a losing in-flight ask", () => {
     const { settlement, journal, driver } = await runScript(script, {
       asks: {
         // ask<string> 是 untyped（末轮文本即结果）：胜者以 turn-end 文本结算。
+        // 胜者结算经真定时器落地（CI run 42499422678 的真实竞态：胜者的微任务结算可能
+        // 先于败者的 stdout-chunk 准入，complete→abortInFlight 时败者尚未在飞）——
+        // 与 resume.test.ts「只有真时间差能钉住次序」同一手法。
         "ask#1": () => ({
           type: "text",
           finalText: "won",
           stats: { tokens: 5, toolCalls: 0, turns: 1 },
+          delayMs: 200,
         }),
         // 败者：无任何动作——ask 永远悬着，模拟一个仍在跑的慢 turn。
         "ask#2": () => [],
