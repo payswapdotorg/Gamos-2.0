@@ -1,13 +1,13 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { copyFile, cp, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { discoverUnityEditor } from "../src/discovery.js";
-import { classifyUnityBatchOutput, projectBuild, runUnityBatch, sceneModify } from "../src/engine.js";
+import { assetImport, classifyUnityBatchOutput, projectBuild, runUnityBatch, sceneModify } from "../src/engine.js";
 import {
   checkUnityVersionContract,
   parseProjectVersionFile,
@@ -16,6 +16,15 @@ import {
 } from "../src/typed-ops.js";
 
 const FIXTURE_DIR = fileURLToPath(new URL("./fixture/unity-project", import.meta.url));
+
+// The committed cross-engine FBX fixture (M3.1 target leg): a real Blender
+// 4.1.1 FBX export of a cube named GamosTestCube with a material color,
+// generated once through the blender plugin's reviewed bridge (bootstrap →
+// typed sceneModify → assetExport FBX interchange {upAxis y, globalScale 1})
+// and committed as the artifact — the record, never regenerated per run.
+const FBX_FIXTURE_PATH = fileURLToPath(new URL("./fixture/gamos-cube.fbx", import.meta.url));
+const FBX_FIXTURE_BYTES = 15228;
+const FBX_FIXTURE_SHA256 = "ce346618c7df43efc2496ed4c5cd2f0f35c5e2be2f7a40ec34e8a9b51fe3d78d";
 
 // ---------------------------------------------------------------------------
 // Machine-readable suite evidence (M2-A): the integration suite ALWAYS writes
@@ -63,6 +72,17 @@ interface SuiteMachineEvidence {
     bytes: number;
     sha256: string;
   } | null;
+  /** M3.1 target leg: the real-editor asset import (null = not run — honest). */
+  asset_import: {
+    verified: boolean;
+    target_asset_path: string;
+    guid: string;
+    mesh_count: number;
+    vertex_count: number;
+    material_count: number;
+    scene_saved: boolean;
+    staged_sha256: string;
+  } | null;
 }
 
 const evidence: SuiteMachineEvidence = {
@@ -73,6 +93,7 @@ const evidence: SuiteMachineEvidence = {
   preflight: null,
   scene_mutation: null,
   build_artifact: null,
+  asset_import: null,
 };
 
 function persistEvidence(): void {
@@ -405,6 +426,99 @@ describe.skipIf(!(realEditorFound && versionCompatible && fixtureProjectVersion 
         } finally {
           await rm(killWorkspace, { recursive: true, force: true });
         }
+      },
+      600_000,
+    );
+
+    // (e) test D (M3.1 target leg): asset_import — the real Blender→Unity
+    //     interchange leg. The committed FBX fixture (with its authoritative
+    //     integrity record) is copied into the workspace exactly like the real
+    //     cross-engine flow (the Blender export lands inside the workspace),
+    //     imported through the real editor's AssetDatabase and verified by the
+    //     loaded-asset record. When the editor is unlicensed, the honest
+    //     license-required negative path is what this test PROVES.
+    test(
+      "asset_import: real AssetDatabase import of the committed FBX fixture when licensed, honest license-required when not",
+      async () => {
+        // the committed fixture IS the record: byteLength and sha256 pinned
+        expect(existsSync(FBX_FIXTURE_PATH)).toBe(true);
+        expect(sha256Of(FBX_FIXTURE_PATH)).toBe(FBX_FIXTURE_SHA256);
+
+        const artifactPath = path.join(workspace, "gamos-cube.fbx");
+        await copyFile(FBX_FIXTURE_PATH, artifactPath);
+
+        const outcome = await assetImport(
+          exe as string,
+          {
+            projectRoot,
+            artifactPath,
+            targetAssetPath: "Assets/Gamos/gamos-cube.fbx",
+            expectedIntegrity: { byteLength: FBX_FIXTURE_BYTES, sha256: FBX_FIXTURE_SHA256 },
+            placeInScene: { scenePath: "Assets/Scenes/Main.unity" },
+          },
+          workspace,
+          { timeoutMs: 600_000 },
+        );
+
+        if (!editorLicensed) {
+          expect(outcome.ok).toBe(false);
+          if (!outcome.ok) {
+            expect(outcome.code).toBe("license-required");
+            expect(outcome.reason).toMatch(/external, user-controlled prerequisite/i);
+            expect(outcome.reason).toMatch(/never fabricated/i);
+            console.log(
+              `[gamos-evidence] honest negative path PROVEN: asset_import returns ${outcome.code} — ` +
+                `${outcome.reason}`,
+            );
+          }
+          return;
+        }
+
+        expect(outcome.ok).toBe(true);
+        if (!outcome.ok) return;
+        expect(outcome.imported).toBe(true);
+        expect(outcome.exitStatus).toBe(0);
+        // the engine-query verification: a staged file alone does not prove import
+        expect(outcome.guid).toMatch(/^[0-9a-f]{32,64}$/);
+        expect(outcome.meshCount).toBeGreaterThan(0);
+        expect(outcome.vertexCount).toBeGreaterThan(0);
+        expect(outcome.materialCount).toBeGreaterThanOrEqual(1);
+        expect(outcome.subAssetNames.length).toBeGreaterThan(0);
+        // the staged copy is byte-identical to the committed fixture
+        expect(outcome.stagedBytes).toBe(FBX_FIXTURE_BYTES);
+        expect(outcome.stagedSha256).toBe(FBX_FIXTURE_SHA256);
+        expect(sha256Of(path.join(projectRoot, "Assets", "Gamos", "gamos-cube.fbx"))).toBe(
+          FBX_FIXTURE_SHA256,
+        );
+        // the scene integration saved the instantiated object
+        expect(outcome.sceneIntegrated).toBe(true);
+        expect(outcome.scenePath).toBe("Assets/Scenes/Main.unity");
+        const sceneText = readFileSync(sceneFile, "utf8");
+        expect(sceneText).toContain("GamosImported");
+        // the copied reviewed bridge (all three templates) is part of the evidence
+        expect(outcome.bridgeFiles.map((file) => file.name).sort()).toEqual([
+          "GamosAssetImport.cs",
+          "GamosBuild.cs",
+          "GamosMarker.cs",
+        ]);
+        // record the verified import as machine evidence (only after every
+        // assertion above passed — an unverified import is never evidence)
+        evidence.asset_import = {
+          verified: true,
+          target_asset_path: outcome.targetAssetPath,
+          guid: outcome.guid,
+          mesh_count: outcome.meshCount,
+          vertex_count: outcome.vertexCount,
+          material_count: outcome.materialCount,
+          scene_saved: true,
+          staged_sha256: outcome.stagedSha256,
+        };
+        persistEvidence();
+        console.log(
+          `[gamos-evidence] asset_import: ${outcome.targetAssetPath} guid=${outcome.guid.slice(0, 12)}… ` +
+            `meshes=${outcome.meshCount} vertices=${outcome.vertexCount} materials=${outcome.materialCount} ` +
+            `sceneSaved=true stagedSha256=${outcome.stagedSha256.slice(0, 16)}…`,
+        );
       },
       600_000,
     );

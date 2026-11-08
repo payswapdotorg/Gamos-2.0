@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { BRIDGE_FILES, UNITY_EXECUTE_METHODS, resolveBridgeRoot } from "../src/typed-ops.js";
@@ -13,14 +13,22 @@ import { BRIDGE_FILES, UNITY_EXECUTE_METHODS, resolveBridgeRoot } from "../src/t
 const root = resolveBridgeRoot();
 const markerSource = readFileSync(path.join(root, "GamosMarker.cs"), "utf8");
 const buildSource = readFileSync(path.join(root, "GamosBuild.cs"), "utf8");
+// M3.1 target leg: the asset-import bridge is a NEW committed template — read
+// it defensively so its absence fails the new assertions (RED), never the
+// pre-existing review of the two landed templates.
+const assetImportBridgePath = path.join(root, "GamosAssetImport.cs");
+const assetImportSource = existsSync(assetImportBridgePath)
+  ? readFileSync(assetImportBridgePath, "utf8")
+  : "";
 const bridgeSources: Record<string, string> = {
   "GamosMarker.cs": markerSource,
   "GamosBuild.cs": buildSource,
+  ...(assetImportSource === "" ? {} : { "GamosAssetImport.cs": assetImportSource }),
 };
 
 describe("committed C# bridge content review (text-shape checks, not engine execution)", () => {
-  test("the bridge set is exactly the two reviewed templates", () => {
-    expect([...BRIDGE_FILES].sort()).toEqual(["GamosBuild.cs", "GamosMarker.cs"]);
+  test("the bridge set is exactly the three reviewed templates", () => {
+    expect([...BRIDGE_FILES].sort()).toEqual(["GamosAssetImport.cs", "GamosBuild.cs", "GamosMarker.cs"]);
     for (const name of BRIDGE_FILES) {
       expect(bridgeSources[name]?.length ?? 0).toBeGreaterThan(500);
     }
@@ -54,6 +62,10 @@ describe("committed C# bridge content review (text-shape checks, not engine exec
     const build = UNITY_EXECUTE_METHODS["project.build"]?.split(".") ?? [];
     expect(build).toHaveLength(3);
     expect(buildSource).toContain(`public static void ${build[2]}()`);
+    const assetImport = UNITY_EXECUTE_METHODS["asset.import"]?.split(".") ?? [];
+    expect(assetImport).toHaveLength(3);
+    expect(assetImport[0]).toBe("Gamos");
+    expect(assetImportSource).toContain(`public static void ${assetImport[2]}()`);
   });
 
   test("both bridges parse command-line args safely via System.Environment.GetCommandLineArgs", () => {
@@ -119,5 +131,67 @@ describe("committed C# bridge content review (text-shape checks, not engine exec
     expect(buildSource).toMatch(/BuildTarget\.StandaloneLinux64/);
     // the bridge validates the incoming buildTarget string against its allowlist
     expect(buildSource).toMatch(/allowlist|AllowedBuildTargets|allowed/i);
+  });
+
+  // -------------------------------------------------------------------------
+  // M3.1 target leg: the GamosAssetImport.cs template (asset.import)
+  // -------------------------------------------------------------------------
+
+  test("GamosAssetImport.cs is committed in the bridge directory and exposes the reviewed entry point", () => {
+    // the template must actually be committed (defensive read failed → "")
+    expect(assetImportSource.length).toBeGreaterThan(500);
+    expect(assetImportSource).toContain("namespace Gamos");
+    expect(assetImportSource).toContain("static class AssetImport");
+    expect(assetImportSource).toContain("public static void ImportAsset()");
+    // the entry point exits batch mode with an explicit status after writing its report
+    expect(assetImportSource).toContain("EditorApplication.Exit");
+  });
+
+  test("GamosAssetImport.cs imports through AssetDatabase and verifies the LOADED asset (a file alone proves nothing)", () => {
+    expect(assetImportSource).toContain("AssetDatabase.ImportAsset");
+    expect(assetImportSource).toContain("ImportAssetOptions.ForceUpdate");
+    expect(assetImportSource).toContain("AssetDatabase.LoadAssetAtPath");
+    expect(assetImportSource).toContain("AssetDatabase.LoadAllAssetsAtPath");
+    expect(assetImportSource).toContain("AssetDatabase.AssetPathToGUID");
+    // the loaded-asset counts are the engine-query verification
+    expect(assetImportSource).toMatch(/meshCount/);
+    expect(assetImportSource).toMatch(/vertexCount/);
+    expect(assetImportSource).toMatch(/materialCount/);
+  });
+
+  test("GamosAssetImport.cs copies nothing itself — it operates only on the engine-staged file", () => {
+    // no File.Copy / FileStream writes: staging is the TypeScript engine's job
+    expect(assetImportSource).not.toContain("File.Copy");
+    expect(assetImportSource).not.toContain("File.ReadAllBytes");
+    expect(assetImportSource).not.toContain("FileStream");
+    // the bridge refuses to run when the staged artifact is not on disk
+    expect(assetImportSource).toMatch(/staged/i);
+  });
+
+  test("GamosAssetImport.cs places the imported asset into the scene through EditorSceneManager", () => {
+    expect(assetImportSource).toContain("UnityEngine.Object.Instantiate");
+    expect(assetImportSource).toContain("GamosImported");
+    expect(assetImportSource).toContain("EditorSceneManager.SaveScene");
+    expect(assetImportSource).toMatch(/EditorSceneManager\.OpenScene|EditorSceneManager\.NewScene/);
+  });
+
+  test("GamosAssetImport.cs mirrors the path-safety guard for targetAssetPath and scenePath", () => {
+    expect(assetImportSource).toContain("IsSafeRelativeAssetPath");
+    expect(assetImportSource).toMatch(/Path\.IsPathRooted/);
+    expect(assetImportSource).toMatch(/Contains\("\.\."\)|IndexOf\("\.\."\)/);
+    expect(assetImportSource).toContain("Assets/");
+  });
+
+  test("GamosAssetImport.cs keeps the JsonUtility DTO protocol and safe argv pair-matching", () => {
+    expect(assetImportSource).toContain("System.Environment.GetCommandLineArgs()");
+    expect(assetImportSource).toContain("-gamosParams");
+    expect(assetImportSource).toContain("-gamosResult");
+    expect(assetImportSource).toContain("JsonUtility.FromJson");
+    expect(assetImportSource).toContain("JsonUtility.ToJson");
+    expect(assetImportSource).toContain("File.WriteAllText");
+    expect(assetImportSource).toMatch(/artifactStagedPath/);
+    expect(assetImportSource).toMatch(/targetAssetPath/);
+    expect(assetImportSource).toMatch(/placeInScene/);
+    expect(assetImportSource).toMatch(/scenePath/);
   });
 });
