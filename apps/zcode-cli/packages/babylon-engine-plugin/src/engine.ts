@@ -1,17 +1,26 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, realpathSync, statSync } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { get as httpGet } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import path from "node:path";
 import type { ZodError } from "zod";
 import {
+  ASSET_NAME_PATTERN,
+  ASSET_REGISTRY_SCHEMA_ID,
+  AssetIntegrateInput,
   ProjectBuildInput,
   ProjectInspectInput,
   ProjectRunInput,
+  buildAssetRegistryEntry,
   detectHtmlMount,
+  parseAssetRegistry,
+  registryFileOf,
+  resolveStagedAssetPath,
   resolveWorkspacePath,
+  type AssetRegistry,
+  type AssetRegistryEntry,
   type HtmlMount,
   type StructuredFailure,
 } from "./typed-ops.js";
@@ -876,6 +885,266 @@ async function killRuntimeTree(runtime: TrackedRuntime): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// asset_integrate (M3.2 target leg — executableless)
+// ---------------------------------------------------------------------------
+
+export interface AssetIntegrateSuccess {
+  ok: true;
+  integrated: true;
+  assetName: string;
+  stagedPath: string;
+  bytes: number;
+  sha256: string;
+  registryEntry: AssetRegistryEntry;
+  registryPath: string;
+}
+
+/**
+ * Integrate a verified GLB artifact into a Babylon project. No engine binary
+ * is spawned: the operation hashes the source artifact (fail-closed against
+ * the authoritative cross-engine manifest integrity record when one is
+ * declared), stages a byte-identical copy under `<projectRoot>/public/assets`
+ * and appends/replaces the entry in the committed registry
+ * (`<projectRoot>/src/gamos-assets.json`, atomic tmp+rename write).
+ *
+ * Fail-closed rules:
+ * - `artifact-missing` / `artifact-invalid` / `artifact-empty` — the artifact
+ *   must exist as a non-empty regular file;
+ * - `asset-integrity-mismatch` — a declared expectedIntegrity record is
+ *   authoritative: any byteLength/sha256 deviation fails the integration;
+ * - `not-a-babylon-project` — the project root must inspect as a Babylon
+ *   project;
+ * - `asset-name-invalid` — a derived (stem) asset name outside the registry
+ *   pattern requires an explicit assetName;
+ * - `asset-name-collision` — a different file already staged under the name,
+ *   or a registry entry with the same name and a different sha256;
+ * - `staged-asset-hash-mismatch` — the staged copy must hash identical to the
+ *   source (verified after the copy, never assumed).
+ */
+export async function assetIntegrate(
+  input: unknown,
+  workspaceRoot: string,
+): Promise<AssetIntegrateSuccess | StructuredFailure> {
+  const parsed = AssetIntegrateInput.safeParse(input);
+  if (!parsed.success) {
+    return invalidInput(parsed.error);
+  }
+  let projectRoot: string;
+  let artifactPath: string;
+  try {
+    projectRoot = resolveWorkspacePath(parsed.data.projectRoot, workspaceRoot);
+    artifactPath = resolveWorkspacePath(parsed.data.artifactPath, workspaceRoot);
+  } catch (error) {
+    return { ok: false, code: "path-safety", reason: messageOf(error) };
+  }
+
+  // The artifact must exist as a non-empty regular file.
+  if (!existsSync(artifactPath)) {
+    return { ok: false, code: "artifact-missing", reason: `artifact not found: ${artifactPath}` };
+  }
+  let artifactStat;
+  try {
+    artifactStat = await stat(artifactPath);
+  } catch (error) {
+    return { ok: false, code: "artifact-missing", reason: `cannot stat artifact ${artifactPath}: ${messageOf(error)}` };
+  }
+  if (!artifactStat.isFile()) {
+    return { ok: false, code: "artifact-invalid", reason: `artifact is not a regular file: ${artifactPath}` };
+  }
+  if (artifactStat.size <= 0) {
+    return { ok: false, code: "artifact-empty", reason: `artifact is empty: ${artifactPath}` };
+  }
+  const artifactBytes = artifactStat.size;
+  const artifactSha256 = await sha256File(artifactPath);
+
+  // The cross-engine manifest's integrity record is authoritative.
+  const expected = parsed.data.expectedIntegrity;
+  if (expected !== undefined && (expected.byteLength !== artifactBytes || expected.sha256 !== artifactSha256)) {
+    return {
+      ok: false,
+      code: "asset-integrity-mismatch",
+      reason:
+        `artifact does not match the authoritative integrity record (expected bytes=${expected.byteLength} ` +
+        `sha256=${expected.sha256}, observed bytes=${artifactBytes} sha256=${artifactSha256}): ${artifactPath}`,
+      details: {
+        expected,
+        observed: { byteLength: artifactBytes, sha256: artifactSha256 },
+        artifactPath,
+      },
+    };
+  }
+
+  // The project root must inspect as a Babylon project (fail closed otherwise).
+  const metadata = inspectProject(projectRoot);
+  if (isFailure(metadata)) {
+    return {
+      ok: false,
+      code: "not-a-babylon-project",
+      reason: metadata.reason,
+      details: { underlyingCode: metadata.code, projectRoot },
+    };
+  }
+
+  // Asset name: explicit, or the artifact filename stem — still pattern-checked.
+  const stem = path.basename(artifactPath, path.extname(artifactPath));
+  const assetName = parsed.data.assetName ?? (ASSET_NAME_PATTERN.test(stem) ? stem : null);
+  if (assetName === null || !ASSET_NAME_PATTERN.test(assetName)) {
+    return {
+      ok: false,
+      code: "asset-name-invalid",
+      reason:
+        `derived asset name "${stem}" does not match ${ASSET_NAME_PATTERN.source} — pass an explicit assetName ` +
+        `(artifact: ${artifactPath})`,
+    };
+  }
+  const stagedFile = `${assetName}.glb`;
+  const registryEntry = buildAssetRegistryEntry({ assetName, file: stagedFile, sha256: artifactSha256 });
+
+  let stagedPath: string;
+  try {
+    stagedPath = resolveStagedAssetPath(projectRoot, stagedFile);
+  } catch (error) {
+    return { ok: false, code: "path-safety", reason: messageOf(error) };
+  }
+  const registryPath = registryFileOf(projectRoot);
+
+  // An existing staged file under the same name: identical content is an
+  // idempotent replace; different content fails closed.
+  if (existsSync(stagedPath)) {
+    let stagedStat;
+    try {
+      stagedStat = await stat(stagedPath);
+    } catch (error) {
+      return {
+        ok: false,
+        code: "asset-name-collision",
+        reason: `cannot inspect the file already staged as "${assetName}" (${stagedPath}): ${messageOf(error)}`,
+      };
+    }
+    if (!stagedStat.isFile() || stagedStat.size <= 0) {
+      return {
+        ok: false,
+        code: "asset-name-collision",
+        reason: `the path staged for "${assetName}" exists and is not a non-empty regular file: ${stagedPath}`,
+      };
+    }
+    const existingStagedSha256 = await sha256File(stagedPath);
+    if (existingStagedSha256 !== artifactSha256) {
+      return {
+        ok: false,
+        code: "asset-name-collision",
+        reason:
+          `a different file is already staged as "${assetName}" (staged sha256=${existingStagedSha256}, ` +
+          `artifact sha256=${artifactSha256}): ${stagedPath}`,
+        details: {
+          surface: "staged-file",
+          stagedPath,
+          stagedSha256: existingStagedSha256,
+          artifactSha256,
+        },
+      };
+    }
+  }
+
+  // The existing registry parses fail-closed; a missing file or an unparseable
+  // registry starts from the fresh schema shape (the registry is derived state
+  // — the staged-file hash checks remain the integrity barrier).
+  let registry: AssetRegistry = { schema: ASSET_REGISTRY_SCHEMA_ID, assets: [] };
+  if (existsSync(registryPath)) {
+    let raw: string;
+    try {
+      raw = await readFile(registryPath, "utf8");
+    } catch (error) {
+      return {
+        ok: false,
+        code: "asset-registry-read-failure",
+        reason: `cannot read the asset registry ${registryPath}: ${messageOf(error)}`,
+      };
+    }
+    const existingRegistry = parseAssetRegistry(raw);
+    if (existingRegistry !== null) {
+      // A duplicate assetName with a different sha256 fails closed.
+      for (const entry of existingRegistry.assets) {
+        if (entry.assetName === assetName && entry.sha256 !== artifactSha256) {
+          return {
+            ok: false,
+            code: "asset-name-collision",
+            reason:
+              `asset name "${assetName}" is already registered with a different sha256 (registry ` +
+              `sha256=${entry.sha256}, artifact sha256=${artifactSha256})`,
+            details: {
+              surface: "registry",
+              registryPath,
+              registeredSha256: entry.sha256,
+              artifactSha256,
+            },
+          };
+        }
+      }
+      registry = existingRegistry;
+    }
+  }
+
+  // Stage the artifact (mkdir recursive; the copy is verified by re-hash).
+  try {
+    await mkdir(path.dirname(stagedPath), { recursive: true });
+    await copyFile(artifactPath, stagedPath);
+  } catch (error) {
+    return {
+      ok: false,
+      code: "asset-staging-failure",
+      reason: `failed to stage ${artifactPath} -> ${stagedPath}: ${messageOf(error)}`,
+    };
+  }
+  if (!existsSync(stagedPath)) {
+    return { ok: false, code: "asset-staging-failure", reason: `staged asset missing after copy: ${stagedPath}` };
+  }
+  const stagedBytes = (await stat(stagedPath)).size;
+  const stagedSha256 = await sha256File(stagedPath);
+  if (stagedSha256 !== artifactSha256 || stagedBytes !== artifactBytes) {
+    return {
+      ok: false,
+      code: "staged-asset-hash-mismatch",
+      reason:
+        `staged copy does not hash identical to the source artifact (source bytes=${artifactBytes} ` +
+        `sha256=${artifactSha256}, staged bytes=${stagedBytes} sha256=${stagedSha256}): ${stagedPath}`,
+      details: {
+        source: { byteLength: artifactBytes, sha256: artifactSha256 },
+        staged: { byteLength: stagedBytes, sha256: stagedSha256 },
+      },
+    };
+  }
+
+  // Append/replace the registry entry and write atomically (tmp + rename).
+  const nextAssets = registry.assets.filter((entry) => entry.assetName !== assetName);
+  nextAssets.push(registryEntry);
+  const nextRegistry: AssetRegistry = { schema: ASSET_REGISTRY_SCHEMA_ID, assets: nextAssets };
+  try {
+    await mkdir(path.dirname(registryPath), { recursive: true });
+    const tmpPath = `${registryPath}.tmp-${process.pid}-${Date.now()}`;
+    await writeFile(tmpPath, `${JSON.stringify(nextRegistry, null, 2)}\n`, "utf8");
+    await rename(tmpPath, registryPath);
+  } catch (error) {
+    return {
+      ok: false,
+      code: "asset-registry-write-failure",
+      reason: `failed to update the asset registry ${registryPath}: ${messageOf(error)}`,
+    };
+  }
+
+  return {
+    ok: true,
+    integrated: true,
+    assetName,
+    stagedPath,
+    bytes: stagedBytes,
+    sha256: stagedSha256,
+    registryEntry,
+    registryPath,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -896,6 +1165,10 @@ function resolveProjectRoot(
 
 function isFailure<T>(value: T | StructuredFailure): value is StructuredFailure {
   return typeof value === "object" && value !== null && (value as StructuredFailure).ok === false;
+}
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function invalidInput(error: ZodError): StructuredFailure {

@@ -181,6 +181,7 @@ describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
   it("ships records for all three engines with append-only ids", () => {
     const ids = ENGINE_PLUGIN_CAPABILITIES.map((r) => r.id).sort();
     expect(ids).toEqual([
+      "babylon/asset.integrate",
       "babylon/project.build",
       "babylon/project.inspect",
       "babylon/project.run",

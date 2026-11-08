@@ -91,6 +91,16 @@ function realPathOfExisting(candidate: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Asset registry model constants (M3.2 target leg)
+// ---------------------------------------------------------------------------
+
+/** Schema id of the committed Babylon asset registry. */
+export const ASSET_REGISTRY_SCHEMA_ID = "gamos/babylon-assets@1" as const;
+
+/** Registry asset names are lowercase alphanumeric plus dashes, max 64 chars. */
+export const ASSET_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+// ---------------------------------------------------------------------------
 // Frozen capability input schemas
 // ---------------------------------------------------------------------------
 
@@ -126,6 +136,42 @@ export const ProjectStopInput = z.object({
 });
 export type ProjectStopInput = z.infer<typeof ProjectStopInput>;
 
+export const AssetIntegrateInput = z
+  .object({
+    projectRoot: z.string().min(1).describe("Absolute path to the Babylon project root inside the workspace."),
+    artifactPath: z
+      .string()
+      .min(1)
+      .describe("Absolute path to the GLB artifact inside the workspace (the Blender export leg's output)."),
+    assetName: z
+      .string()
+      .regex(ASSET_NAME_PATTERN)
+      .optional()
+      .describe(
+        "Registry asset name (lowercase alphanumeric plus dashes, max 64 chars). Defaults to the artifact filename stem.",
+      ),
+    expectedIntegrity: z
+      .object({
+        byteLength: z
+          .number()
+          .int()
+          .positive()
+          .describe("Expected artifact size in bytes (the cross-engine manifest record is authoritative)."),
+        sha256: z
+          .string()
+          .regex(/^[0-9a-f]{64}$/)
+          .describe("Expected artifact sha256 (64 lowercase hex chars; a mismatch fails closed)."),
+      })
+      .optional()
+      .describe(
+        "Authoritative integrity record carried from the cross-engine asset-interchange manifest; when present, the artifact must match byteLength and sha256 exactly.",
+      ),
+  })
+  .describe(
+    "Integrate a verified GLB artifact into a Babylon project: stage it under public/assets and append the committed asset registry entry.",
+  );
+export type AssetIntegrateInput = z.infer<typeof AssetIntegrateInput>;
+
 // ---------------------------------------------------------------------------
 // Runtime HTML verification model (pure)
 // ---------------------------------------------------------------------------
@@ -147,4 +193,131 @@ export function detectHtmlMount(html: string): HtmlMount {
     return "div";
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Asset integration registry model (M3.2 target leg, pure)
+// ---------------------------------------------------------------------------
+
+/** Registry files are plain .glb filenames — the only URLs the fixture loader will ever fetch. */
+const ASSET_FILE_PATTERN = /^[a-z0-9][a-z0-9-]*\.glb$/;
+
+const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/;
+
+/** One committed registry entry: the frozen {assetName, file, sha256} triple. */
+export interface AssetRegistryEntry {
+  readonly assetName: string;
+  readonly file: string;
+  readonly sha256: string;
+}
+
+/** The committed registry shape (`src/gamos-assets.json`). */
+export interface AssetRegistry {
+  readonly schema: typeof ASSET_REGISTRY_SCHEMA_ID;
+  readonly assets: readonly AssetRegistryEntry[];
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Parse a committed asset registry, fail-closed: a wrong schema id, malformed
+ * JSON, a non-registry shape or ANY malformed entry yields `null` — never a
+ * partial guess. The caller decides how to treat `null` (missing file and
+ * unreadable/malformed registries both surface explicitly).
+ */
+export function parseAssetRegistry(json: string): AssetRegistry | null {
+  if (typeof json !== "string" || json.length === 0) {
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return null;
+  }
+  if (!isPlainObject(parsed)) {
+    return null;
+  }
+  if (parsed.schema !== ASSET_REGISTRY_SCHEMA_ID) {
+    return null;
+  }
+  if (!Array.isArray(parsed.assets)) {
+    return null;
+  }
+  const assets: AssetRegistryEntry[] = [];
+  for (const entry of parsed.assets) {
+    if (!isPlainObject(entry)) {
+      return null;
+    }
+    if (typeof entry.assetName !== "string" || !ASSET_NAME_PATTERN.test(entry.assetName)) {
+      return null;
+    }
+    if (typeof entry.file !== "string" || !ASSET_FILE_PATTERN.test(entry.file)) {
+      return null;
+    }
+    if (typeof entry.sha256 !== "string" || !SHA256_HEX_PATTERN.test(entry.sha256)) {
+      return null;
+    }
+    assets.push({ assetName: entry.assetName, file: entry.file, sha256: entry.sha256 });
+  }
+  return { schema: ASSET_REGISTRY_SCHEMA_ID, assets };
+}
+
+/**
+ * Construct a registry entry, refusing invalid constituents: entries enter
+ * the committed registry only through this frozen triple.
+ */
+export function buildAssetRegistryEntry(input: {
+  readonly assetName: string;
+  readonly file: string;
+  readonly sha256: string;
+}): AssetRegistryEntry {
+  if (typeof input.assetName !== "string" || !ASSET_NAME_PATTERN.test(input.assetName)) {
+    throw new Error(`assetName must match ${ASSET_NAME_PATTERN.source}: ${String(input.assetName)}`);
+  }
+  if (typeof input.file !== "string" || !ASSET_FILE_PATTERN.test(input.file)) {
+    throw new Error(`file must match ${ASSET_FILE_PATTERN.source}: ${String(input.file)}`);
+  }
+  if (typeof input.sha256 !== "string" || !SHA256_HEX_PATTERN.test(input.sha256)) {
+    throw new Error(`sha256 must be 64 lowercase hex chars: ${String(input.sha256)}`);
+  }
+  return { assetName: input.assetName, file: input.file, sha256: input.sha256 };
+}
+
+/** The committed registry file of a project root: `<projectRoot>/src/gamos-assets.json`. */
+export function registryFileOf(projectRoot: string): string {
+  return path.join(projectRoot, "src", "gamos-assets.json");
+}
+
+/**
+ * Resolve where a registry file is staged: `<projectRoot>/public/assets/<file>`.
+ * The same path-safety semantics as `resolveWorkspacePath`, applied to the
+ * staging root: no traversal, no separators, no absolute file names — a
+ * registry file is always a plain `.glb` filename.
+ */
+export function resolveStagedAssetPath(projectRoot: string, file: string): string {
+  if (typeof projectRoot !== "string" || projectRoot.length === 0 || !path.isAbsolute(projectRoot)) {
+    throw new PathSafetyError(`project root must be an absolute path: ${String(projectRoot)}`);
+  }
+  if (typeof file !== "string" || file.length === 0) {
+    throw new PathSafetyError("asset file must be a non-empty string");
+  }
+  if (path.isAbsolute(file)) {
+    throw new PathSafetyError(`asset file must be a plain filename under public/assets, got absolute path: ${file}`);
+  }
+  if (file.includes("/") || file.includes("\\")) {
+    throw new PathSafetyError(`asset file must be a plain filename under public/assets (no path separators): ${file}`);
+  }
+  if (file === "." || file === "..") {
+    throw new PathSafetyError(`asset file must be a plain filename: ${file}`);
+  }
+  const stagingRoot = path.resolve(projectRoot, "public", "assets");
+  const staged = path.join(stagingRoot, file);
+  const relative = path.relative(stagingRoot, staged);
+  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new PathSafetyError(`staged asset path escapes the public/assets staging root: ${staged}`);
+  }
+  return staged;
 }

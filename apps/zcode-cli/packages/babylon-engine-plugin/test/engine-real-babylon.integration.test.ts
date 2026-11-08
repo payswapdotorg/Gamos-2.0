@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { get as httpGet } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -353,10 +353,17 @@ describe.skipIf(!realToolchainFound)("babylon-engine plugin real-Node/Vite/Babyl
       const fixtureSha256 = sha256Of(GAMOS_CUBE_GLB);
       expect(fixtureSha256).toBe(GAMOS_CUBE_GLB_SHA256);
 
+      // The Blender export leg's artifact lands inside the workspace (path
+      // safety: the artifact must resolve inside the workspace root).
+      const artifactPath = path.join(workspace, "exports", "gamos-cube.glb");
+      await mkdir(path.dirname(artifactPath), { recursive: true });
+      await copyFile(GAMOS_CUBE_GLB, artifactPath);
+      expect(sha256Of(artifactPath)).toBe(fixtureSha256);
+
       const outcome = await assetIntegrate(
         {
           projectRoot,
-          artifactPath: GAMOS_CUBE_GLB,
+          artifactPath,
           expectedIntegrity: { byteLength: fixtureBytes, sha256: GAMOS_CUBE_GLB_SHA256 },
         },
         workspace,

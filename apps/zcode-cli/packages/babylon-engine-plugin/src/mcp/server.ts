@@ -3,8 +3,9 @@ import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
 import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { json, fail } from "../lib/result.js";
 import { discoverNode } from "../discovery.js";
-import { projectBuild, projectInspect, projectRun, stopRuntime } from "../engine.js";
+import { assetIntegrate, projectBuild, projectInspect, projectRun, stopRuntime } from "../engine.js";
 import {
+  AssetIntegrateInput,
   ProjectBuildInput,
   ProjectInspectInput,
   ProjectRunInput,
@@ -105,6 +106,28 @@ server.registerTool(
         });
       }
       const outcome = await stopRuntime(parsed.data.pid);
+      return outcome.ok ? json(outcome) : fail(outcome);
+    } catch (error) {
+      return fail({
+        ok: false,
+        code: "unexpected-error",
+        reason: error instanceof Error ? error.message : String(error),
+      });
+    }
+  },
+);
+
+server.registerTool(
+  "asset_integrate",
+  {
+    title: "Babylon Asset Integrate",
+    description:
+      "Integrates a verified GLB artifact into a Babylon project WITHOUT spawning any engine binary: hashes the artifact (an expectedIntegrity record from the cross-engine manifest is authoritative — a mismatch fails closed), stages a byte-identical, hash-verified copy under the project's public/assets directory, and appends/replaces the entry in the committed asset registry (src/gamos-assets.json, atomic rename). The project's reviewed main.js loader imports exactly the committed registry entries — no dynamic code, no arbitrary URLs. Idempotent: re-integrating the identical artifact is a no-op replace; a different file under the same asset name fails closed with asset-name-collision.",
+    inputSchema: AssetIntegrateInput.shape,
+  },
+  async (args) => {
+    try {
+      const outcome = await assetIntegrate(args, process.cwd());
       return outcome.ok ? json(outcome) : fail(outcome);
     } catch (error) {
       return fail({
