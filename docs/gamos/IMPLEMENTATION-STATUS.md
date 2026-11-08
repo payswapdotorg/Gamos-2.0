@@ -1168,3 +1168,59 @@ bundle exists and none is fabricated.
       — but the M3 completion bundle still requires the CI legs to run on the
       pushed head, and M3-G1 stays honestly blocked while no compliant Unity
       licensed runner exists. No `evidence/roadmap/M3.json` is claimed.
+
+16. **M3.5 CI verification on the head + the M3.4 Worker-C leftovers (branch
+    `gamos/m3-ci-head-repair` → PR #18, then the M3.4 slice):** the two
+    remaining items of the M3.5 handoff, closed with real evidence:
+    - **CI repair (PR #18, merge `12ac5906`):** the first runs of the M3 CI
+      legs on the development head failed honestly — (a) `gamos-governance`
+      `PIN_MISMATCH` (runs 42490086973/42490034283): the AUTH-0011
+      rebaseline `c810085d` recomputed `baseline.controls` but never rotated
+      `GAMOS_BASELINE_SHA256` in the workflow — the tamper control working
+      as designed; fixed through the sanctioned
+      `governance-rebaseline.mjs --write-workflow-pin` (new pin `bb63ad81…`;
+      the `d181f262` precedent class; the diff is exactly one workflow line);
+      (b) the m3-e2e plan-mode smoke lacked `GAMOS_M3_WORKSPACE_ROOT`
+      (absolute-POSIX workspace contract) — set to `github.workspace`;
+      (c) the journey key-exposure scan false-positived on the evidence field
+      name `back_used` (contains `ck_`) while the journey verdict was
+      pass — every provider prefix now carries an entropy qualifier
+      (16+ chars of key body; real-length keys still match, verified against
+      synthetic fixtures). CI on `f71133af`: governance success ×2,
+      m3-e2e ALL jobs success (domain+contracts, G3/G4 runtime gates, the
+      §11 journey).
+    - **M3.4 repeat-export reproducibility record
+      (`scripts/gamos/m3-reproducibility.mjs` +
+      `evidence/phase-m3/reproducibility/m3-repeat-export-reproducibility.json`):**
+      the same bootstrapped source (817928B, `67a72319…`), the same REAL
+      Blender 4.1.1 execution layer, the same settings (GLTF, upAxis y) —
+      exported TWICE to the same output path: **identical digests**
+      (`55665e6c…`, 1736B ×2) and identical manifests through the REAL M3.4
+      facility (fixed `created-at`; manifest sha256 `b11704b3…` ×2) →
+      **verdict: reproducible**. The runtime workspace is temp state, never
+      committed; a digest difference would have been recorded with its
+      byte/field-level analysis (verdict `difference-documented`) — never
+      forced.
+    - **M3.4 cross-engine handoff-record bundle
+      (`scripts/gamos/m3-handoff-bundle.mjs` +
+      `evidence/phase-m3/handoff/m3-cross-engine-handoff-bundle.json`):**
+      the single hash-bound chain derived from the committed §11 journey
+      evidence (the authoritative stage rows): plan → permission-gate →
+      source → export → manifest → integration → build → runtime-verification
+      (THE ORIGINAL ZCODE BROWSER) → cancellation → unity-import — 10 hops,
+      9 `verified` + Unity `honestly-unavailable`; the integrity chain
+      re-verifies (manifest artifact === staged asset === registry entry ===
+      export digest `7f15af95…`) → **verdict: handoff-chain-verified**.
+      Fail-closed: any broken hop or digest disagreement exits non-zero.
+    - **CI leg `m3-reproducibility-and-handoff`** added to `gamos-m3-e2e.yml`
+      (real Blender provisioned, plugin dist built, CLI bundled): re-proves
+      the repeat-export determinism on every runner and re-derives the
+      handoff bundle from the committed evidence with strict assertions.
+    - Regression on this head: the full chain (governance-check pinned
+      compliant, self-test 14/14, roadmap-check valid, architecture:check 0
+      violations, gamos-domain 383/383, dynamic-workflow acceptance 8/8,
+      build ok, plan-mode smoke ok).
+    - **No gate claim changes:** M3-G1 stays honestly blocked; M2 completion
+      stays pending (M2-G1 — maintainer-side Unity Hub sign-in per
+      `docs/gamos/UNITY-M2G1-PROVISIONING.md` §7); the roadmap validator
+      fails closed until then — no `evidence/roadmap/M3.json` is claimed.

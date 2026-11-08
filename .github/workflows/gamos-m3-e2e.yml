@@ -15,6 +15,15 @@ name: gamos-m3-e2e
 #     resource-claim conflict gate, journal resume and cancellation are
 #     proven against the production runtime. REQUIRED to pass.
 #
+#   Job "m3-reproducibility-and-handoff": the M3.4 Worker-C leftovers —
+#     the repeat-export reproducibility record (same source+tool+settings
+#     run TWICE through the REAL Blender exporter; identical digests
+#     required on the runner, or a documented difference) and the
+#     cross-engine handoff-record bundle (re-derived from the committed
+#     §11 journey evidence; the hash chain manifest/staged/registry ===
+#     export digest must re-verify; Unity honestly-unavailable). REQUIRED
+#     to pass.
+#
 #   Job "blender-real-engine" / "babylon-real-toolchain" / "unity-engine-status":
 #     inherited from the M2 workflow verbatim (the same plugin surfaces the M3
 #     pipeline calls: asset_export, asset_integrate, asset_import) — see
@@ -49,6 +58,8 @@ on:
       - "scripts/gamos/m3-ui-journey.mjs"
       - "scripts/gamos/m3-local-model-server.mjs"
       - "scripts/gamos/m3-capability-cli.ts"
+      - "scripts/gamos/m3-reproducibility.mjs"
+      - "scripts/gamos/m3-handoff-bundle.mjs"
       - "apps/zcode-cli/packages/babylon-engine-plugin/test/fixture/**"
       - "apps/zcode-cli/packages/unity-engine-plugin/test/fixture/**"
       - ".github/workflows/gamos-m3-e2e.yml"
@@ -152,6 +163,77 @@ jobs:
           name: m3-runtime-gates-${{ github.sha }}
           path: |
             apps/zcode-cli/packages/dynamic-workflow-runtime/tests/gamos-evidence/
+          if-no-files-found: warn
+
+  m3-reproducibility-and-handoff:
+    name: M3.4 reproducibility + cross-engine handoff bundle (real Blender; repeat-export)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.14.0"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - name: Install workspace (frozen lockfile)
+        run: pnpm install --frozen-lockfile || (echo "::warning::retrying install after known pnpm@10.33.2 hoisted-linker ENOENT race" && pnpm install --frozen-lockfile)
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      - name: Provision real Blender 4.1.1 (pre-approved CI engine install; hash recorded)
+        run: |
+          mkdir -p "$RUNNER_TEMP/engines"
+          curl -sSL --retry 3 -o "$RUNNER_TEMP/engines/blender.tar.xz" \
+            "https://download.blender.org/release/Blender4.1/blender-4.1.1-linux-x64.tar.xz"
+          echo "${BLENDER_TARBALL_SHA256}  $RUNNER_TEMP/engines/blender.tar.xz" | sha256sum --check --strict -
+          tar -xf "$RUNNER_TEMP/engines/blender.tar.xz" -C "$RUNNER_TEMP/engines"
+          "$RUNNER_TEMP/engines/blender-4.1.1-linux-x64/blender" --version | head -2
+          sudo mkdir -p /home/z/engines
+          sudo ln -sfn "$RUNNER_TEMP/engines/blender-4.1.1-linux-x64" /home/z/engines/blender-4.1.1-linux-x64
+      - name: Build the blender plugin dist (the REAL execution layer the scripts import)
+        run: pnpm --filter @zcode/blender-engine-plugin build
+      - name: Bundle the M3 capability CLI (M3.4 manifest facility)
+        run: pnpm exec esbuild scripts/gamos/m3-capability-cli.ts --bundle --platform=node --format=esm --outfile=/tmp/m3-capability-cli.mjs
+      - name: M3.4 repeat-export reproducibility record (same source+tool+settings twice)
+        run: |
+          set -e
+          node scripts/gamos/m3-reproducibility.mjs
+          python3 - <<'PY'
+          import json
+          d = json.load(open('evidence/phase-m3/reproducibility/m3-repeat-export-reproducibility.json'))
+          v = d['comparison']
+          assert d['verdict'] in ('reproducible', 'difference-documented'), d['verdict']
+          # The digest comparison is the gate: same source+tool+settings must
+          # yield the same digest on THIS runner, or the difference must be
+          # documented with the field/byte analysis (both honest outcomes).
+          assert v['artifactDigestsEqual'] is True, v.get('differenceReason')
+          print(f"M3.4 reproducibility: {d['verdict']} (fresh runner repeat-export digests identical)")
+          PY
+      - name: M3.4 cross-engine handoff bundle (re-derive from the committed evidence)
+        run: |
+          set -e
+          node scripts/gamos/m3-handoff-bundle.mjs
+          python3 - <<'PY'
+          import json
+          d = json.load(open('evidence/phase-m3/handoff/m3-cross-engine-handoff-bundle.json'))
+          assert d['verdict'] == 'handoff-chain-verified', d['verdict']
+          statuses = {h['id']: h['status'] for h in d['hops']}
+          assert all(s == 'verified' for i, s in statuses.items() if i != 'unity-import'), statuses
+          assert statuses['unity-import'] == 'honestly-unavailable', statuses
+          assert d['hashChain']['manifestArtifactSha256MatchesExport'] is True
+          assert d['hashChain']['stagedAssetSha256MatchesExport'] is True
+          assert d['hashChain']['registryEntrySha256MatchesExport'] is True
+          print('M3.4 handoff bundle: handoff-chain-verified — 10 hops, integrity chain intact, Unity honestly-unavailable')
+          PY
+      - name: Upload M3.4 reproducibility + handoff evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m3-reproducibility-handoff-${{ github.sha }}
+          path: |
+            evidence/phase-m3/reproducibility/
+            evidence/phase-m3/handoff/
           if-no-files-found: warn
 
   m3-engine-journey:
