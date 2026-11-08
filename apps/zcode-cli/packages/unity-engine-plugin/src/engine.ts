@@ -1,6 +1,6 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ZodError } from "zod";
@@ -9,6 +9,7 @@ import {
   AssetImportInput,
   BRIDGE_FILES,
   DEFAULT_SCENE_PATH,
+  PathSafetyError,
   ProjectBuildInput,
   ProjectInspectInput,
   REQUIRED_UNITY_EDITOR_REVISION,
@@ -330,6 +331,36 @@ function resolveProjectRoot(inputPath: string, workspaceRoot: string): ProjectRo
     return { projectRoot: resolveWorkspacePath(inputPath, workspaceRoot) };
   } catch (error) {
     return { failure: pathFailure(error) };
+  }
+}
+
+/** Deepest existing ancestor realpath (lexical join below the filesystem root). */
+function realPathOfExistingPath(candidate: string): string {
+  if (existsSync(candidate)) {
+    return realpathSync(candidate);
+  }
+  const parent = path.dirname(candidate);
+  if (parent === candidate) {
+    return candidate;
+  }
+  return path.join(realPathOfExistingPath(parent), path.basename(candidate));
+}
+
+/**
+ * Output-path containment (asset.import HARDEN): the engine's own writes must
+ * stay inside the project root — a symlinked `Assets/…` directory swapped to
+ * redirect into another workspace location (or out of the workspace entirely)
+ * cannot relocate the staged asset or the bridge params/result files. The
+ * workspace-level guard on the input paths only rejects escapes out of the
+ * workspace; this check rejects escapes out of the PROJECT, applied to every
+ * path the operation is about to write before any mutation happens.
+ */
+function assertPathWithinProject(candidate: string, projectRoot: string): void {
+  const realProjectRoot = realPathOfExistingPath(projectRoot);
+  const realAncestor = realPathOfExistingPath(candidate);
+  const relative = path.relative(realProjectRoot, realAncestor);
+  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new PathSafetyError(`path escapes the project root: ${candidate} (real: ${realAncestor})`);
   }
 }
 
@@ -998,11 +1029,22 @@ export async function assetImport(
     "/",
   );
   const stagedPath = path.join(projectRoot, ...targetAssetPath.split("/"));
+  const gamosDir = path.join(projectRoot, "Gamos");
+  const paramsPath = path.join(gamosDir, "params.json");
+  const resultPath = path.join(gamosDir, "result.json");
 
-  // The staged path must stay inside the workspace (the same guard the input
-  // paths went through — a symlinked Assets/ tree cannot escape it).
+  // Output-path containment (HARDEN, fail before mutate): every path this
+  // operation writes — the staged artifact AND the bridge params/result
+  // files — must stay inside the workspace AND the project. A symlinked
+  // Assets/… or Gamos directory swapped to redirect the writes is rejected
+  // before anything is staged.
   try {
     resolveWorkspacePath(stagedPath, workspaceRoot);
+    resolveWorkspacePath(paramsPath, workspaceRoot);
+    resolveWorkspacePath(resultPath, workspaceRoot);
+    assertPathWithinProject(stagedPath, projectRoot);
+    assertPathWithinProject(paramsPath, projectRoot);
+    assertPathWithinProject(resultPath, projectRoot);
   } catch (error) {
     return pathFailure(error);
   }
@@ -1084,10 +1126,7 @@ export async function assetImport(
   const bridgeFiles = await copyBridgeScripts(projectRoot);
 
   // 2. write the typed params JSON (data-only bridge communication)
-  const gamosDir = path.join(projectRoot, "Gamos");
   await mkdir(gamosDir, { recursive: true });
-  const paramsPath = path.join(gamosDir, "params.json");
-  const resultPath = path.join(gamosDir, "result.json");
   const placeInScene = parsed.data.placeInScene;
   const scenePathRelative = placeInScene?.scenePath?.replace(/\\/g, "/") ?? DEFAULT_SCENE_PATH;
   const paramsFile: AssetImportParamsFile = {
