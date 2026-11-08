@@ -307,10 +307,30 @@ jobs:
             exit 1
           fi
           python3 - <<'PY'
-          import json
+          import json, os, re
           d = json.load(open('evidence/phase-m3/journey-ci/m3-journey-evidence.json'))
           summary = d.get('summary', {})
           assert summary.get('verdict') == 'pass', f"journey verdict: {summary.get('verdict')} non_pass={summary.get('non_pass_stages')} missing={summary.get('missing_stages')}"
+          # Provenance (directive §3, 2026-11-08): the evidence must identify
+          # the M3 journey script (regression: an m2 identity was once copied
+          # verbatim), bind to its source sha256, record the CI execution
+          # identity, and prove a fresh single-run journey — every stage row
+          # carries this run's token; nothing merged from prior chunks.
+          assert d.get('script') == 'scripts/gamos/m3-ui-journey.mjs', d.get('script')
+          assert d.get('revision', 0) >= 2, d.get('revision')
+          assert re.fullmatch(r'[0-9a-f]{64}', d.get('source_sha256') or ''), d.get('source_sha256')
+          ci = d.get('ci') or {}
+          assert ci.get('workflow_run_id') == os.environ.get('GITHUB_RUN_ID'), ci.get('workflow_run_id')
+          assert ci.get('tested_commit') == os.environ.get('GITHUB_SHA'), ci.get('tested_commit')
+          run_token = d.get('run_token') or ''
+          assert re.fullmatch(r'GAMOS-M3-\d{14}', run_token), run_token
+          stages = d.get('stages', {})
+          for sid, row in stages.items():
+              assert row.get('run_token') == run_token, f"{sid}: stage run_token mismatch ({row.get('run_token')} != {run_token})"
+              assert row.get('merged_from_prior_chunk') is False, f"{sid}: fresh CI journey must not merge prior chunks"
+          assert summary.get('stages_requested') == ['M3J0','M3J1','M3J2','M3J3','M3J4','M3J5','M3J6'], summary.get('stages_requested')
+          assert summary.get('stages_merged_from_prior_chunks') == [], summary.get('stages_merged_from_prior_chunks')
+          assert sorted(summary.get('stages_executed_this_run') or []) == sorted(stages.keys()), summary.get('stages_executed_this_run')
           m3 = d.get('m3', {}).get('cross_engine_journey', {})
           ce = d.get('stages', {}).get('M3J4', {}).get('detail', {})
           browser = ce.get('browser_verification', {}).get('assertions', {})
@@ -323,7 +343,7 @@ jobs:
           assert m3.get('cancellation', {}).get('stop_verified') is True
           unity = d.get('m3', {}).get('unity', {})
           assert unity.get('honest_unavailable') is True, unity
-          print('M3 journey verdict: pass — integrated asset consumed in the running browser, manifest integrity chain intact, cancellation verified, Unity honestly unavailable')
+          print('M3 journey verdict: pass — provenance locked (m3 script identity + source sha256 + CI run ' + str(ci.get('workflow_run_id')) + ' @ ' + str(ci.get('tested_commit'))[:8] + '), integrated asset consumed in the running browser, manifest integrity chain intact, cancellation verified, Unity honestly unavailable')
           PY
           # The journey uses no external credential (local deterministic model
           # endpoint) — scan the evidence for accidental key material. Each

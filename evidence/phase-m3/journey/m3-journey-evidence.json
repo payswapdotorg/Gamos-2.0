@@ -1,12 +1,19 @@
 {
-  "script": "scripts/gamos/m2-ui-journey.mjs",
-  "revision": 1,
-  "derived_from": "scripts/gamos/m1-ui-journey.mjs (CDP core + input layer + permission engine + launch + provider/composer machinery reused verbatim)",
-  "run_token": "GAMOS-M3-20261108142129",
+  "script": "scripts/gamos/m3-ui-journey.mjs",
+  "revision": 2,
+  "derived_from": "scripts/gamos/m2-ui-journey.mjs (CDP core + input layer + permission engine + launch + provider/composer machinery reused verbatim)",
+  "source_sha256": "cf59ee027b5664243dc438268d0b05db8222a3fb3c01f68ef8f47085d1b70302",
+  "run_token": "GAMOS-M3-20261108195716",
   "mode": "prod-http",
-  "started_at": "2026-11-08T14:21:29.477Z",
+  "started_at": "2026-11-08T19:57:16.040Z",
+  "ci": {
+    "workflow_run_id": "42517218036",
+    "run_attempt": "1",
+    "tested_commit": "79d51b36078bd7353d7514bd989e1f11a0ec0f4e",
+    "note": "GitHub Actions ambient env (GITHUB_RUN_ID/GITHUB_RUN_ATTEMPT/GITHUB_SHA); null on local runs — per-stage run_token below distinguishes chunk provenance"
+  },
   "environment": {
-    "node": "v24.22.2",
+    "node": "v24.14.0",
     "platform": "linux",
     "cdp_port": 9229,
     "model": "gamos-m3-deterministic-model",
@@ -15,10 +22,10 @@
     "local_model_endpoint": "http://127.0.0.1:4374",
     "local_model_transcript": "m3-local-model-transcript.jsonl (in the evidence dir)",
     "local_model_disclosure": "deterministic scripted endpoint standing in for the external LLM — evidence must not claim real-LLM authorship; the ENGINE operations are real",
-    "blender_path": "/home/z/engines/blender-4.1.1-linux-x64/blender",
-    "app_home": "/home/z/my-project/gamos-2.0/.phaseb-m3-home",
-    "task_workspace": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default",
-    "provider_config_file": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/v2/provider_config.json",
+    "blender_path": "/home/runner/work/_temp/engines/blender-4.1.1-linux-x64/blender",
+    "app_home": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home",
+    "task_workspace": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default",
+    "provider_config_file": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/v2/provider_config.json",
     "input_simulation": "CDP Input.dispatchMouseEvent / Input.insertText / Input.dispatchKeyEvent (no synthetic DOM events)",
     "enginePluginDevStaging": [
       {
@@ -44,26 +51,27 @@
       "status": "pass",
       "detail": {
         "window": "main BrowserWindow over CDP",
-        "launch_url": "http://127.0.0.1:5174/?restoreSession=true&supportsSettings=true&initialWorkspacePath=%2Fhome%2Fz%2Fmy-project%2Fgamos-2.0%2F.phaseb-m3-home%2F.zcode%2Fworkspace%2Fdefault&initialWorkspacePurpose=conversation&zcodeLaunch",
-        "app_title": "127.0.0.1:5174/?restoreSession=true&amp;supportsSettings=true&amp;initialWorkspacePath=%2Fhome%2Fz%2Fmy-project%2Fgamos-2.0%2F.phaseb-m3-home%2F.zcode%2Fworkspace%2Fdefault&amp;initialWorkspacePurpose=conversation&amp;zcodeLaunchMarks=%7B&quot;createdAt&quot;%3A1794146748270%2C&quot;mainStart&quot;%3A1794146750317%2C&quot;appReady&quot;%3A1794146750428%2C&quot;loadUrl&quot;%3A1794146750609%7D",
+        "launch_url": "http://127.0.0.1:5174/?restoreSession=true&supportsSettings=true&initialWorkspacePath=%2Fhome%2Frunner%2Fwork%2FGamos-2.0%2FGamos-2.0%2F.phaseb-m3-home%2F.zcode%2Fworkspace%2Fdefault&initialWorkspacePurpose=conversation&",
+        "app_title": "ZCode",
         "renderer": "vite dev server",
-        "surface": "first-run login entry (WelcomeScreen — walked by S1)",
+        "surface": "first-run onboarding wizard",
         "diag": {
           "ready": "complete",
-          "url": "http://127.0.0.1:5174/?restoreSession=true&supportsSettings=true&initialWorkspacePath=%2Fhome%2Fz%2Fmy-project%2Fgamos-2.0%2F.phaseb-m3-home%2F.zcode%2Fworkspace%2Fdefault&initialWorkspacePurpose=conversation&zcodeLaunchMarks=%7B%22createdAt%22%3A1794146748270%2C%22mainStart%22%3A1794146750317%2C%22appReady%22%3A1794146750428%2C%22loadUrl%22%3A1794146750609%7D",
-          "tidCount": 7,
-          "bodyLen": 118
+          "url": "http://127.0.0.1:5174/?restoreSession=true&supportsSettings=true&initialWorkspacePath=%2Fhome%2Frunner%2Fwork%2FGamos-2.0%2FGamos-2.0%2F.phaseb-m3-home%2F.zcode%2Fworkspace%2Fdefault&initialWorkspacePurpose=conversation&zcodeLaunchMarks=%7B%22createdAt%22%3A1794167838200%2C%22mainStart%22%3A1794167840079%2C%22appReady%22%3A1794167840243%2C%22loadUrl%22%3A1794167840346%7D",
+          "tidCount": 6,
+          "bodyLen": 558
         }
       },
-      "at": "2026-11-08T14:05:56.769Z"
+      "at": "2026-11-08T19:57:25.708Z",
+      "run_token": "GAMOS-M3-20261108195716",
+      "merged_from_prior_chunk": false
     },
     "M3J1": {
       "status": "pass",
       "detail": {
         "first_run_login_entry": {
-          "shown": true,
-          "action": "login-use-api-key-button → login-api-key-skip-button (Skip: no credential written; OpenRouter configured in S2)",
-          "skipped_at": "2026-11-08T14:05:57.957Z"
+          "shown": false,
+          "surface": "onboarding"
         },
         "steps": [
           {
@@ -101,7 +109,9 @@
         "back_used": false,
         "note": "first-run login entry (Use API key → Skip) walked when present (the app's real fresh-HOME screen; no credential written there — OpenRouter is configured in S2); wizard then walked step-by-step via real CDP clicks; no Skip/Back used inside the wizard; defaults kept on the preferences step"
       },
-      "at": "2026-11-08T14:06:01.672Z"
+      "at": "2026-11-08T19:57:29.223Z",
+      "run_token": "GAMOS-M3-20261108195716",
+      "merged_from_prior_chunk": false
     },
     "M3J2": {
       "status": "pass",
@@ -109,7 +119,7 @@
         "nav": "task-settings-button → settings-section-nav-modelProvider → add-provider → template custom (local deterministic endpoint)",
         "provider_id": "new-provider",
         "template": "custom",
-        "persisted_to": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/v2/provider_config.json",
+        "persisted_to": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/v2/provider_config.json",
         "base_url_verified": "http://127.0.0.1:4374",
         "base_url_source": "personal overlay",
         "api_key_persisted": true,
@@ -118,7 +128,9 @@
         "local_model_note": "deterministic local Anthropic-Messages endpoint (maintainer directive: no OpenRouter budget — the free tier's 50 requests/day provably cannot carry the journey, run 42235226375). Provider, key, model and every model turn go through the app's REAL provider/chat surfaces; the model intelligence behind the endpoint is scripted — evidence must not claim real-LLM authorship.",
         "note": "clearly-fake marker key entered via CDP Input.insertText into the real model-provider-api-key-input; persistence verified on disk"
       },
-      "at": "2026-11-08T14:06:14.448Z"
+      "at": "2026-11-08T19:57:41.565Z",
+      "run_token": "GAMOS-M3-20261108195716",
+      "merged_from_prior_chunk": false
     },
     "M3J3": {
       "status": "pass",
@@ -161,7 +173,7 @@
         ],
         "enabled_on_disk": {
           "files": [
-            "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/cli/config.json"
+            "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/cli/config.json"
           ],
           "states": [
             {
@@ -236,7 +248,7 @@
           ],
           "engine_aware_plan": {
             "planId": "gamos-m3-cross-engine",
-            "planSha256": "a813e23d8289070c23a40df0f09fd7514ea1384f55739a60ca27670d121b2fe5",
+            "planSha256": "66c58caae738c768efc7c188be88faf5b0109533f27fe40d1224676a8c28d489",
             "stepCount": 5,
             "steps": [
               {
@@ -277,10 +289,12 @@
             "validatedByParseGamePlan": true,
             "conflictGate": "parseGamePlan rejects unordered write/write (and read/write) overlaps on the same canonical claim path — the builder cannot hand out a plan the plan contract would reject"
           },
-          "evidence": "/home/z/my-project/gamos-2.0/evidence/phase-m3/journey/m3-capability-plan.json"
+          "evidence": "/home/runner/work/Gamos-2.0/Gamos-2.0/evidence/phase-m3/journey-ci/m3-capability-plan.json"
         }
       },
-      "at": "2026-11-08T14:14:13.695Z"
+      "at": "2026-11-08T19:58:01.583Z",
+      "run_token": "GAMOS-M3-20261108195716",
+      "merged_from_prior_chunk": false
     },
     "M3J4": {
       "status": "pass",
@@ -291,13 +305,13 @@
           "clickedItem": "gamos-m3-deterministic-model"
         },
         "blender": {
-          "executable": "/home/z/engines/blender-4.1.1-linux-x64/blender",
+          "executable": "/home/runner/work/_temp/engines/blender-4.1.1-linux-x64/blender",
           "rawVersion": "4.1.1"
         },
         "workspaces": {
-          "blender": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-blender",
-          "babylon": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
-          "staging": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging"
+          "blender": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-blender",
+          "babylon": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
+          "staging": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging"
         },
         "denial_leg": {
           "approvals": [
@@ -309,7 +323,7 @@
           "blend_sha256_unchanged": true,
           "export_artifact_absent": true,
           "denial_summary_seen": true,
-          "timeline_excerpt": "Add a cube named GamosM3Cube to this Blender scene, save it, then export the scene as a glTF binary asset for cross-engine use.\n\nGAMOS-M3-CROSS-ENGINE-TASK\n{\n \"blendFile\": \"/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-blender/scene.blend\",\n \"exportOutput\": \"/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb\"\n}\n\nUse the blender-engine plugin's typed scene_modify and asset_export tools (typed operations only — no arbitrary Python). Modify with save=true, then export with format GLTF to the declared output path.\nCopy\nEdi"
+          "timeline_excerpt": "Add a cube named GamosM3Cube to this Blender scene, save it, then export the scene as a glTF binary asset for cross-engine use.\n\nGAMOS-M3-CROSS-ENGINE-TASK\n{\n \"blendFile\": \"/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-blender/scene.blend\",\n \"exportOutput\": \"/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb\"\n}\n\nUse the blender-engine plugin's typed scene_modify and asset_export tools (typed operations only — no arbitrary Python). Modify with save=true, then export with format GLTF to the declared out"
         },
         "export_leg": {
           "turn_completed": true,
@@ -324,11 +338,11 @@
               "result": "dismissed"
             }
           ],
-          "baseline_blend_sha256": "48327468592dd466873d1068d1ca2393abefb8424893ea17f33cb389170acb16",
-          "saved_blend_sha256": "6e1257d61d86138cf80ce0de7a70e1ffc1bb292786d74bd1da86083a3bf7911a",
+          "baseline_blend_sha256": "a27b9e957f22099d314dd99cf0ae27f6dcdd9e68121d65bd0e6d8e9d6541b33e",
+          "saved_blend_sha256": "0a99036c12d9d7e5b31e821ec48761b87a269082d132301ebfcd3e39f8e6477d",
           "blend_mutated": true,
           "export_artifact": {
-            "path": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
+            "path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
             "bytes": 1984,
             "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6"
           },
@@ -337,7 +351,7 @@
               "status": "completed",
               "output": {
                 "ok": true,
-                "blendFile": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-blender/scene.blend",
+                "blendFile": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-blender/scene.blend",
                 "applied": [
                   {
                     "op": "add-primitive",
@@ -365,7 +379,7 @@
                   }
                 ],
                 "saved": true,
-                "sha256": "6e1257d61d86138cf80ce0de7a70e1ffc1bb292786d74bd1da86083a3bf7911a",
+                "sha256": "0a99036c12d9d7e5b31e821ec48761b87a269082d132301ebfcd3e39f8e6477d",
                 "verification": {
                   "ok": true,
                   "failures": [],
@@ -377,13 +391,13 @@
               "status": "completed",
               "output": {
                 "ok": true,
-                "outputPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
+                "outputPath": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
                 "bytes": 1984,
                 "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6",
                 "format": "GLTF",
                 "selection": null,
                 "blenderVersion": "4.1.1",
-                "sourceSha256": "74741b8b6b2feba1816187526659eef137e58a2bc19f5b71308015735621be96",
+                "sourceSha256": "0a99036c12d9d7e5b31e821ec48761b87a269082d132301ebfcd3e39f8e6477d",
                 "unitScale": 1,
                 "appliedInterchange": {
                   "format": "glb",
@@ -404,11 +418,11 @@
               }
             }
           },
-          "session_id": "sess_bca3ec88-5f96-47eb-b176-94f61c4759a6"
+          "session_id": "sess_7336ce5b-ad08-44d0-b248-659d62678762"
         },
         "manifest_leg": {
-          "path": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb.manifest.json",
-          "sha256": "9f544b92ebd30eccae67fdbff2e789dd2b7a39b78354abb025d61791b7b47fd3",
+          "path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb.manifest.json",
+          "sha256": "204613007d876bd5ac494510fc432eba80488b415d99a4c5914157b309bc49d2",
           "status": "exported",
           "manifestId": "gamos-m3-cross-engine-manifest",
           "artifact": {
@@ -420,9 +434,9 @@
           "builtFrom": "the authoritative session-store asset_export part output, through buildExportedManifest (the M3.4 fail-closed facility)",
           "build_evidence": {
             "schema": "gamos/m3-manifest-build@1",
-            "builtAt": "2026-11-08T14:19:56.259Z",
-            "manifestPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb.manifest.json",
-            "manifestSha256": "8dcad87bdb2529deed11ee3f252744d25c3924e153f07f0c9cb2e6429f4e480b",
+            "builtAt": "2026-11-08T19:58:49.255Z",
+            "manifestPath": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb.manifest.json",
+            "manifestSha256": "5939c1b7ed2f61d133a115aa7629c03debb2bce4651b181eeff6fdb0c7f4f709",
             "manifestId": "gamos-m3-cross-engine-manifest",
             "status": "exported",
             "artifact": {
@@ -434,7 +448,7 @@
             "source": {
               "engine": "blender",
               "engineVersion": "4.1.1",
-              "assetSha256": "74741b8b6b2feba1816187526659eef137e58a2bc19f5b71308015735621be96"
+              "assetSha256": "0a99036c12d9d7e5b31e821ec48761b87a269082d132301ebfcd3e39f8e6477d"
             },
             "interchangeFormat": "glb",
             "dependencyCount": 0,
@@ -455,7 +469,7 @@
             "ok": true,
             "integrated": true,
             "assetName": "gamos-asset",
-            "stagedPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/public/assets/gamos-asset.glb",
+            "stagedPath": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/public/assets/gamos-asset.glb",
             "bytes": 1984,
             "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6",
             "registryEntry": {
@@ -463,16 +477,16 @@
               "file": "gamos-asset.glb",
               "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6"
             },
-            "registryPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/src/gamos-assets.json"
+            "registryPath": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/src/gamos-assets.json"
           },
           "staged_asset": {
-            "path": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/public/assets/gamos-asset.glb",
+            "path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/public/assets/gamos-asset.glb",
             "exists": true,
             "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6",
             "matches_export": true
           },
           "registry": {
-            "path": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/src/gamos-assets.json",
+            "path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/src/gamos-assets.json",
             "entry": {
               "assetName": "gamos-asset",
               "file": "gamos-asset.glb",
@@ -480,7 +494,7 @@
             },
             "carries_export_hash": true
           },
-          "session_id": "sess_bca3ec88-5f96-47eb-b176-94f61c4759a6"
+          "session_id": "sess_7336ce5b-ad08-44d0-b248-659d62678762"
         },
         "build_run_leg": {
           "turn_completed": true,
@@ -495,55 +509,55 @@
             }
           ],
           "dist": {
-            "path": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/dist/index.html",
+            "path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/dist/index.html",
             "sha256": "85e4c9a140b4df9e5e2ee2ea0302a83394cb7471fd2944b162dc32e91aed66d1"
           },
           "runtime": {
-            "url": "http://127.0.0.1:33655/",
-            "pid": 12865
+            "url": "http://127.0.0.1:33653/",
+            "pid": 7199
           },
           "build_output": {
             "ok": true,
-            "projectRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
+            "projectRoot": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
             "packageManager": "npm",
             "script": "build",
             "installed": false,
             "lockfileSha256Before": "c680f31c6944a2335e9829d4212e55829c4cf18d0bfb3fb9dbebac9c76dfd640",
             "lockfileSha256After": "c680f31c6944a2335e9829d4212e55829c4cf18d0bfb3fb9dbebac9c76dfd640",
             "exitStatus": 0,
-            "durationMs": 18346,
-            "buildLogTail": "\n> babylon-fixture-app@0.1.0 build\n> vite build\n\nvite v6.4.5 building for production...\ntransforming...\n✓ 2240 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                                                      0.36 kB │ gzip:     0.25 kB\ndist/assets/tgaTextureLoader-BuI29R97.js                             0.31 kB │ gzip:     0.26 kB\ndist/assets/oitFinalSimpleBlend.fragment-DgFel7Xv.js                 0.38 kB │ gzip:     0.26 kB\ndist/assets/volumetricLightingRenderVolume.vertex-Btz-6vpG.js        0.44 kB │ gzip:     0.28 kB\ndist/assets/oitFinalSimpleBlend.fragment-C3jvr52Y.js                 0.45 kB │ gzip:     0.29 kB\ndist/assets/flowGraphGLTFDataProvider-tyF1nFON.js                    0.46 kB │ gzip:     0.29 kB\ndist/assets/flowGraphCodeExecutionBlock-BD8AAK_b.js                  0.47 kB │ gzip:     0.27 kB\ndist/assets/hdrTextureLoader-DpmdLPuk.js                             0.53 kB │ gzip:     0.38 kB\ndist/assets/volumetricLightingRenderVolume.vertex-CHsMVEkO.js        0.55 kB │ gzip:     0.33 kB\ndist/assets/envTextureLoader-AIxHVm6x.js                             0.57 kB │ gzip:     0.37 kB\ndist/assets/volumetricLightingBlendVolume.fragment-uRPmv7tA.js       0.81 kB │ gzip:     0.46 kB\ndist/assets/selection.fragment-CZQV2Egm.js                           0.90 kB │ gzip:     0.46 kB\ndist/assets/mesh.vertexData.functions-ayNlGC5K.js                    0.96 kB │ gzip:     0.49 kB\ndist/assets/volumetricLightingBlendVolume.fragment-DHqpEWIT.js       1.01 kB │ gzip:     0.52 kB\ndist/assets/selection.fragment-Bkk3Z5Sj.js                           1.11 kB │ gzip:     0.53 kB\ndist/assets/basisTextureLoader-BhpgBy0A.js                           1.19 kB │ gzip:     0.57 kB\ndist/assets/ddsTextureLoader-B37JFGe9.js                             1.22 kB │ gzip:     0.59 kB\ndist/assets/ktxTextureLoader-_L-YImGN.js                             1.38 kB │ gzip:     0.71 kB\ndist/assets/volumetricLightingRenderVolume.fragment-DkGfDBuk.js      1.51 kB │ gzip:     0.74 kB\ndist/assets/screenSpaceCurvature.fragment-D_jNqu-t.js                1.60 kB │ gzip:     0.65 kB\ndist/assets/volumetricLightingRenderVolume.fragment-CDzydCku.js      1.74 kB │ gzip:     0.82 kB\ndist/assets/selection.vertex-CyPjfUfK.js                             1.90 kB │ gzip:     0.71 kB\ndist/assets/selection.vertex-Dt-uJf9O.js                             2.23 kB │ gzip:     0.78 kB\ndist/assets/iesTextureLoader-5b4OrhWJ.js                             2.70 kB │ gzip:     1.17 kB\ndist/assets/selectionOutline.fragment-DhYvnPhN.js                    4.82 kB │ gzip:     1.00 kB\ndist/assets/selectionOutline.fragment-BhBppQIe.js                    6.09 kB │ gzip:     1.12 kB\ndist/assets/openpbrMaterialLoadingAdapter-BZYE91sk.js                9.23 kB │ gzip:     1.60 kB\ndist/assets/pbrMaterialLoadingAdapter-n_JP0XX9.js                   11.57 kB │ gzip:     2.19 kB\ndist/assets/index-D2lqGLA_.js                                    6,307.72 kB │ gzip: 1,380.93 kB\n✓ built in 17.32s\n\n\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\nnpm notice\nnpm notice New major version of npm available! 11.19.1 -> 12.2.2\nnpm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2\nnpm notice To update run: npm install -g npm@12.2.2\nnpm notice\n",
+            "durationMs": 9084,
+            "buildLogTail": "B\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.29 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mflowGraphCodeExecutionBlock-BD8AAK_b.js              \u001b[39m\u001b[1m\u001b[2m    0.47 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.27 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mhdrTextureLoader-DpmdLPuk.js                         \u001b[39m\u001b[1m\u001b[2m    0.53 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.38 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mvolumetricLightingRenderVolume.vertex-CHsMVEkO.js    \u001b[39m\u001b[1m\u001b[2m    0.55 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.33 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36menvTextureLoader-AIxHVm6x.js                         \u001b[39m\u001b[1m\u001b[2m    0.57 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.37 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mvolumetricLightingBlendVolume.fragment-uRPmv7tA.js   \u001b[39m\u001b[1m\u001b[2m    0.81 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.46 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mselection.fragment-CZQV2Egm.js                       \u001b[39m\u001b[1m\u001b[2m    0.90 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.46 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mmesh.vertexData.functions-ayNlGC5K.js                \u001b[39m\u001b[1m\u001b[2m    0.96 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.49 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mvolumetricLightingBlendVolume.fragment-DHqpEWIT.js   \u001b[39m\u001b[1m\u001b[2m    1.01 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.52 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mselection.fragment-Bkk3Z5Sj.js                       \u001b[39m\u001b[1m\u001b[2m    1.11 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.53 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mbasisTextureLoader-BhpgBy0A.js                       \u001b[39m\u001b[1m\u001b[2m    1.19 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.57 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mddsTextureLoader-B37JFGe9.js                         \u001b[39m\u001b[1m\u001b[2m    1.22 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.59 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mktxTextureLoader-_L-YImGN.js                         \u001b[39m\u001b[1m\u001b[2m    1.38 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.71 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mvolumetricLightingRenderVolume.fragment-DkGfDBuk.js  \u001b[39m\u001b[1m\u001b[2m    1.51 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.74 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mscreenSpaceCurvature.fragment-D_jNqu-t.js            \u001b[39m\u001b[1m\u001b[2m    1.60 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.65 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mvolumetricLightingRenderVolume.fragment-CDzydCku.js  \u001b[39m\u001b[1m\u001b[2m    1.74 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.82 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mselection.vertex-CyPjfUfK.js                         \u001b[39m\u001b[1m\u001b[2m    1.90 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.71 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mselection.vertex-Dt-uJf9O.js                         \u001b[39m\u001b[1m\u001b[2m    2.23 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     0.78 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36miesTextureLoader-5b4OrhWJ.js                         \u001b[39m\u001b[1m\u001b[2m    2.70 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     1.17 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mselectionOutline.fragment-DhYvnPhN.js                \u001b[39m\u001b[1m\u001b[2m    4.82 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     1.00 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mselectionOutline.fragment-BhBppQIe.js                \u001b[39m\u001b[1m\u001b[2m    6.09 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     1.12 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mopenpbrMaterialLoadingAdapter-BZYE91sk.js            \u001b[39m\u001b[1m\u001b[2m    9.23 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     1.60 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mpbrMaterialLoadingAdapter-n_JP0XX9.js                \u001b[39m\u001b[1m\u001b[2m   11.57 kB\u001b[22m\u001b[1m\u001b[22m\u001b[2m │ gzip:     2.19 kB\u001b[22m\n\u001b[2mdist/\u001b[22m\u001b[2massets/\u001b[22m\u001b[36mindex-D2lqGLA_.js                                    \u001b[39m\u001b[1m\u001b[33m6,307.72 kB\u001b[39m\u001b[22m\u001b[2m │ gzip: 1,380.93 kB\u001b[22m\n\u001b[32m✓ built in 8.41s\u001b[39m\n\n\u001b[33m\n(!) Some chunks are larger than 500 kB after minification. Consider:\n- Using dynamic import() to code-split the application\n- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks\n- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.\u001b[39m\n",
             "outDirFromConfig": true,
             "artifact": {
-              "path": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/dist/index.html",
+              "path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/dist/index.html",
               "bytes": 358,
               "sha256": "85e4c9a140b4df9e5e2ee2ea0302a83394cb7471fd2944b162dc32e91aed66d1"
             }
           },
           "run_output": {
             "ok": true,
-            "projectRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
+            "projectRoot": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
             "started": true,
-            "runtimeUrl": "http://127.0.0.1:33655/",
-            "port": 33655,
+            "runtimeUrl": "http://127.0.0.1:33653/",
+            "port": 33653,
             "portMode": "auto",
-            "pid": 12865,
+            "pid": 7199,
             "script": "dev",
             "packageManager": "npm",
             "healthChecked": true,
             "htmlBytes": 390,
             "htmlSha256": "4247902409344f36c2efabd7b5de554330a39596bd5c8fb6823e290c116eddd2",
             "htmlMount": "canvas",
-            "startedAtMs": 1794147631778,
-            "readyMs": 1061
+            "startedAtMs": 1794167954380,
+            "readyMs": 545
           },
-          "session_id": "sess_bca3ec88-5f96-47eb-b176-94f61c4759a6"
+          "session_id": "sess_7336ce5b-ad08-44d0-b248-659d62678762"
         },
         "browser_verification": {
           "opened_via": "side-pane-toggle (attempt 1) → open-tab launcher row (browser)",
-          "guest_url": "http://127.0.0.1:33655/",
+          "guest_url": "http://127.0.0.1:33653/",
           "page": {
-            "url": "http://127.0.0.1:33655/",
+            "url": "http://127.0.0.1:33653/",
             "title": "babylon-fixture",
             "canvasPresent": true,
             "ready": true,
@@ -566,7 +580,7 @@
             {
               "enginePresent": true,
               "scenePresent": true,
-              "fps1": 58,
+              "fps1": 60,
               "meshCount": 3,
               "assetsReady": true,
               "assetsError": null,
@@ -586,7 +600,7 @@
             {
               "enginePresent": true,
               "scenePresent": true,
-              "fps1": 60,
+              "fps1": 59.9,
               "meshCount": 3,
               "assetsReady": true,
               "assetsError": null,
@@ -631,9 +645,9 @@
           "stop_verified": true
         },
         "fixture": {
-          "projectRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
+          "projectRoot": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
           "lockfileSha256": "c680f31c6944a2335e9829d4212e55829c4cf18d0bfb3fb9dbebac9c76dfd640",
-          "committedFixture": "/home/z/my-project/gamos-2.0/apps/zcode-cli/packages/babylon-engine-plugin/test/fixture/babylon-app",
+          "committedFixture": "/home/runner/work/Gamos-2.0/Gamos-2.0/apps/zcode-cli/packages/babylon-engine-plugin/test/fixture/babylon-app",
           "npm_ci_prepared": true
         },
         "honest_notes": [
@@ -642,16 +656,18 @@
           "the npm ci pre-staging is fixture preparation only (4GB cgroup); the in-turn project_build runs the REAL vite build and project_run starts the REAL dev server"
         ]
       },
-      "at": "2026-11-08T14:21:06.524Z"
+      "at": "2026-11-08T19:59:43.589Z",
+      "run_token": "GAMOS-M3-20261108195716",
+      "merged_from_prior_chunk": false
     },
     "M3J5": {
       "status": "pass",
       "detail": {
         "task": "Unity §11 honest-failure leg — the typed asset_import attempt on the REAL cross-engine artifact surfaces the structured editor-unavailable state (the meaningful failure path, §11 item 14)",
         "fixture": {
-          "projectRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-unity-project",
-          "committedFixture": "/home/z/my-project/gamos-2.0/apps/zcode-cli/packages/unity-engine-plugin/test/fixture/unity-project",
-          "artifact": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb"
+          "projectRoot": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-unity-project",
+          "committedFixture": "/home/runner/work/Gamos-2.0/Gamos-2.0/apps/zcode-cli/packages/unity-engine-plugin/test/fixture/unity-project",
+          "artifact": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb"
         },
         "outcome": "honest-unavailable (no licensed Unity Editor on this machine — never fabricated)",
         "turn": {
@@ -663,7 +679,7 @@
               "result": "dismissed"
             }
           ],
-          "session_id": "sess_77ada983-3b7e-4e28-9551-2ba1c4dc708e"
+          "session_id": "sess_7336ce5b-ad08-44d0-b248-659d62678762"
         },
         "honest_unavailable_seen": true,
         "session_store_evidence": {
@@ -673,30 +689,44 @@
             "error": null
           }
         },
-        "timeline_excerpt": "Import this cross-engine GLB asset into the Unity project.\n\nGAMOS-M3-UNITY-TASK\n{\n \"projectRoot\": \"/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-unity-project\",\n \"artifactPath\": \"/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb\"\n}\n\nUse the unity-engine plugin's typed asset_import tool to stage the artifact under Assets/ and import it through the real Unity Editor.\nCopy\nEdit\nWorked for 11s\n\nThe Unity asset import was NOT performed — the honest unavailable state surfaced by the engine: MCP tool returned an error: { \"ok\": false, \"code\": \"unity-editor-unavailable\", \"status\": \"unavailable\", \"executable\": null, \"rawVersion\": null, \"reason\": \"no Unity Editor executable found (searched PATH for unity-editor/unity and com",
+        "timeline_excerpt": "Build this Babylon.js project and run its dev server so I can view it in the browser.\n\nGAMOS-M3-BABYLON-TASK\n{\n \"projectRoot\": \"/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app\"\n}\n\nUse the babylon-engine plugin's typed project_build and project_run tools. Build first, then start the dev server and report its runtime URL.\nCopy\nWorked for 14s\n\nCross-engine runtime leg complete — the typed operations ran through the real Node/Vite toolchain:\n\nproject_build: real vite build of the integrated project; dist artifact verified with sha256 (see tool result).\nproject_run: the declared dev script started a REAL dev server; its health-checked runtime URL is http://127.0.0.1:33653. The running Babylon experience at http://127.0.0.1:33653 loads the inte",
         "gate_note": "M3-G1 remains NOT PASSING while the editor prerequisite is external — this stage proves the honest failure path (§11 item 14), not a passing Unity integration gate"
       },
-      "at": "2026-11-08T14:22:01.962Z"
+      "at": "2026-11-08T19:59:55.264Z",
+      "run_token": "GAMOS-M3-20261108195716",
+      "merged_from_prior_chunk": false
     },
     "M3J6": {
       "status": "pass",
       "detail": {
         "task": "engine tool invocations + results recorded in the existing session store",
-        "db_path": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/cli/db/db.sqlite",
+        "db_path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/cli/db/db.sqlite",
         "sessions": [
           {
-            "sessionId": "sess_77ada983-3b7e-4e28-9551-2ba1c4dc708e",
+            "sessionId": "sess_7336ce5b-ad08-44d0-b248-659d62678762",
+            "present": true
+          },
+          {
+            "sessionId": "sess_7336ce5b-ad08-44d0-b248-659d62678762",
+            "present": true
+          },
+          {
+            "sessionId": "sess_7336ce5b-ad08-44d0-b248-659d62678762",
+            "present": true
+          },
+          {
+            "sessionId": "sess_7336ce5b-ad08-44d0-b248-659d62678762",
             "present": true
           }
         ],
         "engine_tool_markers_found": [
-          "asset_import",
           "mcp__plugin_blender-engine",
           "mcp__plugin_babylon-engine",
           "mcp__plugin_unity-engine",
           "GamosM3Cube",
           "asset_export",
           "asset_integrate",
+          "asset_import",
           "gamos-asset",
           "unity-editor-unavailable"
         ],
@@ -704,52 +734,282 @@
         "babylon_recorded": true,
         "unity_recorded": true,
         "cross_engine_pipeline_recorded": true,
-        "evidence": "/home/z/my-project/gamos-2.0/evidence/phase-m3/journey/m3-session-store.json"
+        "evidence": "/home/runner/work/Gamos-2.0/Gamos-2.0/evidence/phase-m3/journey-ci/m3-session-store.json"
       },
-      "at": "2026-11-08T14:22:01.982Z"
+      "at": "2026-11-08T19:59:55.283Z",
+      "run_token": "GAMOS-M3-20261108195716",
+      "merged_from_prior_chunk": false
     }
   },
   "commands": [
     {
-      "cmd": "electron /home/z/my-project/gamos-2.0/.phaseb-m3-app --no-sandbox --enable-unsafe-swiftshader (prod-http renderer at http://127.0.0.1:5174; HOME=ZCODE_DATA_BASE_DIR=/home/z/my-project/gamos-2.0/.phaseb-m3-home)",
-      "at": "2026-11-08T14:21:32.908Z"
+      "cmd": "electron /home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-app --no-sandbox --enable-unsafe-swiftshader (prod-http renderer at http://127.0.0.1:5174; HOME=ZCODE_DATA_BASE_DIR=/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home)",
+      "at": "2026-11-08T19:57:18.376Z"
+    },
+    {
+      "screenshot": "S1-login-entry",
+      "path": "evidence/phase-m3/journey/screenshots/S1-login-entry.png",
+      "at": "2026-11-08T19:57:24.577Z"
+    },
+    {
+      "screenshot": "S1-login-api-key-form",
+      "path": "evidence/phase-m3/journey/screenshots/S1-login-api-key-form.png",
+      "at": "2026-11-08T19:57:24.860Z"
+    },
+    {
+      "screenshot": "S0-app-up",
+      "path": "evidence/phase-m3/journey/screenshots/S0-app-up.png",
+      "at": "2026-11-08T19:57:25.705Z"
+    },
+    {
+      "screenshot": "S1-onboarding-start",
+      "path": "evidence/phase-m3/journey/screenshots/S1-onboarding-start.png",
+      "at": "2026-11-08T19:57:25.923Z"
+    },
+    {
+      "screenshot": "S1-onboarding-step-1",
+      "path": "evidence/phase-m3/journey/screenshots/S1-onboarding-step-1.png",
+      "at": "2026-11-08T19:57:26.734Z"
+    },
+    {
+      "screenshot": "S1-onboarding-step-2",
+      "path": "evidence/phase-m3/journey/screenshots/S1-onboarding-step-2.png",
+      "at": "2026-11-08T19:57:27.563Z"
+    },
+    {
+      "screenshot": "S1-onboarding-done",
+      "path": "evidence/phase-m3/journey/screenshots/S1-onboarding-done.png",
+      "at": "2026-11-08T19:57:29.222Z"
+    },
+    {
+      "screenshot": "S2-local-settings-open",
+      "path": "evidence/phase-m3/journey/screenshots/S2-local-settings-open.png",
+      "at": "2026-11-08T19:57:29.498Z"
+    },
+    {
+      "screenshot": "S2-local-model-settings",
+      "path": "evidence/phase-m3/journey/screenshots/S2-local-model-settings.png",
+      "at": "2026-11-08T19:57:29.740Z"
+    },
+    {
+      "screenshot": "S2-local-add-provider",
+      "path": "evidence/phase-m3/journey/screenshots/S2-local-add-provider.png",
+      "at": "2026-11-08T19:57:29.962Z"
+    },
+    {
+      "screenshot": "S2-local-provider-detail",
+      "path": "evidence/phase-m3/journey/screenshots/S2-local-provider-detail.png",
+      "at": "2026-11-08T19:57:31.558Z"
+    },
+    {
+      "screenshot": "S2-local-provider-saved",
+      "path": "evidence/phase-m3/journey/screenshots/S2-local-provider-saved.png",
+      "at": "2026-11-08T19:57:35.208Z"
+    },
+    {
+      "screenshot": "S2-model-added",
+      "path": "evidence/phase-m3/journey/screenshots/S2-model-added.png",
+      "at": "2026-11-08T19:57:41.446Z"
+    },
+    {
+      "screenshot": "M3J3-settings-open",
+      "path": "evidence/phase-m3/journey/screenshots/M3J3-settings-open.png",
+      "at": "2026-11-08T19:57:41.810Z"
+    },
+    {
+      "screenshot": "M3J3-blender-engine-enabled",
+      "path": "evidence/phase-m3/journey/screenshots/M3J3-blender-engine-enabled.png",
+      "at": "2026-11-08T19:57:44.914Z"
+    },
+    {
+      "screenshot": "M3J3-babylon-engine-enabled",
+      "path": "evidence/phase-m3/journey/screenshots/M3J3-babylon-engine-enabled.png",
+      "at": "2026-11-08T19:57:46.337Z"
+    },
+    {
+      "screenshot": "M3J3-unity-engine-enabled",
+      "path": "evidence/phase-m3/journey/screenshots/M3J3-unity-engine-enabled.png",
+      "at": "2026-11-08T19:57:48.044Z"
+    },
+    {
+      "screenshot": "M3J3-all-engine-plugins-enabled",
+      "path": "evidence/phase-m3/journey/screenshots/M3J3-all-engine-plugins-enabled.png",
+      "at": "2026-11-08T19:57:49.419Z"
+    },
+    {
+      "cmd": "electron /home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-app --no-sandbox --enable-unsafe-swiftshader (prod-http renderer at http://127.0.0.1:5174; HOME=ZCODE_DATA_BASE_DIR=/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home)",
+      "at": "2026-11-08T19:57:55.625Z"
+    },
+    {
+      "screenshot": "M3J3-app-restarted-with-engine-plugins",
+      "path": "evidence/phase-m3/journey/screenshots/M3J3-app-restarted-with-engine-plugins.png",
+      "at": "2026-11-08T19:58:01.582Z"
+    },
+    {
+      "screenshot": "M3J4-deny-composer",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-deny-composer.png",
+      "at": "2026-11-08T19:58:23.868Z"
+    },
+    {
+      "screenshot": "M3J4-deny-typed",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-deny-typed.png",
+      "at": "2026-11-08T19:58:24.740Z"
+    },
+    {
+      "screenshot": "M3J4-denied-turn",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-denied-turn.png",
+      "at": "2026-11-08T19:58:35.338Z"
+    },
+    {
+      "screenshot": "M3J4-approve-composer",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-approve-composer.png",
+      "at": "2026-11-08T19:58:35.387Z"
+    },
+    {
+      "screenshot": "M3J4-approve-typed",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-approve-typed.png",
+      "at": "2026-11-08T19:58:36.243Z"
+    },
+    {
+      "screenshot": "M3J4-approved-turn",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-approved-turn.png",
+      "at": "2026-11-08T19:58:49.227Z"
+    },
+    {
+      "screenshot": "M3J4-integrate-composer",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-integrate-composer.png",
+      "at": "2026-11-08T19:58:49.311Z"
+    },
+    {
+      "screenshot": "M3J4-integrate-typed",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-integrate-typed.png",
+      "at": "2026-11-08T19:58:50.181Z"
+    },
+    {
+      "screenshot": "M3J4-integrate-turn",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-integrate-turn.png",
+      "at": "2026-11-08T19:59:00.776Z"
+    },
+    {
+      "screenshot": "M3J4-run-composer",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-run-composer.png",
+      "at": "2026-11-08T19:59:00.843Z"
+    },
+    {
+      "screenshot": "M3J4-run-typed",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-run-typed.png",
+      "at": "2026-11-08T19:59:01.713Z"
+    },
+    {
+      "screenshot": "M3J4-run-turn",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-run-turn.png",
+      "at": "2026-11-08T19:59:22.743Z"
+    },
+    {
+      "screenshot": "M3J4-browser-open",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-browser-open.png",
+      "at": "2026-11-08T19:59:23.233Z"
+    },
+    {
+      "screenshot": "M3J4-babylon-runtime-in-zcode-browser",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-babylon-runtime-in-zcode-browser.png",
+      "at": "2026-11-08T19:59:29.447Z"
+    },
+    {
+      "screenshot": "M3J4-stop-composer",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-stop-composer.png",
+      "at": "2026-11-08T19:59:32.030Z"
+    },
+    {
+      "screenshot": "M3J4-stop-typed",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-stop-typed.png",
+      "at": "2026-11-08T19:59:32.928Z"
+    },
+    {
+      "screenshot": "M3J4-stop-result",
+      "path": "evidence/phase-m3/journey/screenshots/M3J4-stop-result.png",
+      "at": "2026-11-08T19:59:43.588Z"
     },
     {
       "screenshot": "M3J5-composer",
       "path": "evidence/phase-m3/journey/screenshots/M3J5-composer.png",
-      "at": "2026-11-08T14:21:40.738Z"
+      "at": "2026-11-08T19:59:43.673Z"
     },
     {
       "screenshot": "M3J5-typed",
       "path": "evidence/phase-m3/journey/screenshots/M3J5-typed.png",
-      "at": "2026-11-08T14:21:41.715Z"
+      "at": "2026-11-08T19:59:44.591Z"
     },
     {
       "screenshot": "M3J5-turn-result",
       "path": "evidence/phase-m3/journey/screenshots/M3J5-turn-result.png",
-      "at": "2026-11-08T14:22:01.959Z"
+      "at": "2026-11-08T19:59:55.263Z"
     }
   ],
   "failures": [],
-  "finished_at": "2026-11-08T14:22:03.483Z",
+  "finished_at": "2026-11-08T19:59:56.784Z",
   "m3": {
     "cross_engine_journey": {
-      "denial_blocked_mutation": null,
-      "saved_blend_sha256": null,
-      "export_artifact": null,
-      "interchange_manifest": null,
-      "integration": null,
-      "babylon_runtime": {
-        "runtime_url": null,
-        "runtime_pid": null,
-        "dist_sha256": null
+      "denial_blocked_mutation": true,
+      "saved_blend_sha256": "0a99036c12d9d7e5b31e821ec48761b87a269082d132301ebfcd3e39f8e6477d",
+      "export_artifact": {
+        "path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
+        "bytes": 1984,
+        "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6"
       },
-      "browser_verified_integrated_asset": null,
-      "cancellation": null
+      "interchange_manifest": {
+        "path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb.manifest.json",
+        "sha256": "204613007d876bd5ac494510fc432eba80488b415d99a4c5914157b309bc49d2",
+        "status": "exported",
+        "artifact": {
+          "path": "staging/gamos-asset.glb",
+          "mediaType": "model/gltf-binary",
+          "byteLength": 1984,
+          "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6"
+        }
+      },
+      "integration": {
+        "staged_asset": {
+          "path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/public/assets/gamos-asset.glb",
+          "exists": true,
+          "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6",
+          "matches_export": true
+        },
+        "registry": {
+          "path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app/src/gamos-assets.json",
+          "entry": {
+            "assetName": "gamos-asset",
+            "file": "gamos-asset.glb",
+            "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6"
+          },
+          "carries_export_hash": true
+        }
+      },
+      "babylon_runtime": {
+        "runtime_url": "http://127.0.0.1:33653/",
+        "runtime_pid": 7199,
+        "dist_sha256": "85e4c9a140b4df9e5e2ee2ea0302a83394cb7471fd2944b162dc32e91aed66d1"
+      },
+      "browser_verified_integrated_asset": {
+        "url_matches_runtime": true,
+        "canvas_present": true,
+        "babylon_ready_flag": true,
+        "title_is_fixture": true,
+        "live_render_or_scene": true,
+        "integrated_asset_loaded": true,
+        "integrated_assets_ready": true,
+        "integrated_asset_no_error": true
+      },
+      "cancellation": {
+        "stop_submitted": true,
+        "stop_turn_completed": true,
+        "runtime_url_dead_after_stop": true,
+        "stop_verified": true
+      }
     },
     "engine_aware_plan": {
       "planId": "gamos-m3-cross-engine",
-      "planSha256": "a813e23d8289070c23a40df0f09fd7514ea1384f55739a60ca27670d121b2fe5",
+      "planSha256": "66c58caae738c768efc7c188be88faf5b0109533f27fe40d1224676a8c28d489",
       "stepCount": 5,
       "validatedByParseGamePlan": true
     },
@@ -762,7 +1022,7 @@
       "records": 13,
       "engine_plugin_source_commit": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00"
     },
-    "session_db_path": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/cli/db/db.sqlite"
+    "session_db_path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/cli/db/db.sqlite"
   },
   "summary": {
     "verdict": "pass",
@@ -777,6 +1037,11 @@
       "M3J6"
     ],
     "stages_requested": [
+      "M3J0",
+      "M3J1",
+      "M3J2",
+      "M3J3",
+      "M3J4",
       "M3J5",
       "M3J6"
     ],
@@ -789,6 +1054,16 @@
       "M3J5",
       "M3J6"
     ],
+    "stages_executed_this_run": [
+      "M3J0",
+      "M3J1",
+      "M3J2",
+      "M3J3",
+      "M3J4",
+      "M3J5",
+      "M3J6"
+    ],
+    "stages_merged_from_prior_chunks": [],
     "non_pass_stages": [],
     "missing_stages": []
   }
