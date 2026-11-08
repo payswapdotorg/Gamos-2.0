@@ -50,7 +50,7 @@
     ],
     "completion_rule": "A milestone is complete only when every required gate has passing evidence, required CI is green on the tested commit, the evidence bundle is committed and the roadmap validator passes. Documentation, mocks, partial tests or unrelated green workflows are insufficient.",
     "advancement_rule": "After completion, the validator derives downstream milestones that are ready. The TL may activate up to the configured parallel limit and assign workers without a user phase-approval meeting.",
-    "failure_rule": "A failed, skipped or unevidenced required gate blocks completion and dependent phases. Repair the earliest failing slice and rerun its gate; a later phase cannot bypass it."
+    "failure_rule": "A failed, skipped or unevidenced required gate blocks completion and dependent phases. Repair the earliest failing slice and rerun its gate; a later phase cannot bypass it. Sole exception (ADR-0007): the repository maintainer may explicitly authorize a dependent phase to become active before its dependencies complete; the authorization is recorded as that milestone's activation_waiver (basis maintainer-authorized-waiver, verbatim directive, committed decision-record reference) and authorizes activation only — never completion. Every completion rule above still applies verbatim."
   },
   "team_model": {
     "tl": {
@@ -436,10 +436,18 @@
     {
       "id": "M3",
       "title": "Cross-engine asset and workflow orchestration",
-      "status": "planned",
+      "status": "active",
       "depends_on": [
         "M2"
       ],
+      "activation_waiver": {
+        "basis": "maintainer-authorized-waiver",
+        "authorized_by": "repository maintainer",
+        "authorized_at": "2026-11-08T02:39:28Z",
+        "directive": "you can proceed with M3",
+        "reason": "M2 remains active with M2-G1 honestly blocked on the external Unity licensed-editor prerequisite (maintainer-side provisioning per docs/gamos/UNITY-M2G1-PROVISIONING.md §7; activation is Unity-Hub-sign-in only). The maintainer explicitly authorized beginning M3 while M2 completion stays pending. This waiver authorizes activation only — never completion: M2-G1 stays blocked, no evidence/roadmap/M2.json completion bundle exists, and every completion rule applies verbatim.",
+        "reference": "docs/gamos/ADR/0007-m3-maintainer-authorized-activation.md"
+      },
       "objective": "Execute verified multi-engine workflows with dependencies, parallelism, cancellation, resume and real artifact evidence.",
       "outcomes": [
         "Blender-to-Unity and Blender-to-Babylon pipelines move real assets with reproducible metadata.",

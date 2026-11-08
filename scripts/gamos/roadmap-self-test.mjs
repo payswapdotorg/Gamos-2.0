@@ -88,7 +88,7 @@ test("all required gates and dependencies expose the next phase as ready",() => 
   // expectation would fail. Deriving the state keeps the scenario's meaning
   // ("completing a dependency exposes its dependent as ready") intact forever.
   const x=unfinished();
-  for(const p of x.milestones) { if(p.id!=="M0") { p.status="planned"; p.completion_evidence=null; } }
+  for(const p of x.milestones) { if(p.id!=="M0") { p.status="planned"; p.completion_evidence=null; delete p.activation_waiver; } }
   const m=x.milestones.find(p=>p.id==="M0");
   m.status="complete";
   m.completion_evidence={
@@ -141,8 +141,11 @@ test("completed milestone requires matching on-disk evidence and real gate artif
     // milestones) genuinely complete in the canonical snapshot, the temp tree
     // below only carries M0's fixture evidence — every other milestone must be
     // reset to planned so this temp-tree validation stays about M0 alone
-    // (otherwise M1's on-disk evidence is demanded from the temp root).
-    for(const p of x.milestones) { if(p.id!=="M0") { p.status="planned"; p.completion_evidence=null; } }
+    // (otherwise M1's on-disk evidence is demanded from the temp root). The
+    // canonical M3 activation_waiver is likewise milestone state and must be
+    // cleared with the reset (its committed ADR reference does not exist in a
+    // synthetic temp root).
+    for(const p of x.milestones) { if(p.id!=="M0") { p.status="planned"; p.completion_evidence=null; delete p.activation_waiver; } }
     const testedCommit="c".repeat(40);
     const runId=98765;
     const runUrl="https://github.com/payswapdotorg/Gamos-2.0/actions/runs/" + runId;

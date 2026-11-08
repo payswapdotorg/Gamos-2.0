@@ -681,3 +681,17 @@ bundle exists and none is fabricated.
    resource-claim + asset-manifest contracts; FBX/GLB candidates to be
    verified by real compatibility tests) and the activation rule (only when
    M2 completes and the validator reports M3 ready).
+
+8. **M3 activation (maintainer-authorized waiver, 2026-11-08):** The repository
+   maintainer explicitly directed "you can proceed with M3"
+   (`docs/gamos/ADR/0007-m3-maintainer-authorized-activation.md`, recorded
+   verbatim in `ROADMAP.json` → `milestones[M3].activation_waiver`). The
+   roadmap validator (`scripts/gamos/roadmap-check.mjs`) gained a fail-closed
+   activation-waiver mechanism — TDD: RED `4684e978` (self-test scenario 13
+   assertion failure `[DEPENDENCY] M3 cannot be active before dependencies
+   complete: M2` vs `[]`) → GREEN this commit (self-test 17/17). The waiver
+   authorizes activation ONLY, never completion: M2 stays `active`, M2-G1 stays
+   honestly blocked, no `evidence/roadmap/M2.json` exists, and an M3 completion
+   bundle still requires M2 complete plus all five M3 gates passing. No
+   baseline-tree or control file was modified (no pin rotation required).
+   M3 implementation begins per `docs/gamos/M3-PREPARED-PLAN.md` §1–§6.
