@@ -89,6 +89,12 @@ function makePlan(overrides: Record<string, unknown> = {}): GamePlan {
   return parseGamePlan({ ...validPlanInput, ...overrides });
 }
 
+/** A plan slice without the Unity-project engine binding (the enrichment is plan-structure logic, not engine logic). */
+function makePipelinePlan(steps: Record<string, unknown>[]): GamePlan {
+  const { engineBinding: _stripped, ...rest } = validPlanInput as Record<string, unknown>;
+  return parseGamePlan({ ...rest, steps });
+}
+
 describe("buildGamePlanWorkflowScript — script generation (M1.5)", () => {
   it("generates the workflow script artifact with plan identity + provenance + step sites", () => {
     const context = makeContext(UNITY_INSTALLED, "Generate a read-only plan for validating this game project.");
@@ -211,5 +217,100 @@ describe("buildGamePlanWorkflowScript — script generation (M1.5)", () => {
     expect(artifact.stepCount).toBe(2);
     expect(artifact.parallelLevels).toBe(2); // [step-1] then [step-2]
     expect(artifact.generatedFrom).toBe("gamos/model-context@1");
+  });
+});
+
+describe("buildGamePlanWorkflowScript — cross-engine manifest-integrity instruction enrichment (M3.3)", () => {
+  const MANIFEST_PATH = "/workspace/gamos/staging/gamos-asset.glb.manifest.json";
+
+  /** The cross-engine pipeline steps as a hand-authored plan slice (shape-only: parseGamePlan does not resolve the registry). */
+  function pipelineSteps(consumerCapabilityId: string): Record<string, unknown>[] {
+    return [
+      {
+        stepId: "export-asset",
+        capability: {
+          capabilityId: "blender/asset.export",
+          capabilityVersion: "1.0.0",
+          input: { blendFile: "/workspace/gamos/source/hero.blend", outputPath: "/workspace/gamos/staging/gamos-asset.glb", format: "GLTF" },
+        },
+        dependsOn: [],
+      },
+      {
+        stepId: "validate-export",
+        capability: {
+          capabilityId: "core/asset.manifest-validate",
+          capabilityVersion: "1.0.0",
+          input: { manifestPath: MANIFEST_PATH, artifactPath: "/workspace/gamos/staging/gamos-asset.glb" },
+        },
+        dependsOn: ["export-asset"],
+      },
+      {
+        stepId: "integrate-asset",
+        capability: {
+          capabilityId: consumerCapabilityId,
+          capabilityVersion: "1.0.0",
+          input: { projectRoot: "/workspace/gamos/target", artifactPath: "/workspace/gamos/staging/gamos-asset.glb" },
+        },
+        dependsOn: ["validate-export"],
+      },
+    ];
+  }
+
+  it("an integrate/import step preceded by a manifest-validate step is instructed to read the manifest and pass expectedIntegrity", () => {
+    const context = makeContext(UNITY_INSTALLED, "Generate a read-only plan for validating this game project.");
+    for (const consumer of ["babylon/asset.integrate", "unity/asset.import"]) {
+      const plan = makePipelinePlan(pipelineSteps(consumer));
+      const artifact = buildGamePlanWorkflowScript(plan, context);
+      // the instruction references the manifest path and the integrity record
+      expect(artifact.scriptText).toContain(MANIFEST_PATH);
+      expect(artifact.scriptText).toContain("expectedIntegrity");
+      expect(artifact.scriptText).toContain("byteLength");
+      expect(artifact.scriptText).toContain("sha256");
+      // it is attached to the CONSUMER step's ask only, never to other steps
+      const integrateAsk = artifact.scriptText.split("\n").find((line) => line.includes("gamos-plan-001-integrate-asset"));
+      expect(integrateAsk).toBeDefined();
+      expect(integrateAsk).toContain("expectedIntegrity");
+      const exportAsk = artifact.scriptText.split("\n").find((line) => line.includes("agent("));
+      expect(exportAsk).toBeDefined();
+      expect(exportAsk).not.toContain("expectedIntegrity");
+    }
+  });
+
+  it("a manifest-consuming step WITHOUT a manifest-validate step in the plan keeps the unchanged instruction (no fabricated manifest reference)", () => {
+    const context = makeContext(UNITY_INSTALLED, "Generate a read-only plan for validating this game project.");
+    const integrateOnly = { ...pipelineSteps("babylon/asset.integrate")[2]!, dependsOn: [] };
+    const plan = makePipelinePlan([integrateOnly]);
+    const artifact = buildGamePlanWorkflowScript(plan, context);
+    expect(artifact.scriptText).not.toContain("expectedIntegrity");
+    expect(artifact.scriptText).not.toContain("manifest");
+  });
+
+  it("a manifest-consuming step that appears BEFORE the manifest-validate step gets no instruction (order is load-bearing)", () => {
+    const context = makeContext(UNITY_INSTALLED, "Generate a read-only plan for validating this game project.");
+    const steps = pipelineSteps("babylon/asset.integrate");
+    const plan = makePipelinePlan([steps[2]!, steps[0]!, steps[1]!]);
+    const artifact = buildGamePlanWorkflowScript(plan, context);
+    expect(artifact.scriptText).not.toContain("expectedIntegrity");
+  });
+
+  it("plans without manifest-consuming capabilities keep the exact legacy ask template (byte-identical generation)", () => {
+    const context = makeContext(UNITY_INSTALLED, "Generate a read-only plan for validating this game project.");
+    const plan = makePlan();
+    const artifact = buildGamePlanWorkflowScript(plan, context);
+    // the M1.5 ask template is pinned verbatim — enrichment must never drift it
+    expect(artifact.scriptText).toContain(
+      "Execute capability core/project.inspect (1.0.0) for GamePlan plan-001. Input: {}. Read-only: observe and report; do not modify anything. Report what you actually observed.",
+    );
+    expect(artifact.scriptText).not.toContain("expectedIntegrity");
+    const again = buildGamePlanWorkflowScript(plan, context);
+    expect(again.scriptText).toBe(artifact.scriptText);
+  });
+
+  it("enriched generation is deterministic — the same plan + context produce a byte-identical script", () => {
+    const context = makeContext(UNITY_INSTALLED, "Generate a read-only plan for validating this game project.");
+    const plan = makePipelinePlan(pipelineSteps("babylon/asset.integrate"));
+    const a = buildGamePlanWorkflowScript(plan, context);
+    const b = buildGamePlanWorkflowScript(plan, context);
+    expect(a.scriptText).toBe(b.scriptText);
   });
 });

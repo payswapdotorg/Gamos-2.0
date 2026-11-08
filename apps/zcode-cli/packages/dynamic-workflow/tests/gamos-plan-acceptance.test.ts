@@ -25,6 +25,8 @@ import {
   detectProjectEngines,
   resolveGamingIntent,
   buildGamePlanWorkflowScript,
+  buildGamingModelContext,
+  registerEnginePluginCapabilities,
 } from "../../../../../packages/gamos-domain/src/contract.js";
 import type { GamingModelContext } from "../../../../../packages/gamos-domain/src/contract.js";
 
@@ -167,5 +169,187 @@ describe("Gamos GamePlan script acceptance by the real compiler (M1.5)", () => {
     expect(result.ok).toBe(true);
     const analysis = analyzeWorkflowScript(artifact.scriptText);
     expect(analysis.ok).toBe(true);
+  });
+});
+
+/**
+ * Gamos M3.3 cross-engine plan acceptance — the engine-aware GamePlan built by
+ * @zcode/gamos-domain's buildCrossEngineAssetPlan (Blender export → staging
+ * manifest validation → target-engine integration → build → runtime) must be
+ * accepted by THIS package's real compiler and analyzer: the script IS the
+ * GamePlan and the existing Dynamic Workflow infrastructure stays the only
+ * execution authority (contract 05 revision 2).
+ *
+ * The new builder surface is loaded through a dynamic import so the RED-first
+ * phase of the slice (module not yet implemented) fails ONLY the new tests —
+ * the three M1.5 acceptance tests above stay green throughout.
+ */
+describe("Gamos M3.3 cross-engine plan acceptance", () => {
+  const PIPELINE_NOW = "2026-11-12T10:00:00Z";
+
+  const PIPELINE_CAPABILITY_IDS: Record<"babylon" | "unity", string[]> = {
+    babylon: ["blender/asset.export", "core/asset.manifest-validate", "babylon/asset.integrate", "babylon/project.build", "babylon/project.run"],
+    unity: ["blender/asset.export", "core/asset.manifest-validate", "unity/asset.import", "unity/project.build"],
+  };
+
+  async function loadCrossEnginePlanModule() {
+    return await import("../../../../../packages/gamos-domain/src/domain/cross-engine-plan.js");
+  }
+
+  function makePipelineWorkspace(target: "babylon" | "unity"): string {
+    const root = mkdtempSync(join(tmpdir(), "gamos-m33-pipeline-"));
+    roots.push(root);
+    if (target === "babylon") {
+      // the target project's real family markers (package.json declaring @babylonjs/*)
+      writeFileSync(
+        join(root, "package.json"),
+        JSON.stringify({ name: "gamos-target", dependencies: { "@babylonjs/core": "^8.0.0" } }, null, 2),
+      );
+    } else {
+      mkdirSync(join(root, "ProjectSettings"), { recursive: true });
+      writeFileSync(join(root, "ProjectSettings", "ProjectVersion.txt"), "m_EditorVersionWithRevision: 6000.0.23f1 (abcdef123456)\n");
+    }
+    return root;
+  }
+
+  async function makePipelineFixture(available: boolean, target: "babylon" | "unity") {
+    const { CROSS_ENGINE_CORE_CAPABILITIES, buildCrossEngineAssetPlan } = await loadCrossEnginePlanModule();
+    const root = makePipelineWorkspace(target);
+
+    // ALL pipeline capabilities registered from the real shipped records:
+    // the six engine records (contract 03 §2) + the new core manifest-validate record.
+    const registry = registerEnginePluginCapabilities();
+    for (const record of CROSS_ENGINE_CORE_CAPABILITIES) {
+      const registered = registerCapability(record);
+      registry.set(`${registered.id}@${registered.version}`, registered);
+    }
+
+    const discovered: Parameters<typeof buildMachineDiscoveryRecord>[1] = [
+      available
+        ? { engineFamily: "blender", installed: true, rawVersion: "blender 4.1.1", headlessCapable: true, displayServerRequired: false }
+        : { engineFamily: "blender", installed: false, notes: "Blender executable not found on PATH or common install locations", headlessCapable: false, displayServerRequired: false },
+      available
+        ? {
+            engineFamily: target,
+            installed: true,
+            rawVersion: target === "babylon" ? "24.14.0" : "6000.0.23f1",
+            headlessCapable: true,
+            displayServerRequired: false,
+          }
+        : { engineFamily: target, installed: false, notes: `${target} toolchain not found on this machine`, headlessCapable: false, displayServerRequired: false },
+    ];
+    const machineDiscovery = buildMachineDiscoveryRecord(root, discovered, { platform: "linux", arch: "x64" }, PIPELINE_NOW);
+
+    // Real intent resolution drives classification + the engine-state JOIN; the
+    // engine records are CONDITIONAL (their runtime prerequisites are guarded
+    // by the engine states, contract 07) so resolveGamingIntent reports them
+    // unresolved as requested capabilities. For script GENERATION the context
+    // carries the registered records as resolved DATA (the generator needs the
+    // capability families) — the fail-closed authority stays with the embedded
+    // engine-state guards: unavailable engines throw BEFORE any step.
+    const resolution = resolveGamingIntent({
+      message: `Plan the cross-engine game asset pipeline from Blender into ${target === "babylon" ? "Babylon" : "Unity"}.`,
+      workspaceRoot: root,
+      projectDetection: detectProjectEngines(root),
+      machineDiscovery,
+      registry,
+      requestedCapabilities: PIPELINE_CAPABILITY_IDS[target].map((id) => ({ id })),
+      now: PIPELINE_NOW,
+    });
+    if (!resolution.context) throw new Error("fixture: no context");
+    const capabilityResults = PIPELINE_CAPABILITY_IDS[target].map((id) => {
+      const record = [...registry.values()].find((r) => r.id === id);
+      if (!record) throw new Error(`fixture: pipeline capability ${id} is not registered`);
+      return { request: { id: record.id, version: record.version }, ok: true as const, record };
+    });
+    const context = buildGamingModelContext({
+      now: PIPELINE_NOW,
+      workspaceRoot: root,
+      classification: resolution.classification,
+      projectDetection: detectProjectEngines(root),
+      machineDiscovery,
+      engineStates: resolution.engineStates,
+      capabilityResults,
+    });
+
+    const plan = buildCrossEngineAssetPlan({
+      planId: target === "babylon" ? "cross-engine-babylon-001" : "cross-engine-unity-001",
+      conceptRef: { conceptId: "concept-001", conceptSha256: "a".repeat(64) },
+      acceptanceRecord: { recordId: "acc-001", recordSha256: "b".repeat(64) },
+      workspaceRoot: root,
+      source: { projectIdentity: "source-blender", blendFile: "source-blender/hero.blend" },
+      target: { engine: target, projectIdentity: `target-${target}`, projectRoot: `target-${target}` },
+      format: target === "babylon" ? "glb" : "fbx",
+      interchange: { upAxis: "y" },
+      maxConcurrency: 2,
+      now: PIPELINE_NOW,
+    });
+
+    return { root, context, plan };
+  }
+
+  it("the Babylon pipeline plan script typechecks clean against the facade", async () => {
+    const { context, plan } = await makePipelineFixture(true, "babylon");
+    const artifact = buildGamePlanWorkflowScript(parseGamePlan(plan), context);
+    const result = compileWorkflowScript(artifact.scriptText);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("the analyzer accepts the script and its actor graph carries the five pipeline step agents", async () => {
+    const { context, plan } = await makePipelineFixture(true, "babylon");
+    const artifact = buildGamePlanWorkflowScript(parseGamePlan(plan), context);
+    const analysis = analyzeWorkflowScript(artifact.scriptText);
+    expect(analysis.ok).toBe(true);
+    expect(analysis.graph).toBeDefined();
+    const actors = toActorGraph(analysis.graph!);
+    const names = actors.nodes.map((a: { name?: string }) => a.name ?? "");
+    for (const stepId of ["export-asset", "validate-export", "integrate-asset", "build-project", "verify-runtime"]) {
+      expect(names).toContain(`gamos-cross-engine-babylon-001-${stepId}`);
+    }
+    // the causality/ask structure is present (dependencies are script structure)
+    const causality = analysis.causality!;
+    expect(JSON.stringify(causality)).toContain("ask");
+  });
+
+  it("the engines-unavailable variant still compiles — the blender + babylon guards are fail-closed runtime semantics, not syntax errors", async () => {
+    const { context, plan } = await makePipelineFixture(false, "babylon");
+    const artifact = buildGamePlanWorkflowScript(parseGamePlan(plan), context);
+    expect(artifact.guards.some((g) => g.family === "blender" && g.state === "unavailable")).toBe(true);
+    expect(artifact.guards.some((g) => g.family === "babylon" && g.state === "unavailable")).toBe(true);
+    // the guards throw BEFORE any step (never mock success)
+    const text = artifact.scriptText;
+    const guardPos = text.indexOf("throw new Error");
+    const firstAgent = text.indexOf("agent(");
+    expect(guardPos).toBeGreaterThanOrEqual(0);
+    expect(guardPos).toBeLessThan(firstAgent);
+    const result = compileWorkflowScript(artifact.scriptText);
+    expect(result.ok).toBe(true);
+    const analysis = analyzeWorkflowScript(artifact.scriptText);
+    expect(analysis.ok).toBe(true);
+  });
+
+  it("the integrate-asset step's script instruction tells the actor to read the manifest and pass expectedIntegrity", async () => {
+    const { root, context, plan } = await makePipelineFixture(true, "babylon");
+    const artifact = buildGamePlanWorkflowScript(parseGamePlan(plan), context);
+    const manifestPath = [root, "staging", "gamos-asset.glb.manifest.json"].join("/");
+    expect(artifact.scriptText).toContain(manifestPath);
+    expect(artifact.scriptText).toContain("expectedIntegrity");
+    expect(artifact.scriptText).toContain("byteLength");
+    expect(artifact.scriptText).toContain("sha256");
+  });
+
+  it("the Unity pipeline plan (four steps, no runtime leg) also compiles clean with its step agents", async () => {
+    const { context, plan } = await makePipelineFixture(true, "unity");
+    const artifact = buildGamePlanWorkflowScript(parseGamePlan(plan), context);
+    expect(artifact.stepSites.map((s) => s.stepId)).toEqual(["export-asset", "validate-export", "import-asset", "build-project"]);
+    const result = compileWorkflowScript(artifact.scriptText);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ok).toBe(true);
+    const analysis = analyzeWorkflowScript(artifact.scriptText);
+    expect(analysis.ok).toBe(true);
+    const actors = toActorGraph(analysis.graph!);
+    const names = actors.nodes.map((a: { name?: string }) => a.name ?? "");
+    expect(names).toContain("gamos-cross-engine-unity-001-import-asset");
   });
 });
