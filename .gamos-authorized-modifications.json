@@ -635,6 +635,55 @@
         "date": "2026-11-08T16:10:00Z",
         "decision_ref": "Final-closure directive §12 (regression discipline: every CI-only failure is fixed at its root, honestly recorded, never retried away) + the package's own documented testing rule (AutoDriver header: only a real time delta can pin sibling-admission order). TL-reviewed: test-only change class; the optional delayMs field mirrors the existing submit.delayMs vocabulary; no production surface touched."
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0013",
+      "phase": "M3",
+      "date": "2026-11-08T16:35:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "Second instance of the same inherited-test admission-race class authorized by GAMOS-AUTH-0012 (final-closure directive §12 regression discipline — every CI-only failure fixed at its root). CI run 42499422678 on merge head c8f86089 failed e2e.test.ts 'Promise.race with a losing in-flight ask' (expected false to be true on the loser-cancel assertion) while provider-stop (the AUTH-0012 fix) passed on the same run — a different test, identical mechanism: the winner ask's text action settles on queueMicrotask; if the loser's request line lands in a later child-stdout chunk, engine.complete -> abortInFlight fires before the loser is admitted, so it is never cancelled. Fix: (1) auto-driver.ts generalizes the optional delayMs to every AskAction type (text/fail join submit/stop-run; the schedule path is unchanged — same vocabulary, documented 'only a real time delta can pin the order'); (2) e2e.test.ts pins the winner's settlement 200ms so the loser is admitted and in-flight before complete — the invariant under test (loser cancelled at the driver, node-settled(cancelled) before run-settled, journal rows) is then pinned by real time, not chunk luck.",
+      "risk": "low",
+      "affected_functionality": "Test-only surfaces: the integration-test AutoDriver and one integration test. No production source, no engine surface, no runtime code path, no contract document. The generalization changes no behavior for actions without delayMs (queueMicrotask path identical). Verified: full package suite 100 passed + 7 honest Blender skips (unchanged), provider-stop still green.",
+      "new_functionality": "Every AskAction (submit/text/fail/stop-run) can carry an optional delayMs scheduling the action on a real timer — the package's documented tool for admission-order-sensitive tests.",
+      "regression_tests": [
+        "pnpm --filter @zcode/dynamic-workflow-runtime exec vitest run tests/e2e.test.ts -t 'Promise.race' (20 consecutive runs, 0 failures)",
+        "pnpm --filter @zcode/dynamic-workflow-runtime exec vitest run tests/provider-stop.test.ts (still green after the generalization)",
+        "pnpm --filter @zcode/dynamic-workflow-runtime exec vitest run tests (100 passed + 7 honest Blender skips without BLENDER_PATH; CI re-proves the 7 gates with real Blender)",
+        "node scripts/gamos/governance-check.mjs --pin <new baseline pin>",
+        "node scripts/gamos/governance-self-test.mjs",
+        "node scripts/gamos/roadmap-check.mjs",
+        "pnpm run architecture:check",
+        "pnpm exec vitest run --project gamos-domain (383/383)"
+      ],
+      "evidence": {
+        "summary": "The flake was observed on the post-merge head c8f86089 (run 42499422678, job M3-G3/G4 real-runtime engine gates: e2e.test.ts 1 failed of 107) — the same race class as AUTH-0012, surfacing in a second test because the first was fixed at its root. Fixed identically: real-timer pinning through the generalized delayMs vocabulary. 20/20 consecutive green; full suite green; provider-stop (AUTH-0012) re-verified green.",
+        "links": [
+          "apps/zcode-cli/packages/dynamic-workflow-runtime/tests/e2e.test.ts",
+          "apps/zcode-cli/packages/dynamic-workflow-runtime/tests/auto-driver.ts",
+          "docs/gamos/IMPLEMENTATION-STATUS.md"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "apps/zcode-cli/packages/dynamic-workflow-runtime/tests/auto-driver.ts",
+          "content_sha256": "3a683bef9b6002526a38e1668402b7ea9e9eadd534b588162fa0947149ed8e84"
+        },
+        {
+          "action": "modify",
+          "path": "apps/zcode-cli/packages/dynamic-workflow-runtime/tests/e2e.test.ts",
+          "content_sha256": "82fa7f1aa7ff778cd7889071aface11d729002032934da291303e3dc87c558f0"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-08T16:35:00Z",
+        "decision_ref": "Final-closure directive §12 (regression discipline: fix at the root, never retry away) + the AUTH-0012 precedent (same race class, same authorized inherited-test-repair class). TL-reviewed: test-only change; the delayMs generalization is additive and behavior-identical for undelayed actions; this entry's later binding supersedes AUTH-0012's auto-driver.ts content hash per the ledger's last-entry-wins map semantics."
+      }
     }
   ]
 }

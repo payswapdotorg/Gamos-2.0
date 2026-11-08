@@ -1256,3 +1256,31 @@ bundle exists and none is fabricated.
     - **No gate claim changes:** M3-G1 stays honestly blocked; M2 completion
       stays pending (M2-G1 maintainer-side); the roadmap validator fails
       closed; no `evidence/roadmap/M3.json` claimed.
+
+18. **Inherited-test deterministic repair, second instance — the Promise.race
+    admission race (GAMOS-AUTH-0013, sanctioned rebaseline, new trust-anchor
+    pin `631f3383…`):** the same race class as entry 17 surfaced in a second
+    test on the post-merge head `c8f86089` (run `42499422678`: e2e.test.ts
+    "Promise.race with a losing in-flight ask" — the loser-cancel assertion —
+    while provider-stop, the entry-17 fix, passed on the same run):
+    - **Mechanism (identical class):** the winner ask's `text` action settles
+      on queueMicrotask; if the loser's request line lands in a later
+      child-stdout chunk, `engine.complete → abortInFlight` fires before the
+      loser is admitted — it is never cancelled, and the invariant under test
+      (loser cancelled at the driver) fails on chunk luck.
+    - **Fix (test-only, baseline-tree surfaces → GAMOS-AUTH-0013; the entry's
+      later binding supersedes AUTH-0012's auto-driver.ts hash per the
+      ledger's last-entry-wins semantics):** `auto-driver.ts` generalizes the
+      optional `delayMs` to every `AskAction` type (text/fail join
+      submit/stop-run; the schedule path is unchanged); `e2e.test.ts` pins the
+      winner's settlement 200ms so the loser is admitted and in-flight before
+      complete. No production surface touched.
+    - **Verification:** 20/20 consecutive green on the fixed test;
+      provider-stop re-verified green; full package suite 100 passed + 7
+      honest Blender skips; regression chain on this head (governance-check
+      pinned compliant `631f3383…`, self-test 14/14, roadmap-check valid,
+      architecture:check 0 violations, gamos-domain 383/383, plan acceptance
+      8/8).
+    - **No gate claim changes:** M3-G1 stays honestly blocked; M2 completion
+      stays pending (M2-G1 maintainer-side); the roadmap validator fails
+      closed; no `evidence/roadmap/M3.json` claimed.

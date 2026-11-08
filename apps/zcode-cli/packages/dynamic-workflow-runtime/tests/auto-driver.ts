@@ -33,16 +33,11 @@ export type AskAction =
    * `delayMs`：这一步不在微任务上、而是在真定时器之后才执行。给「谁先结算」承重的测试用：两个
    * 请求行可能落在子进程 stdout 的两个 chunk 里、被父进程在两个 tick 里准入，此时「多一个来回
    * 就晚结算」的微任务计数论证不再成立，只有真时间差能钉住次序（resume.test.ts）。
+   * 所有动作类型都可携带（submit/text/fail/stop-run）——同一语义：真定时器落地。
    */
   | { type: "submit"; payload: unknown; stats?: AskStats; delayMs?: number }
-  | { type: "text"; finalText: string; stats?: AskStats }
-  | { type: "fail"; error: WorkflowError }
-  /**
-   * 确定性模型侧错误：driver 不结算节点，经 `stopRun` 让整个 run 停下（ProviderStop）。
-   * `delayMs`：与 submit 同义的真定时器延迟——给「stop 必须晚于兄弟 ask 准入」承重的测试用
-   * （provider-stop.test.ts：兄弟站点尚未准入时 stop 落地会改变取消集合，stdout 分 chunk 的
-   * 竞态只有真时间差能钉住）。
-   */
+  | { type: "text"; finalText: string; stats?: AskStats; delayMs?: number }
+  | { type: "fail"; error: WorkflowError; delayMs?: number }
   | { type: "stop-run"; error: WorkflowError; delayMs?: number };
 
 /** 某 ask 站点的应答器：据实例/消息给出一步或一串动作（串用于 repair/nudge 序列）。 */
@@ -141,8 +136,7 @@ export class AutoDriver implements WorkflowDriver {
     if (script === undefined) return;
     const action = script.actions[script.idx];
     if (action === undefined) return; // 无更多动作：引擎会耗尽 repair/nudge 后自行结算失败。
-    const delayMs =
-      action.type === "submit" || action.type === "stop-run" ? action.delayMs : undefined;
+    const delayMs = "delayMs" in action ? action.delayMs : undefined;
     const schedule = (fn: () => void): void => {
       if (delayMs === undefined) queueMicrotask(fn);
       else setTimeout(fn, delayMs);
