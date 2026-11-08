@@ -12,6 +12,11 @@
 
 import { canonicalJson, assertJsonSafe, canonicalSha256 } from "../adapters/canonical.js";
 import type { EngineFamily } from "./game-concept.js";
+import {
+  validateResourceClaims,
+  findClaimConflicts,
+} from "./resource-claims.js";
+import type { StepResourceClaims, ClaimConflict } from "./resource-claims.js";
 
 /** Reference to the GameSpec this plan was built for (never embedded). */
 export interface GameSpecRef {
@@ -34,6 +39,12 @@ export interface GamePlanStep {
     readonly read_only?: boolean;
     readonly timeout_ms?: number;
   };
+  /**
+   * M3.3 additive (gamos/resource-claims@1): declared read/write resource
+   * claims for this step. Optional — unchanged plans hash byte-identically;
+   * when present, unordered conflicting claims fail closed at parse time.
+   */
+  readonly resourceClaims?: StepResourceClaims;
 }
 
 /** An engine binding decision recorded in the plan. */
@@ -176,6 +187,7 @@ export function parseGamePlan(input: unknown): GamePlan {
   // Steps: unique ids, valid capability refs, resolvable dependencies.
   if (!Array.isArray(input.steps)) fail("steps", "must be an array");
   const stepIds = new Set<string>();
+  const validatedClaimsByStep = new Map<string, StepResourceClaims>();
   for (const step of input.steps) {
     if (!isRecord(step)) fail("steps[]", "each step must be an object");
     if (typeof step.stepId !== "string" || !ID_PATTERN.test(step.stepId)) {
@@ -208,6 +220,12 @@ export function parseGamePlan(input: unknown): GamePlan {
         fail("steps[].constraints.timeout_ms", "must be a number when present");
       }
     }
+    // M3.3 resource claims: validated through the versioned contract; the
+    // normalized claim set replaces the raw field so the plan (and its
+    // deterministic hash) carries exactly the validated claims.
+    if (step.resourceClaims !== undefined) {
+      validatedClaimsByStep.set(step.stepId as string, validateResourceClaims(step.resourceClaims));
+    }
   }
   // Dependencies must resolve AFTER all steps are collected (DAG order),
   // and the dependency graph must be ACYCLIC (a self- or circularly-dependent
@@ -239,6 +257,22 @@ export function parseGamePlan(input: unknown): GamePlan {
     visited.add(id);
   };
   for (const id of adjacency.keys()) detectCycle(id);
+
+  // M3.3 resource-claim conflict gate: unordered conflicting claims fail
+  // closed (handoff §5.3 rules 2-4). Serialization through an explicit
+  // dependsOn edge is the remediation; there is no silent resolution.
+  const stepsWithValidatedClaims = (input.steps as Record<string, unknown>[]).map((step) => {
+    const validated = validatedClaimsByStep.get(step.stepId as string);
+    return validated === undefined ? step : { ...step, resourceClaims: validated };
+  }) as unknown as readonly GamePlanStep[];
+  const claimConflicts: readonly ClaimConflict[] = findClaimConflicts(stepsWithValidatedClaims);
+  if (claimConflicts.length > 0) {
+    const first = claimConflicts[0] as ClaimConflict;
+    fail(
+      "steps[].resourceClaims",
+      `conflicting unordered claims between step ${first.stepA} and step ${first.stepB} over ${first.path} (${first.kind}) — add an explicit dependsOn edge or narrow the claims (${claimConflicts.length} conflict(s); no silent serialization)`,
+    );
+  }
 
   // Permissions.
   if (input.permissions !== undefined && !Array.isArray(input.permissions)) {
@@ -329,7 +363,7 @@ export function parseGamePlan(input: unknown): GamePlan {
     },
     ...(specRef ? { specRef } : {}),
     ...(engineBinding ? { engineBinding } : {}),
-    steps: input.steps as readonly GamePlanStep[],
+    steps: stepsWithValidatedClaims,
     permissions: (input.permissions ?? []) as readonly PlanPermissionRequirement[],
     acceptanceRecord: {
       recordId: ar.recordId as string,

@@ -6,6 +6,6 @@
 export const gamosDomainModule = {
   id: "gamos-domain",
   requires: [],
-  provides: ["gamos-domain-types", "gamos-capability-registry", "gamos-engine-discovery", "gamos-intent-resolution", "gamos-gameplan-workflow-artifact", "gamos-permission-gate", "gamos-plugin-trust", "playliquid-gameir-vendor"],
+  provides: ["gamos-domain-types", "gamos-capability-registry", "gamos-engine-discovery", "gamos-intent-resolution", "gamos-gameplan-workflow-artifact", "gamos-resource-claims", "gamos-permission-gate", "gamos-plugin-trust", "playliquid-gameir-vendor"],
   publicEntrypoints: ["contract.ts"],
 } as const;

@@ -301,8 +301,8 @@ describe("conflict detection across plan steps (handoff §5.3 rules 1-4)", () =>
       step("k-step", [], writeClaim("a/other.bin")),
     ]);
     expect(conflicts.map((c) => `${c.stepA}:${c.stepB}:${c.path}`)).toEqual([
-      "k-step:m-step:a/other.bin",
       "a-step:z-step:b/asset.bin",
+      "k-step:m-step:a/other.bin",
     ]);
   });
 

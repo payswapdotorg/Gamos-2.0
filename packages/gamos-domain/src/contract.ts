@@ -50,6 +50,22 @@ export {
 } from "./domain/game-plan.js";
 
 export type {
+  ResourceClaimAccess,
+  ResourceClaimScope,
+  ResourceClaim,
+  StepResourceClaims,
+  ClaimConflict,
+} from "./domain/resource-claims.js";
+export {
+  RESOURCE_CLAIMS_SCHEMA_ID,
+  RESOURCE_CLAIMS_SCHEMA_VERSION,
+  canonicalizeClaimPath,
+  validateResourceClaims,
+  claimsOverlap,
+  findClaimConflicts,
+} from "./domain/resource-claims.js";
+
+export type {
   AcceptanceCriterion,
   AcceptanceCriterionResult,
   AcceptanceRecord,
