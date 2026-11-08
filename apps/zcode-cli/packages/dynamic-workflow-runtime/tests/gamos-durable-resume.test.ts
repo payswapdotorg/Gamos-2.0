@@ -223,9 +223,26 @@ async function waitForJson<T>(path: string, timeoutMs: number, what: string): Pr
 
 /** waitForJson that dumps the leg child's collected output on timeout — a
  * leg that never reported must never fail silently. */
-async function waitForJsonWithOutput<T>(path: string, timeoutMs: number, what: string, child: ChildProcess, output: () => string): Promise<T> {
+async function waitForJsonWithOutput<T>(
+  path: string,
+  timeoutMs: number,
+  what: string,
+  child: ChildProcess,
+  output: () => string,
+  accept?: (value: T) => boolean,
+): Promise<T> {
   try {
-    return await waitForJson<T>(path, timeoutMs, what);
+    const startedAt = Date.now();
+    for (;;) {
+      try {
+        const parsed = JSON.parse(readFileSync(path, "utf8")) as T;
+        if (accept === undefined || accept(parsed)) return parsed;
+      } catch {
+        /* not written/parseable yet */
+      }
+      if (Date.now() - startedAt > timeoutMs) throw new Error(`timeout waiting for ${what}`);
+      await new Promise((r) => setTimeout(r, 50));
+    }
   } catch (e) {
     console.error(`=== leg child output (${what}) ===\n${output().slice(-4000)}`);
     killProcessGroup(child);
@@ -393,7 +410,18 @@ function runCycleOnce(caseName: string, options: CycleOptions): Promise<CycleRes
       await waitBootHeartbeat(leg2Output, respawned2, 120_000);
       leg2 = respawned2;
     }
-    const leg2Report = await waitForJsonWithOutput<Leg2Report>(leg2ReportPath, 420_000, `leg2 report for ${caseName}`, leg2, leg2Output);
+    // The FINAL leg2 report only: the leg writes an interim settlement
+    // snapshot (complete: false) before enrichment — the orchestrator must
+    // not consume that version (observed: cachedSettles empty in the interim
+    // write raced the read). Wait for complete === true.
+    const leg2Report = await waitForJsonWithOutput<Leg2Report>(
+      leg2ReportPath,
+      420_000,
+      `leg2 report (complete) for ${caseName}`,
+      leg2,
+      leg2Output,
+      (r) => (r as { complete?: boolean }).complete === true,
+    );
     // Bounded exit wait: the report is the evidence; a hung teardown must not
     // hang the proof (bounded wait, then a group kill like any real cleanup).
     const leg2ExitCode = await new Promise<number | null>((resolve) => {

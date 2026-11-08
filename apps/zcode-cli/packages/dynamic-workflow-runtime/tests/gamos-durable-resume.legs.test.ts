@@ -263,11 +263,18 @@ describe.skipIf(LEG !== "leg1" && LEG !== "leg2")("gamos durable-resume legs (pr
                   const prompt = lastUserPrompt(request);
                   const key = opKeyFor(prompt);
                   turns[key] += 1;
-                  // cancel-during-export: fire the cancel once the export op is in flight
+                  // cancel-during-export: fire the cancel once the export op is
+                  // GENUINELY in flight. 50ms after the export turn starts, the
+                  // Blender subprocess is always still booting (cold start is
+                  // ~1s+ on any machine — on a fast CI runner the whole tiny
+                  // OBJ export can finish inside a 400ms window, which would
+                  // let the run advance past the export before the cancel
+                  // lands; 50ms keeps the cancel inside the engine op on every
+                  // runner while still being after admission).
                   if (key === "export" && MODE === "cancel-during-export" && cancelHook) {
                     const hook = cancelHook;
                     cancelHook = null;
-                    setTimeout(hook, 400);
+                    setTimeout(hook, 50);
                   }
                   const abortSignal = (request as { abortSignal?: AbortSignal } | undefined)?.abortSignal;
                   const result = (await runRealOp(prompt, abortSignal)) as { ok: boolean; code?: string; message?: string };
@@ -333,10 +340,11 @@ describe.skipIf(LEG !== "leg1" && LEG !== "leg2")("gamos durable-resume legs (pr
       let resumeAfterCompletion: { ok: boolean; reason?: string } | undefined;
       let harnessError: string | null = null;
 
-      const buildReport = () => ({
+      const buildReport = (complete: boolean) => ({
         leg: 2,
         pid: process.pid,
         mode: MODE,
+        complete,
         orphanBeforeResume,
         resume: { ok: resumeResult.ok, ...(resumeResult.ok ? {} : { reason: resumeResult.reason }) },
         runAfterSettle,
@@ -413,7 +421,7 @@ describe.skipIf(LEG !== "leg1" && LEG !== "leg2")("gamos durable-resume legs (pr
       }
       if (runAfterSettle === null) runAfterSettle = readRunRow();
 
-      await writeReport(buildReport());
+      await writeReport(buildReport(true));
       sessionStore.close();
     },
     600_000,
