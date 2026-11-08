@@ -825,4 +825,79 @@ bundle exists and none is fabricated.
       gate result is recorded. The target legs (Unity typed import, Babylon
       typed integration), the M3.3 generator/runtime integration, the M3.5
       journey and the M3 CI remain open; M3-G1 stays honestly blocked while
-      no compliant Unity licensed runner exists.
+      no compliant Unity licensed runner exists. Merged as PR #11
+      (`1e53aa64`) with fully green branch CI on the tested head `f2145cab`.
+
+11. **M3.2 target leg — the Babylon asset integration (strict TDD, branch
+    `gamos/m3-babylon-asset-integration`, stacked on the merged PR #11
+    head):** the first complete cross-engine TARGET operation — a verified
+    GLB artifact is staged into a real Babylon project through a reviewed,
+    typed convention (handoff §8: "a typed Babylon project operation that
+    integrates the asset through the project's supported asset-loading
+    path"):
+    - **New capability `babylon/asset.integrate` v1.0.0** (append-only across
+      the three agreeing surfaces: `engine-plugin.ts` capability record,
+      `ENGINE_PLUGIN_METAS`, `.zcode-plugin/plugin.json`): executableless —
+      hash-verifies the artifact against the authoritative cross-engine
+      manifest integrity record (`expectedIntegrity {byteLength, sha256}` —
+      any mismatch fails closed `asset-integrity-mismatch`), gates
+      `not-a-babylon-project`, stages a byte-identical copy under
+      `public/assets/` (re-hashed after the copy — `staged-asset-hash-
+      mismatch` never assumed; idempotent-replace for identical content,
+      `asset-name-collision` for a different file or a conflicting registry
+      entry), and appends/replaces the committed registry entry
+      (`src/gamos-assets.json`, schema `gamos/babylon-assets@1`, atomic
+      tmp+rename write). Permissions: `filesystem-write` scoped to
+      project-public-assets-staging; verification: `artifact-hash`.
+    - **The reviewed asset-loading convention (never model-authored):** the
+      fixture gained `@babylonjs/loaders ^8.0.0` (8.56.2, same version as
+      core; committed lockfile in sync — `npm ci` reproduces it
+      byte-identically) and a deterministic bounded loader in `main.js`:
+      static JSON registry import + `@babylonjs/loaders/glTF` side-effect
+      registration + `SceneLoader.ImportMeshAsync("", "/assets/<file>", …)`
+      ONLY for registry files matching `^[a-z0-9][a-z0-9-]*\.glb$` (no
+      dynamic code, no arbitrary URLs); failed imports are VISIBLE
+      (`window.__GAMOS_BABYLON_ASSET_ERROR__` + the errors array — never
+      silent); `window.__GAMOS_BABYLON_ASSETS__` exposes the loaded
+      `{assetName, meshNames, vertices}` records for the M3-G2 in-guest
+      journey assertions and `__GAMOS_BABYLON_ASSETS_READY__` flips only
+      after every import settles (readiness means attempted; success means
+      an empty errors array).
+    - **Cross-engine fixture:** `test/fixture/gamos-cube.glb` (1988 bytes,
+      sha256 `b8acd9cf2ce3f5e55cc0ae07566e13b2221043ff5b3e27a953905748983bd1f1`)
+      is a REAL Blender 4.1.1 GLB export of a cube with a material —
+      generated once through the blender plugin's reviewed bridge
+      (bootstrap → typed `sceneModify` → `assetExport` GLTF
+      `{upAxis:"y"}`, materials embedded, zero dependent files) and
+      committed as the artifact-under-test.
+    - **Strict TDD:** RED `82829ff1` (11 typed TypeError failures + the
+      integration chain failing `assetIntegrate is not a function`; 6
+      pre-existing green) → GREEN `74e719cf` (12/12 typed + 7/7
+      real-toolchain) → HARDEN `1fe68fab` — including a GENUINE fix found
+      by the adversarial tests: `assertPathWithinProject` (project-scoped
+      symlink guard, exported from typed-ops) now guards both output paths
+      BEFORE any mutation — a `public/assets` or `src` directory swapped
+      for a symlink cannot redirect the engine's writes even when the
+      redirect target stays inside the workspace (21/21 harden suite).
+    - **Real-toolchain INTEGRATE evidence (node v24.22.2 / npm 11.19.1):**
+      the full chain in `engine-real-babylon.integration.test.ts` — `npm ci`
+      lockfile reproducibility holds (`c680f31c…` before/after);
+      `asset_integrate` stages `public/assets/gamos-cube.glb` with the
+      registry entry appended; `project_build` stays green with the registry
+      baked in and `dist/assets/gamos-cube.glb` byte-identical in the built
+      output; `project_run` dev server answers HTTP 200 on
+      `/assets/gamos-cube.glb` with byte-identical content (binary-safe
+      GET); `stopRuntime` frees the port. TL re-verified the whole chain
+      (69/69 plugin suite).
+    - Regression on this head: babylon plugin 6 files 69/69 (real
+      toolchain) + `tsc --noEmit` + `pnpm run build` clean; gamos-domain 23
+      files 338/338 (three-surface agreement holds; the append-only id list
+      gained the new id); architecture:check 0 violations; governance-check
+      compliant (pin `46c14c90…` unchanged — additive surfaces only);
+      roadmap-check valid (M2+M3 active).
+    - **No gate claim:** the plugin-level chain (staging + build + HTTP
+      serving) is proven, but M3-G2 additionally requires the REAL running
+      Browser experience consuming the asset with in-guest verification —
+      that is the M3.5 journey's evidence, not yet run. No gate result is
+      recorded; M3-G1 stays honestly blocked while no compliant Unity
+      licensed runner exists.
