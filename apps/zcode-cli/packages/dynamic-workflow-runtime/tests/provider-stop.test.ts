@@ -35,7 +35,10 @@ describe("provider stop 过界", () => {
 
     const { settlement, journal, driver } = await runScript(script, {
       asks: {
-        "ask#1": () => ({ type: "stop-run", error: PROVIDER_STOP }),
+        // 兄弟 ask 准入可能落后一个 stdout chunk/tick（CI run 42494215014 的真实竞态）：
+        // stop 经真定时器落地，保证两个站点都已准入在飞——取消集合才是被测的不变量，
+        // 不是 chunk 切分。与 resume.test.ts「只有真时间差能钉住次序」同一手法。
+        "ask#1": () => ({ type: "stop-run", error: PROVIDER_STOP, delayMs: 200 }),
         // 兄弟 ask 永不应答：只有 run 级 abort 能把它收掉。
         "ask#2": () => [],
       },
