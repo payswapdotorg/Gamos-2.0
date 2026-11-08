@@ -119,7 +119,10 @@ jobs:
         run: |
           set -e
           echo "::group::unity-engine-plugin unit suites"
-          pnpm --filter @zcode/unity-engine-plugin exec vitest run test/typed-ops.test.ts test/discovery.test.ts test/project.test.ts test/bridge-content.test.ts
+          pnpm --filter @zcode/unity-engine-plugin exec vitest run test/typed-ops.test.ts test/discovery.test.ts test/project.test.ts test/bridge-content.test.ts test/version-contract.test.ts
+          echo "::endgroup::"
+          echo "::group::unity M2-A gate-status classifier (gamos-domain)"
+          pnpm exec vitest run --project gamos-domain test/unity-gate-status.test.ts
           echo "::endgroup::"
           echo "::group::blender-engine-plugin unit suites"
           pnpm --filter @zcode/blender-engine-plugin exec vitest run test/typed-ops.test.ts test/discovery.test.ts
