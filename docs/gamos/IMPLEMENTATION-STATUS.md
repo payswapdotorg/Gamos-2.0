@@ -966,3 +966,73 @@ bundle exists and none is fabricated.
     - **No gate claim:** M3-G1 remains honestly blocked (licensed
       runner external prerequisite — same as M2-G1); the M3.3
       generator/runtime integration and the M3.5 journey remain open.
+      Merged as PR #13 (`fa817865`) with fully green branch CI on the
+      tested head `37aeb156`.
+
+13. **M3.3 — the engine-aware cross-engine plan builder (strict TDD,
+    branch `gamos/m3-crossengine-plan-builder`, stacked on the merged
+    PR #13 head):** the GamePlan-generation leg of handoff §9 ("the plan
+    must represent: engine-aware capability selection; source and target
+    project context; export, validation, transfer, import, build and
+    runtime-verification steps; explicit dependencies; independent work
+    eligible for concurrency; maximum concurrency; resource claims;
+    idempotency and retry behavior; artifact expectations; permission
+    requirements; cancellation and resume semantics; final
+    acceptance-record references"):
+    - **New pure module `cross-engine-plan.ts`** (`gamos/cross-engine-plan@1`):
+      `buildCrossEngineAssetPlan(request)` emits an engine-aware GamePlan
+      referencing the REAL operations shipped by the M3.1/M3.2/M3.4 legs —
+      Babylon target = 5 steps (export-asset → validate-export →
+      integrate-asset → build-project → verify-runtime), Unity target = 4
+      steps (…→ import-asset → build-project; the player build is the
+      terminal verification). Every step carries explicit `dependsOn`,
+      workspace-canonical `resourceClaims` (read source asset-path; write
+      staging/generated-output; read/write project scopes), the permission
+      union mirrors the real capability records (a HARDEN drift guard pins
+      this), artifact expectations (file/build/scene), and
+      `executionConstraints {maxConcurrency, requiresApproval: true}`.
+      Fail-closed request validation (exact field set, canonical relative
+      paths, Babylon+FBX rejected, strict UTC `now` for hash determinism);
+      **the emitted plan is validated through `parseGamePlan` before it is
+      returned** — the builder can never hand out a plan the plan contract
+      (including the unordered resource-claim conflict gate) would reject.
+    - **`expectedIntegrity` is INTENTIONALLY absent from the
+      integrate/import op inputs:** the interchange manifest — not the
+      plan — is the integrity authority at runtime; the generated workflow
+      script (plan-workflow.ts enrichment, additive, existing
+      byte-determinism tests untouched) instructs the actor to READ the
+      manifest and pass its artifact record as `expectedIntegrity`.
+    - **New shipped core capability `core/asset.manifest-validate@1.0.0`**
+      (provider `agent-tool` — the workflow actor validates the manifest
+      against the exporting operation's machine evidence through its
+      built-in tools; status "exported" + artifact integrity record
+      matching the export step's reported bytes+sha256).
+    - **Real-compiler acceptance extended** (dynamic-workflow
+      `gamos-plan-acceptance.test.ts`, existing 3 M1.5 tests untouched):
+      +5 tests — the Babylon pipeline plan compiles clean through
+      `compileWorkflowScript`; the actor graph carries the 5 step agents;
+      engines-unavailable contexts still COMPILE with fail-closed guards
+      (runtime semantics, never syntax errors); the manifest-integrity
+      instruction is present in the generated script text.
+    - **Strict TDD:** RED `46db7ba7` (Cannot-find-module + 5 acceptance
+      failures while the 3 existing stay green) → GREEN `0795a64c` (373/373
+      domain, 8/8 acceptance) → HARDEN `7e8a2101` (the adversarial
+      contract: permission-union drift guard, real-record schema validation
+      of EVERY emitted op input, strict now/scale/suffix matrices,
+      manifest-choice determinism; 383/383 domain).
+    - Architecture note: `node:path` computation lives in a new pure
+      adapter `src/adapters/workspace-paths.ts` — the domain-layer IO rule
+      caught the first GREEN attempt (1 violation) and the fix follows the
+      `adapters/canonical.ts` (node:crypto) purity precedent; dependency
+      direction stays one-way (plan-workflow does NOT import
+      cross-engine-plan).
+    - Regression on this head: gamos-domain 24 files 383/383 (+45);
+      acceptance 8/8; architecture:check 0 violations; governance-check
+      compliant (pin `46c14c90…` unchanged — additive surfaces only);
+      roadmap-check valid (M2+M3 active). TL re-verified the full chain.
+    - **No gate claim:** M3-G3 (concurrency/conflict proof against the
+      REAL runtime with real engine operations) and M3-G4 (resume/
+      cancellation against the real journal) still require the runtime
+      integration + journey legs — the M3.5 end-to-end journey and the M3
+      CI remain open; M3-G1 stays honestly blocked while no compliant
+      Unity licensed runner exists.

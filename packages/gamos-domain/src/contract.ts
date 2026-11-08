@@ -203,6 +203,22 @@ export {
 export type { GamePlanWorkflowScript } from "./domain/plan-workflow.js";
 export { buildGamePlanWorkflowScript } from "./domain/plan-workflow.js";
 
+// Cross-engine asset pipeline plan builder（M3.3，gamos/cross-engine-plan@1）——
+// 纯数据构造：把 fail-closed 校验过的请求变成 engine-aware GamePlan
+// （Blender export → staging manifest validate → babylon integrate / unity import
+// → project build → babylon run），产物本身必须通过 parseGamePlan。
+export type {
+  CrossEnginePlanRequest,
+  CrossEngineTarget,
+  CrossEngineInterchangeFormat,
+} from "./domain/cross-engine-plan.js";
+export {
+  CROSS_ENGINE_PLAN_SCHEMA_ID,
+  CROSS_ENGINE_CORE_CAPABILITIES,
+  M3_CROSS_ENGINE_SOURCE_COMMIT,
+  buildCrossEngineAssetPlan,
+} from "./domain/cross-engine-plan.js";
+
 // 权限映射与权力边界（M1.6，directive §13 / contract 06 rev 2）——评估既存 ZCode
 // 权限状态；无第二个权限 broker；仓库治理授权与发布授权严格分离。
 export type {

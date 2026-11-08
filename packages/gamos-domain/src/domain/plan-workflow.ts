@@ -93,6 +93,50 @@ function sanitized(stepId: string): string {
 
 const READ_ONLY_MARKER = /read[- ]only/i;
 
+// M3.3 additive: the cross-engine pipeline's integrate/import steps consume an
+// upstream `gamos/asset-interchange@1` manifest. The plan deliberately does NOT
+// embed the manifest's integrity record as op input (the manifest — not the
+// plan — is the integrity authority), so the generated instruction tells the
+// actor to READ the manifest and pass its artifact record. This is generator
+// logic derived purely from the plan structure: no wire-format change, and
+// plans without these capabilities generate byte-identical scripts.
+const MANIFEST_VALIDATOR_CAPABILITY_ID = "core/asset.manifest-validate";
+const MANIFEST_CONSUMER_CAPABILITY_IDS: ReadonlySet<string> = new Set(["babylon/asset.integrate", "unity/asset.import"]);
+
+/** The manifest path a manifest-validate step's input declares (undefined when the step is not one / declares none). */
+function manifestPathOfStep(step: GamePlanStep): string | undefined {
+  if (step.capability.capabilityId !== MANIFEST_VALIDATOR_CAPABILITY_ID) return undefined;
+  const input = step.capability.input;
+  if (typeof input !== "object" || input === null || Array.isArray(input)) return undefined;
+  const manifestPath = (input as { manifestPath?: unknown }).manifestPath;
+  return typeof manifestPath === "string" && manifestPath.length > 0 ? manifestPath : undefined;
+}
+
+/**
+ * Per-step manifest-integrity instruction: a manifest-CONSUMING step
+ * (babylon/asset.integrate | unity/asset.import) that appears AFTER an earlier
+ * manifest-validate step in the plan's step order is instructed to read that
+ * manifest and pass its artifact record as expectedIntegrity. A consumer with
+ * no earlier manifest step gets NO instruction (never fabricate a reference).
+ */
+function manifestIntegrityInstructions(steps: readonly GamePlanStep[]): Map<string, string> {
+  const instructions = new Map<string, string>();
+  let earlierManifestPath: string | undefined;
+  for (const step of steps) {
+    const manifestPath = manifestPathOfStep(step);
+    if (manifestPath !== undefined && earlierManifestPath === undefined) {
+      earlierManifestPath = manifestPath;
+    }
+    if (earlierManifestPath !== undefined && MANIFEST_CONSUMER_CAPABILITY_IDS.has(step.capability.capabilityId)) {
+      instructions.set(
+        step.stepId,
+        `Manifest integrity: read the cross-engine asset-interchange manifest at ${earlierManifestPath} and pass its artifact record {byteLength, sha256} as expectedIntegrity for this operation — the manifest is the integrity authority and any mismatch fails closed.`,
+      );
+    }
+  }
+  return instructions;
+}
+
 /**
  * Builds the Dynamic Workflow script artifact for a GamePlan from the model
  * context (real observations only — every guard and embedded state traces to
@@ -127,6 +171,7 @@ export function buildGamePlanWorkflowScript(plan: GamePlan, context: GamingModel
     capabilityVersion: step.capability.capabilityVersion,
   }));
   const levels = topoLevels(plan.steps);
+  const integrityInstructions = manifestIntegrityInstructions(plan.steps);
 
   const engineStatesLiteral = [...requiredFamilies].sort().map((family) => {
     const observed = observedEngineState(context, family);
@@ -176,11 +221,17 @@ export function buildGamePlanWorkflowScript(plan: GamePlan, context: GamingModel
         : "Gamos capability executor. Follow the capability's contract and its permission requirements.";
       lines.push(`// step ${step.stepId} — capability ${step.capability.capabilityId} (${step.capability.capabilityVersion})`);
       const varName = `n_${sanitized(step.stepId)}`;
-      lines.push(`const ${varName} = agent(${JSON.stringify(`gamos-${plan.planId}-${step.stepId}`)}, { system: ${JSON.stringify(persona)} }).ask(${JSON.stringify(
-        `Execute capability ${step.capability.capabilityId} (${step.capability.capabilityVersion}) for GamePlan ${plan.planId}. Input: ${JSON.stringify(step.capability.input)}. ${
-          readOnly ? "Read-only: observe and report; do not modify anything." : "Follow the capability contract."
-        } Report what you actually observed.`,
-      )});`);
+      const integrityInstruction = integrityInstructions.get(step.stepId);
+      // Segment assembly keeps the M1.5 ask template byte-identical for plans
+      // without a manifest-integrity instruction (enrichment is additive-only).
+      const ask = [
+        `Execute capability ${step.capability.capabilityId} (${step.capability.capabilityVersion}) for GamePlan ${plan.planId}.`,
+        `Input: ${JSON.stringify(step.capability.input)}.`,
+        ...(integrityInstruction !== undefined ? [integrityInstruction] : []),
+        readOnly ? "Read-only: observe and report; do not modify anything." : "Follow the capability contract.",
+        "Report what you actually observed.",
+      ].join(" ");
+      lines.push(`const ${varName} = agent(${JSON.stringify(`gamos-${plan.planId}-${step.stepId}`)}, { system: ${JSON.stringify(persona)} }).ask(${JSON.stringify(ask)});`);
       vars.push(varName);
     }
     if (vars.length === 1) {
