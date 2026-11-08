@@ -42,6 +42,7 @@
 
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import { relative, sep } from "node:path";
 import {
   registerCapability,
   registerEnginePluginCapabilities,
@@ -228,12 +229,24 @@ function runBuildManifestMode(): number {
   const manifestOutputPath = argValue("--manifest-output");
   const planId = argValue("--plan-id") ?? "gamos-m3-cross-engine";
   const blendFile = argValue("--blend-file") ?? "";
+  const workspaceRoot = argValue("--workspace-root") ?? "";
   const projectIdentity = argValue("--project-identity") ?? "gamos-m3-blender";
   const createdAt = argValue("--created-at") ?? new Date().toISOString();
-  if (!exportResultPath || !manifestOutputPath || !blendFile) {
-    process.stderr.write("usage: build-manifest --export-result <file> --manifest-output <file> --plan-id <id> --blend-file <abs> --project-identity <id> --created-at <iso>\n");
+  if (!exportResultPath || !manifestOutputPath || !blendFile || !workspaceRoot) {
+    process.stderr.write("usage: build-manifest --export-result <file> --manifest-output <file> --plan-id <id> --blend-file <abs> --workspace-root <abs> --project-identity <id> --created-at <iso>\n");
     return 2;
   }
+  // The manifest contract stores CANONICAL WORKSPACE-RELATIVE POSIX paths
+  // (asset-interchange.ts parseCanonicalPath — absolute paths fail closed);
+  // the caller supplies observed absolute paths, this adapter relativizes.
+  const toWorkspaceRelative = (absolute: string): string => {
+    const rel = relative(workspaceRoot, absolute).split(sep).join("/");
+    if (rel.startsWith("../") || rel === absolute) {
+      process.stderr.write(`path ${absolute} is not inside the workspace root ${workspaceRoot} — refusing to emit a non-canonical manifest path\n`);
+      process.exit(2);
+    }
+    return rel;
+  };
 
   // The REAL asset_export tool result (authoritative session-store part output).
   let exportResult: Record<string, unknown>;
@@ -248,7 +261,14 @@ function runBuildManifestMode(): number {
     return 1;
   }
   const appliedInterchange = (exportResult.appliedInterchange ?? {}) as Record<string, unknown>;
-  const dependentFiles = Array.isArray(exportResult.dependentFiles) ? (exportResult.dependentFiles as unknown[]) : [];
+  const dependentFiles = (Array.isArray(exportResult.dependentFiles) ? (exportResult.dependentFiles as unknown[]) : [])
+    .map((file) => {
+      if (typeof file === "object" && file !== null && typeof (file as Record<string, unknown>).path === "string") {
+        const record = file as Record<string, unknown>;
+        return { ...record, path: toWorkspaceRelative(String(record.path)) };
+      }
+      return file;
+    });
 
   // Map the tool result onto ExportedManifestBuildInput (asset-interchange-build.ts):
   // the additive result fields were designed as the manifest ingredients.
@@ -258,7 +278,7 @@ function runBuildManifestMode(): number {
       engine: "blender",
       engineVersion: exportResult.blenderVersion,
       projectIdentity,
-      assetPath: blendFile,
+      assetPath: toWorkspaceRelative(blendFile),
       assetSha256: exportResult.sourceSha256,
       operationPlanId: planId,
       exporter: {
@@ -270,7 +290,7 @@ function runBuildManifestMode(): number {
       ...appliedInterchange,
     },
     artifact: {
-      path: exportResult.outputPath,
+      path: toWorkspaceRelative(String(exportResult.outputPath)),
       mediaType: appliedInterchange.format === "glb" ? "model/gltf-binary" : "application/octet-stream",
       byteLength: exportResult.bytes,
       sha256: exportResult.sha256,

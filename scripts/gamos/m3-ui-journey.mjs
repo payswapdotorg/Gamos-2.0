@@ -1776,6 +1776,7 @@ function runM3ManifestBuildCli(exportResultPath, manifestPath, exportedAt) {
     "--manifest-output", manifestPath,
     "--plan-id", "gamos-m3-cross-engine",
     "--blend-file", join(M3_WORKSPACES.blender, "scene.blend"),
+    "--workspace-root", TASK_WORKSPACE,
     "--project-identity", "gamos-m3-blender",
     "--created-at", exportedAt,
   ], {
@@ -1792,7 +1793,26 @@ function runM3ManifestBuildCli(exportResultPath, manifestPath, exportedAt) {
  *  toggles and verify the enabled state on disk; record the registry's
  *  capability resolution (the provenance-backed context the tasks will use). */
 async function stageM3J3() {
-  await waitForTid("sidebar");
+  // Chunked/slow-box robustness: the initial sidebar wait uses the S0-style
+  // recovery (blank-renderer reload loop) instead of the bare 30s testid wait
+  // — on this 2-core sandbox the production renderer's first load can exceed
+  // it (the same documented mechanism as stageS0; GH runners are faster).
+  {
+    let reloads = 0;
+    const maxReloads = Number(process.env.PHASEB_S0_RELOADS ?? 10);
+    await waitFor(async () => {
+      if (await hasTid("sidebar")) return true;
+      const state = await evalJs(`(() => ({ ready: document.readyState, bodyLen: (document.body?.innerText ?? '').length }))()`).catch(() => null);
+      if (state?.ready === "complete" && state.bodyLen === 0 && reloads < maxReloads) {
+        reloads++;
+        log(`M3J3 initial: renderer blank — reloading (attempt ${reloads}/${maxReloads})`);
+        await page.send("Page.reload", { ignoreCache: false }).catch(() => {});
+        await new Promise((r) => setTimeout(r, 15000));
+      }
+      return false;
+    }, { what: "sidebar at M3J3 start (with blank-renderer reload recovery)", timeout: MAX_WAIT, interval: 5000 });
+    await waitForTid("sidebar", { timeout: 90000 });
+  }
   await clickTid("task-settings-button", { timeout: 30000 });
   await waitForTid("settings-page", { timeout: 30000 });
   await screenshot("M3J3-settings-open");
@@ -2031,8 +2051,15 @@ async function stageM3J4() {
   // engine tools (the timeline UI does not render full tool-result JSON).
   M3_EVIDENCE.sessionDbPath = M3_EVIDENCE.sessionDbPath ?? findSessionStoreDb();
   const blenderParts = (await readEngineToolParts(["scene_modify", "asset_export"])) ?? {};
-  const modifyPart = (blenderParts["scene_modify"] ?? []).find((p) => p.state?.status === "completed") ?? null;
-  const exportPart = (blenderParts["asset_export"] ?? []).find((p) => p.state?.status === "completed") ?? null;
+  // Chunk-retry correctness: prior interrupted runs leave their own completed
+  // part rows in the SAME persisted session store — pick the LATEST completed
+  // row, and for the export also require the output path to match THIS run's
+  // staging artifact (the manifest must be built from the current export).
+  const modifyPart = (blenderParts["scene_modify"] ?? []).filter((p) => p.state?.status === "completed").pop() ?? null;
+  const exportCandidates = (blenderParts["asset_export"] ?? []).filter((p) => p.state?.status === "completed");
+  const exportPart = exportCandidates.find((p) => {
+    try { const o = JSON.parse(String(p.state.output)); return o?.ok === true && o?.outputPath === exportOutput; } catch { return false; }
+  }) ?? exportCandidates.pop() ?? null;
   const modifyOutput = toolPartOutput(modifyPart);
   const exportOutput_ = toolPartOutput(exportPart);
   const exportDispatchOk = Boolean(modifyPart) && Boolean(exportPart);
@@ -2118,7 +2145,7 @@ async function stageM3J4() {
   // AUTHORITATIVE evidence: the Read part (the manifest the agent actually
   // read) + the asset_integrate part (registry entry + staged file).
   const integrateParts = (await readEngineToolParts(["asset_integrate", "Read"])) ?? {};
-  const integratePart = (integrateParts["asset_integrate"] ?? []).find((p) => p.state?.status === "completed") ?? null;
+  const integratePart = (integrateParts["asset_integrate"] ?? []).filter((p) => p.state?.status === "completed").pop() ?? null;
   const integrateOutput = toolPartOutput(integratePart);
   const readParts = integrateParts["Read"] ?? [];
   const manifestReadPart = readParts.find((p) => String(p.state?.input?.file_path ?? "").includes("staging")) ?? readParts[readParts.length - 1] ?? null;
@@ -2172,9 +2199,9 @@ async function stageM3J4() {
   await screenshot("M3J4-run-turn");
   if (runResult.paneSessionId && runResult.paneSessionId !== "draft") journey.sessionIds.push(runResult.paneSessionId);
   const engineParts = (await readEngineToolParts(["project_build", "project_run"])) ?? {};
-  const buildPart = (engineParts["project_build"] ?? []).find((p) => p.state?.status === "completed") ?? null;
+  const buildPart = (engineParts["project_build"] ?? []).filter((p) => p.state?.status === "completed").pop() ?? null;
   const buildOutput = toolPartOutput(buildPart);
-  const runPart = (engineParts["project_run"] ?? []).find((p) => p.state?.status === "completed") ?? null;
+  const runPart = (engineParts["project_run"] ?? []).filter((p) => p.state?.status === "completed").pop() ?? null;
   const runOutput = toolPartOutput(runPart);
   const runtimeUrl = runOutput?.runtimeUrl ?? null;
   const runtimePid = runOutput?.pid ?? null;
@@ -2312,6 +2339,11 @@ function stageBabylonFixtureWorkspace() {
  *  is virtualized and its scrape capped at 2500 chars from the TOP — older
  *  rows only (run-10 lesson: the Blender task text hid the Babylon/Unity
  *  turns' results). Every engine-stage assertion reads the store instead. */
+function toolPartOutput(part) {
+  if (!part?.state?.output) return null;
+  try { return JSON.parse(part.state.output); } catch { return null; }
+}
+
 async function readEngineToolParts(patterns) {
   const dbPath = M3_EVIDENCE.sessionDbPath ?? findSessionStoreDb();
   if (!dbPath) return null;
@@ -2600,7 +2632,7 @@ async function stageM3J5() {
   // licensed editor on this machine — the staged evidence carried in the
   // failure) OR the real imported success shape (a licensed runner).
   const unityParts = (await readEngineToolParts(["asset_import", "unity_asset_import"])) ?? {};
-  const importPart = (unityParts["asset_import"] ?? []).find((p) => String(p.tool).includes("unity-engine")) ?? (unityParts["asset_import"] ?? [])[0] ?? null;
+  const importPart = (unityParts["asset_import"] ?? []).filter((p) => String(p.tool).includes("unity-engine")).pop() ?? (unityParts["asset_import"] ?? [])[0] ?? null;
   const importOutput = toolPartOutput(importPart);
   const importState = importPart?.state ?? null;
   const importText = JSON.stringify(importState ?? {});
@@ -2766,6 +2798,17 @@ async function main() {
     else if (MODE === "prod") await launchProd();
     else if (MODE === "prod-http") await launchProdHttp();
     else if (MODE !== "attach") throw new Error(`unknown PHASEB_MODE ${MODE}`);
+    // Chunked-run correctness: attach the CDP session at launch regardless of
+    // the requested stages — stageS0 owns the attach in a full run, but a
+    // stage subset that skips S0 would otherwise run every evalJs against an
+    // unattached page (sandbox chunk runs exercise exactly that).
+    if (!page) await attachCdp().catch(async (e) => {
+      // The app may need a moment; one retry after a display check.
+      log(`initial CDP attach failed (${e.message}) — one retry`);
+      await ensureDisplay();
+      await attachCdp();
+    });
+    await handleFirstRunLoginEntryIfPresent().catch(() => {});
     for (const stage of STAGES) {
       const fn = M3_STAGE_MAP[stage];
       if (!fn) { recordStage(stage, "fail", `unknown M3 stage id ${stage}`); continue; }

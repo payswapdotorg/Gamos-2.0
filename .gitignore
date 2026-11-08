@@ -81,3 +81,7 @@ __pycache__/
 .phaseb-m2-home/
 .phaseb-m2-app/
 .phaseb-m2-debug-home/
+
+# M3 journey runtime dirs (same treatment as the M2 journey; evidence goes to evidence/phase-m3/).
+.phaseb-m3-home/
+.phaseb-m3-app/
