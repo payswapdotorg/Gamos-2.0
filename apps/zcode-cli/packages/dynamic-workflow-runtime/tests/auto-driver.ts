@@ -37,8 +37,13 @@ export type AskAction =
   | { type: "submit"; payload: unknown; stats?: AskStats; delayMs?: number }
   | { type: "text"; finalText: string; stats?: AskStats }
   | { type: "fail"; error: WorkflowError }
-  /** 确定性模型侧错误：driver 不结算节点，经 `stopRun` 让整个 run 停下（ProviderStop）。 */
-  | { type: "stop-run"; error: WorkflowError };
+  /**
+   * 确定性模型侧错误：driver 不结算节点，经 `stopRun` 让整个 run 停下（ProviderStop）。
+   * `delayMs`：与 submit 同义的真定时器延迟——给「stop 必须晚于兄弟 ask 准入」承重的测试用
+   * （provider-stop.test.ts：兄弟站点尚未准入时 stop 落地会改变取消集合，stdout 分 chunk 的
+   * 竞态只有真时间差能钉住）。
+   */
+  | { type: "stop-run"; error: WorkflowError; delayMs?: number };
 
 /** 某 ask 站点的应答器：据实例/消息给出一步或一串动作（串用于 repair/nudge 序列）。 */
 export type AskResponder = (ctx: { instance: InstanceRef; message: AskMessage }) => AskAction | AskAction[];
@@ -136,7 +141,8 @@ export class AutoDriver implements WorkflowDriver {
     if (script === undefined) return;
     const action = script.actions[script.idx];
     if (action === undefined) return; // 无更多动作：引擎会耗尽 repair/nudge 后自行结算失败。
-    const delayMs = action.type === "submit" ? action.delayMs : undefined;
+    const delayMs =
+      action.type === "submit" || action.type === "stop-run" ? action.delayMs : undefined;
     const schedule = (fn: () => void): void => {
       if (delayMs === undefined) queueMicrotask(fn);
       else setTimeout(fn, delayMs);

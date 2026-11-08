@@ -587,6 +587,54 @@
         "date": "2026-11-08T14:25:00Z",
         "decision_ref": "Final-closure directive §12 (large generated outputs stay out of Git; committed evidence carries manifests/hashes/records) + the M2 journey's identical GAMOS-AUTH-0007 precedent (.phaseb-m2-* entries). TL-reviewed: additive ignore entries only; no tracked surface changes."
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0012",
+      "phase": "M3",
+      "date": "2026-11-08T16:10:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "Deterministic repair of the inherited provider-stop integration test's admission race (final-closure handoff §12 regression discipline; the same authorized inherited-test-repair class as the M2-F trust-anchor rotation and the gamos-plan-acceptance fixture repair). CI run 42494215014 on merge commit 12ac5906 failed honestly: expected cancels ['ask#1','ask#2'], observed ['ask#1'] — the two ask request lines can land in two child-stdout chunks, the parent admits them in two ticks, and ask#1's stop-run action (scheduled on queueMicrotask) can fire before ask#2 is admitted, changing the cancellation set. The package's own testing vocabulary already solves exactly this class (AskAction submit.delayMs, documented: 'only a real time delta can pin the order' — resume.test.ts). (1) auto-driver.ts: extend delayMs to the stop-run action (additive optional field; same scheduling path; no behavior change for actions without delayMs). (2) provider-stop.test.ts: give the stop-run action delayMs 200 so both sibling asks are admitted and in-flight before the stop lands — the invariant under test (the cancellation set and the running-status journal rows) is then pinned by real time, not by chunk luck.",
+      "risk": "low",
+      "affected_functionality": "Test-only surfaces: the integration-test AutoDriver (tests/auto-driver.ts) and one integration test (tests/provider-stop.test.ts). No production source, no engine surface, no runtime code path, no IPC/RPC channel, no contract document is touched. The 7 skip-vs-run Blender gate tests and every other suite in the package are unaffected (verified: full package suite 100 passed + 7 honest Blender skips, same as before the change).",
+      "new_functionality": "AskAction stop-run gains an optional delayMs (real-timer scheduling, identical semantics to the existing submit.delayMs) so tests that depend on admission order versus a run-level stop can pin the order deterministically. The provider-stop test uses it to close the CI-only flake.",
+      "regression_tests": [
+        "pnpm --filter @zcode/dynamic-workflow-runtime exec vitest run tests/provider-stop.test.ts (1/1; 20 consecutive runs, 0 failures)",
+        "pnpm --filter @zcode/dynamic-workflow-runtime exec vitest run tests (100 passed + 7 honest Blender skips without BLENDER_PATH; CI re-proves the 7 gates with real Blender)",
+        "node scripts/gamos/governance-check.mjs --pin <new baseline pin>",
+        "node scripts/gamos/governance-self-test.mjs",
+        "node scripts/gamos/roadmap-check.mjs",
+        "pnpm run architecture:check",
+        "pnpm exec vitest run --project gamos-domain (383/383)"
+      ],
+      "evidence": {
+        "summary": "The flake was observed once on the CI merge commit 12ac5906 (run 42494215014, job M3-G3/G4 real-runtime engine gates: provider-stop.test.ts 1 failed of 107) while the same tree content passed on the branch run (42493331066) and the next head (42495532466) — a real nondeterministic defect, fixed at its root (admission order pinned by the package's own real-timer vocabulary) rather than by retry. Local verification: 20/20 consecutive green on the fixed test; full package suite green.",
+        "links": [
+          "apps/zcode-cli/packages/dynamic-workflow-runtime/tests/provider-stop.test.ts",
+          "apps/zcode-cli/packages/dynamic-workflow-runtime/tests/auto-driver.ts",
+          "docs/gamos/IMPLEMENTATION-STATUS.md"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "apps/zcode-cli/packages/dynamic-workflow-runtime/tests/auto-driver.ts",
+          "content_sha256": "44788a7c76d95c9927de20c639e952f3391e671a185f91170a44eb2cf2973005"
+        },
+        {
+          "action": "modify",
+          "path": "apps/zcode-cli/packages/dynamic-workflow-runtime/tests/provider-stop.test.ts",
+          "content_sha256": "058dc25477a8fe91a6afbf7b278ea308cd4658dace208046079ed360bbf2d986"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-08T16:10:00Z",
+        "decision_ref": "Final-closure directive §12 (regression discipline: every CI-only failure is fixed at its root, honestly recorded, never retried away) + the package's own documented testing rule (AutoDriver header: only a real time delta can pin sibling-admission order). TL-reviewed: test-only change class; the optional delayMs field mirrors the existing submit.delayMs vocabulary; no production surface touched."
+      }
     }
   ]
 }

@@ -23,26 +23,52 @@ handoff-record bundle, with their CI leg). Status ledger entry 16 in
   (`7f15af95…`) → verdict **handoff-chain-verified**
   (`evidence/phase-m3/handoff/`); Unity honestly-unavailable.
 - **New CI leg** `m3-reproducibility-and-handoff` re-proves both on every
-  runner (real Blender, plugin dist built, strict assertions).
+  runner (real Blender, plugin dist built, strict assertions) — **first run
+  on the M3.4 merge head `45e35636`: all four m3-e2e jobs success** (run
+  `42495532466`), governance success.
+- **Inherited-test deterministic repair (PR #20, GAMOS-AUTH-0012, rebaseline
+  pin `9b3cd8f5…`):** the one flake found in the process — run `42494215014`
+  on merge `12ac5906` failed `provider-stop.test.ts` (admission race: two
+  ask request lines in two stdout chunks; ask#1's stop-run microtask can
+  fire before ask#2 is admitted). Fixed at the root with the package's own
+  vocabulary (`stop-run` gains the optional `delayMs` — same semantics as
+  `submit.delayMs`; the test pins the stop 200ms). 20/20 consecutive green;
+  full suite 100 passed + 7 honest Blender skips locally. Status ledger entry
+  17.
 
 ## Remaining work for the next session
 
-1. **Verify the new CI leg on the pushed head** (first run lands on the M3.4
-   slice merge; fix any CI-only drift honestly — the PR #18 pattern).
+1. ~~Verify the new CI leg on the pushed head~~ **DONE** — first run on
+   `45e35636` all-green; the PR #20 flake fix rides the same CI (verify its
+   branch run, merge, then verify the post-merge head).
 2. **M3 completion decision — UNCHANGED and blocked exactly as designed:**
    M2 must complete first (M2-G1: maintainer-side Unity Hub sign-in per
    `docs/gamos/UNITY-M2G1-PROVISIONING.md` §7); the roadmap validator fails
    closed until then. Never hand-edit. No `evidence/roadmap/M3.json`.
 3. **M2-A..F closure items** (the final-closure handoff §2 list) remain open
-   where not already covered by entries 14–16.
+   where not already covered by entries 14–17. Verified this session:
+   M2-A (the classifier — machine-readable-evidence-derived, false-positive
+   path closed and documented in the workflow header), M2-B (version contract
+   test `6000.0.23f1`+revision), M2-C (`docs/gamos/UNITY-M2G1-PROVISIONING.md`
+   present), M2-D (`6f3f4c6b`), M2-E (`d0588721`) are all landed — the only
+   M2 blocker is M2-G1 (external, maintainer-side).
 
 ## Environment notes (sandbox)
 
-- Same as the M3.5 journey handoff: 4GB cgroup (`--sourcemap false` local
-  renderer builds), stage-chunk journeys, pre-push hook targets upstream
-  `origin/staging` — push with `--no-verify` after running the
-  governance/architecture/regression chain manually and recording it in the
-  TL-review block.
+- **The sandbox was RESET mid-session (after the PR #19 merge):** the clone,
+   node_modules and the local Blender install were wiped. Recovery was clean
+   because every artifact was already pushed: re-clone with the PAT, `corepack`
+   or `npm i -g pnpm@10.33.2`, `pnpm install --frozen-lockfile`, `pnpm
+   --filter @zcode/dynamic-workflow build` (the runtime tests need the built
+   compiler entry), then re-apply the in-flight work. The local Blender
+   (engines dir) was NOT re-provisioned this slice — CI covers the
+   Blender-dependent tests; re-provision locally only if a local gates run is
+   needed (`https://download.blender.org/release/Blender4.1/blender-4.1.1-linux-x64.tar.xz`,
+   sha256 `ab2ea3fe…`, symlink into `/home/z/my-project/engines/`).
+- Same as before: 4GB cgroup (`--sourcemap false` local renderer builds),
+   stage-chunk journeys, pre-push hook targets upstream `origin/staging` —
+   push with `--no-verify` after running the governance/architecture/regression
+   chain manually and recording it in the TL-review block.
 - The reproducibility/handoff scripts import the blender plugin's BUILT dist
   (`dist/` is gitignored): build `pnpm --filter @zcode/blender-engine-plugin
   build` before running them locally.

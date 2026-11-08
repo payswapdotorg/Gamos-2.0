@@ -1224,3 +1224,35 @@ bundle exists and none is fabricated.
       stays pending (M2-G1 — maintainer-side Unity Hub sign-in per
       `docs/gamos/UNITY-M2G1-PROVISIONING.md` §7); the roadmap validator
       fails closed until then — no `evidence/roadmap/M3.json` is claimed.
+
+17. **Inherited-test deterministic repair — the provider-stop admission race
+    (GAMOS-AUTH-0012, sanctioned rebaseline, new trust-anchor pin
+    `9b3cd8f5…`):** the one honest CI failure left after entry 16's state —
+    run `42494215014` on merge commit `12ac5906` failed
+    `provider-stop.test.ts` (`expected ['ask#1','ask#2'], observed
+    ['ask#1']`) while the same tree content passed on the branch run
+    (`42493331066`) and the next head (`42495532466`) — a real
+    nondeterministic defect, fixed at its root:
+    - **Mechanism:** the two ask request lines can land in two child-stdout
+      chunks; the parent admits them in two ticks; ask#1's `stop-run` action
+      (queueMicrotask) can fire before ask#2 is admitted — the cancellation
+      set under test then differs. The package's own testing vocabulary
+      documents exactly this (`AskAction submit.delayMs`: "only a real time
+      delta can pin the order" — resume.test.ts).
+    - **Fix (test-only, baseline-tree surfaces → GAMOS-AUTH-0012):**
+      `auto-driver.ts` extends the optional `delayMs` (real-timer
+      scheduling) to the `stop-run` action — additive, same semantics as the
+      existing `submit.delayMs`; `provider-stop.test.ts` gives the stop-run
+      `delayMs: 200` so both sibling asks are admitted and in-flight before
+      the stop lands; the invariant under test (cancellation set + running
+      journal rows) is pinned by real time, not chunk luck. No production
+      surface touched.
+    - **Verification:** 20/20 consecutive green on the fixed test; full
+      package suite 100 passed + 7 honest Blender skips (no `BLENDER_PATH`
+      locally — CI re-proves the 7 gates with real Blender); the full
+      regression chain on this head (governance-check pinned compliant,
+      self-test 14/14, roadmap-check valid, architecture:check 0 violations,
+      gamos-domain 383/383, plan acceptance 8/8).
+    - **No gate claim changes:** M3-G1 stays honestly blocked; M2 completion
+      stays pending (M2-G1 maintainer-side); the roadmap validator fails
+      closed; no `evidence/roadmap/M3.json` claimed.
