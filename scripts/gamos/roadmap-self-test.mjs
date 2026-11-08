@@ -187,5 +187,58 @@ test("completed milestone requires matching on-disk evidence and real gate artif
     rmSync(tempRoot,{recursive:true,force:true});
   }
 });
+// --- activation-waiver mechanism (ADR-0007): maintainer-authorized activation ---
+// A milestone may become active before its dependencies complete ONLY through a
+// complete, recorded activation_waiver. The waiver authorizes activation ONLY —
+// never completion — and fails closed when absent, malformed or unreferenced.
+function withM3Waiver(x, override) {
+  const m3 = x.milestones.find(m => m.id === "M3");
+  m3.status = "active";
+  m3.activation_waiver = Object.assign({
+    basis: "maintainer-authorized-waiver",
+    authorized_by: "repository maintainer",
+    authorized_at: "2026-11-08T02:39:28Z",
+    directive: "you can proceed with M3",
+    reason: "M2-G1 remains honestly blocked on an external prerequisite; the maintainer authorized beginning M3 while M2 completion stays pending.",
+    reference: "docs/gamos/ADR/0007-m3-maintainer-authorized-activation.md"
+  }, override);
+  return x;
+}
+test("a maintainer-authorized activation waiver permits active despite an incomplete dependency",() => {
+  const x = withM3Waiver(clone());
+  const r = validateRoadmap(x);
+  assert.deepEqual(r.errors,[]);
+  assert.deepEqual(r.active,["M2","M3"]);
+});
+test("an activation waiver with an unrecognized basis fails closed",() => {
+  const x = withM3Waiver(clone(),{basis:"tl-discretion"});
+  const c = codes(validateRoadmap(x));
+  assert.ok(c.includes("WAIVER"));
+  assert.ok(c.includes("DEPENDENCY"));
+});
+test("an activation waiver with missing required fields fails closed",() => {
+  const x = withM3Waiver(clone(),{directive:"   "});
+  const c = codes(validateRoadmap(x));
+  assert.ok(c.includes("WAIVER"));
+  assert.ok(c.includes("DEPENDENCY"));
+});
+test("an activation waiver never permits completion before dependencies complete",() => {
+  const x = withM3Waiver(clone());
+  const m3 = x.milestones.find(m => m.id === "M3");
+  m3.status = "complete";
+  m3.completion_evidence = {
+    evidence_file:"evidence/roadmap/M3.json",tested_commit:"d".repeat(40),
+    workflow_run_head_sha:"d".repeat(40),workflow_run_conclusion:"success",
+    workflow_run_id:55555,workflow_run_url:"https://github.com/payswapdotorg/Gamos-2.0/actions/runs/55555",
+    completed_at:"2026-11-08T00:00:00Z",gate_ids:m3.acceptance_gates.map(g=>g.id).sort()
+  };
+  const r = validateRoadmap(x);
+  assert.deepEqual(codes(r),["DEPENDENCY"]);
+});
+test("the activation waiver is scoped to the authorized milestone only",() => {
+  const x = withM3Waiver(clone());
+  x.milestones.find(m => m.id === "M4").status = "active"; // same incomplete dependency, no waiver
+  assert.deepEqual(codes(validateRoadmap(x)),["STATUS","DEPENDENCY"]);
+});
 console.log("1.." + count);
 console.log("# roadmap self-test: " + count + " passed, 0 failed");
