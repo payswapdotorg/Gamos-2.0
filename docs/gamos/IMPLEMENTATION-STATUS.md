@@ -687,7 +687,7 @@ bundle exists and none is fabricated.
    (`docs/gamos/ADR/0007-m3-maintainer-authorized-activation.md`, recorded
    verbatim in `ROADMAP.json` → `milestones[M3].activation_waiver`). The
    roadmap validator (`scripts/gamos/roadmap-check.mjs`) gained a fail-closed
-   activation-waiver mechanism — TDD: RED `4684e978` (self-test scenario 13
+   activation-waiver mechanism — TDD: RED `6af0f542` (self-test scenario 13
    assertion failure `[DEPENDENCY] M3 cannot be active before dependencies
    complete: M2` vs `[]`) → GREEN this commit (self-test 17/17). The waiver
    authorizes activation ONLY, never completion: M2 stays `active`, M2-G1 stays
@@ -701,7 +701,7 @@ bundle exists and none is fabricated.
    final-closure handoff §6 ("define an additive, versioned cross-engine asset
    manifest before the production pipelines are implemented"):**
    - **M3.3 resource-claim contract `gamos/resource-claims@1`** (RED
-     `a1f2c3d`-predecessor → GREEN `44759a2f`): canonical workspace-confined
+     `5d438313` → GREEN `5596a105`): canonical workspace-confined
      claim paths (traversal/backslash/control/Windows-unsafe/non-ASCII/reserved
      devices fail closed), claim-set validation (exact schema version, enums,
      read-over-generated-output rejected, duplicates rejected), overlap
@@ -714,8 +714,8 @@ bundle exists and none is fabricated.
      (`steps[].resourceClaims`, optional — unchanged plans hash
      byte-identically; claims are plan identity) with a parse-time conflict
      gate in `parseGamePlan`. 31/31 contract+integration tests.
-   - **M3.4 asset-interchange manifest `gamos/asset-interchange@1`** (RED →
-     GREEN `92471868`): handoff §6 minimums — identity/provenance (five real
+   - **M3.4 asset-interchange manifest `gamos/asset-interchange@1`** (RED `a7f09532` →
+     GREEN `39517fbd`): handoff §6 minimums — identity/provenance (five real
      engine families, exact versions, canonical paths, exporter capability),
      file integrity (path/mediaType/byteLength/64-hex sha256 for artifact and
      dependent textures), interchange semantics (format, handedness, upAxis,
