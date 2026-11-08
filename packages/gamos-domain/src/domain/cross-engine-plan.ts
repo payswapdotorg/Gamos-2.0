@@ -93,14 +93,16 @@ export interface CrossEnginePlanRequest {
 // ---------------------------------------------------------------------------
 
 /**
- * The source-of-record commit for the M3.3 cross-engine plan slice: the RED
- * commit that first shipped the contract's tests (the record itself ships in
- * the slice's GREEN commit; a commit cannot contain its own hash, so the pin
- * names the slice's first commit — the exact same tree the record was written
- * against). Provenance is exact (contract 09 §4): the sha names a commit
- * object that exists.
+ * The source-of-record commit for the M3.3 cross-engine plan slice: the GREEN
+ * commit that first shipped this module (the builder, the core record and the
+ * enrichment). A commit cannot contain its own hash, so the pin was authored
+ * as the slice's RED commit and re-pinned to the shipping GREEN commit in the
+ * slice's HARDEN pass — the exact pattern the M2 engine records follow (their
+ * source-of-record names the PR that first shipped them; a later version bump
+ * points at its own shipping commit). Provenance is exact (contract 09 §4):
+ * the sha names a commit object that exists.
  */
-export const M3_CROSS_ENGINE_SOURCE_COMMIT = "46db7ba7631066074c33e8a02fde08388f1b1bf2";
+export const M3_CROSS_ENGINE_SOURCE_COMMIT = "0795a64c3effd1c75976fc115dc0d75d232a1d1a";
 
 /**
  * core/asset.manifest-validate@1.0.0 — the ONE core capability the cross-engine

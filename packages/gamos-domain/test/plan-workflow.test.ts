@@ -313,4 +313,28 @@ describe("buildGamePlanWorkflowScript — cross-engine manifest-integrity instru
     const b = buildGamePlanWorkflowScript(plan, context);
     expect(a.scriptText).toBe(b.scriptText);
   });
+
+  it("when several manifest-validate steps exist, the instruction references the FIRST one's manifest path (deterministic choice)", () => {
+    const context = makeContext(UNITY_INSTALLED, "Generate a read-only plan for validating this game project.");
+    const firstManifest = "/workspace/gamos/staging/gamos-asset.glb.manifest.json";
+    const secondManifest = "/workspace/gamos/staging/other-asset.glb.manifest.json";
+    const steps: Record<string, unknown>[] = [
+      ...pipelineSteps("babylon/asset.integrate"),
+      {
+        stepId: "validate-other",
+        capability: {
+          capabilityId: "core/asset.manifest-validate",
+          capabilityVersion: "1.0.0",
+          input: { manifestPath: secondManifest, artifactPath: "/workspace/gamos/staging/other-asset.glb" },
+        },
+        dependsOn: [],
+      },
+    ];
+    const plan = makePipelinePlan(steps);
+    const artifact = buildGamePlanWorkflowScript(plan, context);
+    const integrateAsk = artifact.scriptText.split("\n").find((line) => line.includes("gamos-plan-001-integrate-asset"));
+    expect(integrateAsk).toBeDefined();
+    expect(integrateAsk).toContain(firstManifest);
+    expect(integrateAsk).not.toContain(secondManifest);
+  });
 });

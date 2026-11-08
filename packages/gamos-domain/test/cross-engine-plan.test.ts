@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   CROSS_ENGINE_PLAN_SCHEMA_ID,
   CROSS_ENGINE_CORE_CAPABILITIES,
+  M3_CROSS_ENGINE_SOURCE_COMMIT,
   buildCrossEngineAssetPlan,
 } from "../src/domain/cross-engine-plan.js";
 import type { CrossEnginePlanRequest } from "../src/domain/cross-engine-plan.js";
@@ -13,7 +14,7 @@ import { findClaimConflicts } from "../src/domain/resource-claims.js";
 import type { ResourceClaim, StepResourceClaims } from "../src/domain/resource-claims.js";
 import { registerCapability, resolveCapability } from "../src/domain/capability-registry.js";
 import type { CapabilityRecord } from "../src/domain/capability-registry.js";
-import { registerEnginePluginCapabilities } from "../src/domain/engine-plugin.js";
+import { registerEnginePluginCapabilities, ENGINE_PLUGIN_CAPABILITIES } from "../src/domain/engine-plugin.js";
 import { buildMachineDiscoveryRecord, joinEngineState } from "../src/domain/discovery/discovery-record.js";
 import type { DiscoveredEngine } from "../src/domain/discovery/discovery-record.js";
 import { classifyIntent, buildGamingModelContext } from "../src/domain/intent.js";
@@ -504,6 +505,135 @@ describe("CROSS_ENGINE_CORE_CAPABILITIES — the shipped core record (M3.3)", ()
 
   it("exposes the request schema id gamos/cross-engine-plan@1", () => {
     expect(CROSS_ENGINE_PLAN_SCHEMA_ID).toBe("gamos/cross-engine-plan@1");
+  });
+});
+
+describe("buildCrossEngineAssetPlan — adversarial hardening (M3.3 HARDEN)", () => {
+  /** The full pipeline registry: the six real engine records + the new core record. */
+  function pipelineRegistry(): Map<string, CapabilityRecord> {
+    const registry = registerEnginePluginCapabilities();
+    for (const record of CROSS_ENGINE_CORE_CAPABILITIES) {
+      const registered = registerCapability(record);
+      registry.set(`${registered.id}@${registered.version}`, registered);
+    }
+    return registry;
+  }
+
+  const BABYLON_PIPELINE_IDS = ["blender/asset.export", "core/asset.manifest-validate", "babylon/asset.integrate", "babylon/project.build", "babylon/project.run"];
+  const UNITY_PIPELINE_IDS = ["blender/asset.export", "core/asset.manifest-validate", "unity/asset.import", "unity/project.build"];
+
+  /** The records' permission union in pipeline order, deduplicated by kind|scope (first occurrence). */
+  function permissionUnion(registry: ReadonlyMap<string, CapabilityRecord>, ids: readonly string[]) {
+    const seen = new Set<string>();
+    const union: { kind: string; scope: string; rationale: string }[] = [];
+    for (const id of ids) {
+      const record = [...registry.values()].find((r) => r.id === id);
+      if (!record) throw new Error(`fixture: pipeline capability ${id} is not registered`);
+      for (const permission of record.permissions) {
+        const key = `${permission.kind}|${permission.scope}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        union.push({ kind: permission.kind, scope: permission.scope, rationale: permission.rationale });
+      }
+    }
+    return union;
+  }
+
+  it("the plan's permission union mirrors the REAL shipped records exactly — verbatim rationales, no drift (drift guard)", () => {
+    const registry = pipelineRegistry();
+    const babylon = buildCrossEngineAssetPlan(babylonRequest());
+    expect(babylon.permissions).toEqual(permissionUnion(registry, BABYLON_PIPELINE_IDS));
+
+    const unity = buildCrossEngineAssetPlan(unityRequest("fbx"));
+    expect(unity.permissions).toEqual(permissionUnion(registry, UNITY_PIPELINE_IDS));
+  });
+
+  it("every emitted step input validates against the REAL capability record's input schema (fail-closed required-field check)", () => {
+    const registry = pipelineRegistry();
+    for (const request of [babylonRequest(), unityRequest("fbx"), unityRequest("glb")]) {
+      const plan = buildCrossEngineAssetPlan(request);
+      for (const step of plan.steps) {
+        const record = [...registry.values()].find((r) => r.id === step.capability.capabilityId);
+        expect(record).toBeDefined();
+        // the declared runtime prerequisites are explicitly satisfied here so
+        // resolution reaches the INPUT schema check (contract 07 separation:
+        // engine availability is the runtime guard, not a data error)
+        const outcome = resolveCapability(registry, {
+          id: step.capability.capabilityId,
+          version: step.capability.capabilityVersion,
+          input: step.capability.input,
+          prerequisites: record?.availability.prerequisites ?? [],
+        });
+        expect(outcome.ok).toBe(true);
+      }
+    }
+  });
+
+  it("pins exactly the shipped capability versions — every emitted id@version resolves in the real registry", () => {
+    const registry = pipelineRegistry();
+    for (const request of [babylonRequest(), unityRequest("fbx")]) {
+      const plan = buildCrossEngineAssetPlan(request);
+      for (const step of plan.steps) {
+        const record = [...registry.values()].find((r) => r.id === step.capability.capabilityId);
+        expect(record?.version).toBe(step.capability.capabilityVersion);
+      }
+    }
+    // the shipped records themselves are the append-only source of truth
+    // (12 engine records: 4 unity + 4 blender + 4 babylon)
+    expect(ENGINE_PLUGIN_CAPABILITIES.length).toBe(12);
+  });
+
+  it("the generated script instructs the manifest handoff for BOTH targets (derived manifest path + expectedIntegrity)", () => {
+    for (const target of ["babylon", "unity"] as const) {
+      const context = makePipelineContext(true, target, target === "babylon" ? ["blender", "babylon"] : ["blender", "unity"]);
+      const request = target === "babylon" ? babylonRequest() : unityRequest("fbx");
+      const plan = buildCrossEngineAssetPlan(request);
+      const artifact = buildGamePlanWorkflowScript(plan, context);
+      expect(artifact.scriptText).toContain(join(WORKSPACE_ROOT, "staging", `gamos-asset.${target === "babylon" ? "glb" : "fbx"}.manifest.json`));
+      expect(artifact.scriptText).toContain("expectedIntegrity");
+      expect(artifact.scriptText).toContain("byteLength");
+      expect(artifact.scriptText).toContain("sha256");
+    }
+  });
+
+  it("rejects non-object requests (null, arrays, strings) fail closed", () => {
+    expect(() => buildCrossEngineAssetPlan(null)).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: request/);
+    expect(() => buildCrossEngineAssetPlan([])).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: request/);
+    expect(() => buildCrossEngineAssetPlan("plan")).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: request/);
+    expect(() => buildCrossEngineAssetPlan(42)).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: request/);
+  });
+
+  it("rejects NaN/Infinity maxConcurrency and non-numeric interchange scale", () => {
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ maxConcurrency: Number.NaN }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: maxConcurrency/);
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ maxConcurrency: Number.POSITIVE_INFINITY }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: maxConcurrency/);
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ interchange: { upAxis: "y", globalScale: Number.NaN } }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: interchange.globalScale/);
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ interchange: { upAxis: "y", globalScale: Number.POSITIVE_INFINITY } }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: interchange.globalScale/);
+  });
+
+  it("rejects now values that are ISO-shaped but not strict canonical UTC (offset form, zone-less, lowercase z)", () => {
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ now: "2026-11-12T10:00:00+00:00" }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: now/);
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ now: "2026-11-12T10:00:00" }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: now/);
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ now: "2026-11-12t10:00:00z" }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: now/);
+    // the canonical millisecond form IS accepted
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ now: "2026-11-12T10:00:00.123Z" }))).not.toThrow();
+  });
+
+  it("rejects blend files without the exact .blend suffix (case-sensitive)", () => {
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ source: { projectIdentity: "source-blender", blendFile: "source-blender/hero.fbx" } }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: source.blendFile/);
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ source: { projectIdentity: "source-blender", blendFile: "source-blender/hero.Blend" } }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: source.blendFile/);
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ source: { projectIdentity: "source-blender", blendFile: "source-blender/heroblend" } }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN: source.blendFile/);
+  });
+
+  it("the core record's provenance pins a 40-hex source-of-record commit", () => {
+    expect(M3_CROSS_ENGINE_SOURCE_COMMIT).toMatch(/^[0-9a-f]{40}$/);
+    const record = CROSS_ENGINE_CORE_CAPABILITIES[0] as CapabilityRecord;
+    expect(record.provenance.source).toMatchObject({
+      type: "repository",
+      repo: "payswapdotorg/Gamos-2.0",
+      commitSha: M3_CROSS_ENGINE_SOURCE_COMMIT,
+      path: "packages/gamos-domain/src/domain/cross-engine-plan.ts",
+    });
+    expect(record.provenance.surfaces).toContain("mcp");
   });
 });
 
