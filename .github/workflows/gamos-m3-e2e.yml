@@ -152,8 +152,14 @@ jobs:
         run: pnpm --filter @zcode/dynamic-workflow-runtime exec vitest run tests/gamos-engine-runtime.test.ts
         env:
           BLENDER_PATH: ${{ runner.temp }}/engines/blender-4.1.1-linux-x64/blender
-      - name: Full dynamic-workflow-runtime regression (100 pre-existing + 7 gates)
-        run: pnpm --filter @zcode/dynamic-workflow-runtime exec vitest run tests
+      - name: Full dynamic-workflow-runtime regression (pre-existing + gates + provenance + durable process-restart resume)
+        # --no-file-parallelism: the M3-G4 durable-resume suite spawns real
+        # separate vitest child processes (the two production-stack legs); on
+        # constrained runners, parallel sibling files starve those children's
+        # startup (observed: vite-transform heartbeats delayed by minutes).
+        # Serialized files keep the legs' CPU predictable; total wall time stays
+        # well inside the job budget.
+        run: pnpm --filter @zcode/dynamic-workflow-runtime exec vitest run tests --no-file-parallelism
         env:
           BLENDER_PATH: ${{ runner.temp }}/engines/blender-4.1.1-linux-x64/blender
       - name: Upload M3 runtime-gate evidence
