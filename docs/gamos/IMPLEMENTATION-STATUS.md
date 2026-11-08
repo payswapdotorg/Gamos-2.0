@@ -1327,6 +1327,69 @@ bundle exists and none is fabricated.
       stays pending (M2-G1 maintainer-side); the roadmap validator fails
       closed; no `evidence/roadmap/M3.json` claimed.
 
+20. **M3-G4 durable process-restart resume — the production-path proof
+    (directive §4, 2026-11-08, branch `gamos/m3-g4-durable-resume`):** the
+    prior G4 evidence proved in-process journal replay only
+    (`InMemoryJournalStore` + the test-only `GamosEngineDriver`, two
+    invocations in ONE process sharing one journal object). This slice adds
+    the missing proof, TDD-first.
+    - **RED (recorded first):** the orchestrating test
+      `tests/gamos-durable-resume.test.ts` with the full directive contract
+      plus a stub legs spec — failed with `timeout waiting for leg1 report`
+      because "the production-path process-restart proof (SQLite dwf_*
+      journal + bootstrap service + real Blender) is not assembled in tests
+      yet".
+    - **GREEN:** `tests/gamos-durable-resume.legs.test.ts` assembles the
+      REAL production stack in two SEPARATE processes (spawned vitest
+      children, detached process groups): leg 1 —
+      `createSqliteSessionStore({dbPath}).workflowJournalStore()` (the
+      production SQLite `dwf_*` adapter) + `createDynamicWorkflowRunService`
+      (the production bootstrap service: constructor
+      `reconcileOrphanRuns`, `AgentRuntimeWorkflowDriver`, the real harness
+      spawning the workflow-script child) + a real-Blender actor seam at the
+      `createActorRuntime` factory (the same typed engine ops the production
+      MCP path dispatches, executed inside real `AgentRuntime` turns through
+      the real `submit_result` tool). The orchestrator polls the journal
+      FILE itself, then SIGKILLs the whole leg-1 process group (real process
+      loss — nothing graceful); leg 2 constructs the service against the
+      same db + parent session (the constructor converges the orphan to
+      `stopped(interrupted)`), calls the production `service.resume(runId)`
+      and settles through `waitForTask` (raced with a terminal-state journal
+      poll). `GamosEngineDriver` is not involved anywhere.
+    - **Proven (all six tests green, real Blender):** core — completed steps
+      replay from the SQLite journal with ZERO re-dispatch (per-op turn
+      counts `modify:0/inspect:0/export:1`, cached `node-settled` events for
+      ask#1/ask#2), the pending step executes against real Blender, the
+      final output matches the pre-interruption mutation, journal/settlement/
+      artifact evidence agree, and the completed steps' journaled result
+      BYTES are identical across the restart (the durability property).
+      Harden cases — mid-flight kill (the uncommitted step re-dispatches
+      live, `inspect:1`), tampered script_text (service refuses
+      `script_mismatch`, never silently accepts), resume after completion
+      (`not_resumable`, duplicate invocation), cancellation during a live
+      engine operation (settlement `stopped(user)` persisted as cancelled —
+      never completed; the dependent verifier step never dispatches; no
+      artifact), and a missing on-disk artifact after the journal says
+      exported (the real `files.read` fails — the run settles `errored` with
+      a structured `DriverError`, never a fabricated success).
+    - **Harness hardening found on the way (honesty notes):** a
+      `fs.writeFile` create-vs-flush race (fixed by parse-polling the
+      report), `readOnly` WAL visibility lag (fixed by a read-write
+      poller), a late-kill guard with ONE whole-cycle retry (harness timing
+      tolerance — every assertion still runs in full on the retried cycle),
+      a frozen-string output-accessor bug (live accessor now), a
+      boot-heartbeat + single respawn for leg children (rare vitest worker
+      IPC startup hang under load — loud if it recurs), guaranteed
+      process-group kills in a `finally` (no zombie leaks on any failure
+      path), and CI's full-suite step now runs `--no-file-parallelism` (the
+      legs' CPU stays predictable on constrained runners). A stray temporary
+      spike test file was deleted; disk pressure from orphaned vite tmp
+      files was identified and cleaned (CI runners have ample headroom).
+    - **Verification:** full package suite serialized:
+      **119 passed + 1 skipped (120)** — the 107 pre-existing + 6 provenance
+      + 6 durable + the legs spec (skipped without `GAMOS_DURABLE_LEG`).
+    - **No gate claim changes:** M3-G1 stays honestly blocked; M2 completion
+
 21. **Unity Personal provisioning conclusion corrected (directive §5,
     2026-11-08, branch `gamos/m3-unity-terms-correction`):** the prior
     §1.3/§5/§6 conclusion — that a self-hosted runner on any existing machine
