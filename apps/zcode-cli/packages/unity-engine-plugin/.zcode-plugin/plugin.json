@@ -28,7 +28,8 @@
   "capabilities": [
     "unity/project.inspect",
     "unity/scene.modify",
-    "unity/project.build"
+    "unity/project.build",
+    "unity/asset.import"
   ],
   "headlessSupport": "full",
   "requiresDisplayServer": false,

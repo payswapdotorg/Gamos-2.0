@@ -330,6 +330,73 @@ const unityCapabilities: readonly CapabilityRecord[] = [
     cancellation: { supported: true, semantics: "cooperative (editor batch process termination)" },
     verification: { method: "artifact-hash", spec: "the build artifact must exist with the recorded sha256 and the Unity log must report build success" },
   },
+  {
+    id: "unity/asset.import",
+    version: "1.0.0",
+    title: "Import asset into Unity project",
+    description:
+      "Imports a hash-verified FBX/GLB export artifact (the Blender export leg's output) into a real Unity project through the licensed Unity Editor in batch mode: the artifact is staged byte-identical under Assets/ (idempotent for identical content, collision fail-closed otherwise), imported through AssetDatabase, and verified by the loaded asset's engine-query record.",
+    engineFamily: "unity",
+    input: {
+      type: "object",
+      properties: {
+        projectRoot: { type: "string" },
+        artifactPath: { type: "string", description: "Absolute path to the FBX/GLB export artifact inside the workspace (the source engine's verified output)." },
+        targetAssetPath: {
+          type: "string",
+          description: 'Relative target path under Assets/ (default "Assets/Gamos/gamos-asset<ext>" derived from the artifact extension); must be a relative "Assets/…" path without ".." whose extension matches the artifact\'s (.fbx or .glb).',
+        },
+        expectedIntegrity: {
+          type: "object",
+          description: "Authoritative integrity record from the cross-engine asset-interchange manifest; a mismatch fails closed.",
+          properties: { byteLength: { type: "number" }, sha256: { type: "string" } },
+          required: ["byteLength", "sha256"],
+        },
+        placeInScene: {
+          type: "object",
+          description: "Place the imported asset into a scene at the origin (named GamosImported) and save the scene.",
+          properties: { scenePath: { type: "string", description: 'Relative scene path under Assets/ (default "Assets/Scenes/GamosScene.unity").' } },
+        },
+      },
+      required: ["projectRoot", "artifactPath"],
+    },
+    output: {
+      type: "object",
+      properties: {
+        imported: { type: "boolean" },
+        targetAssetPath: { type: "string" },
+        guid: { type: "string", description: "The imported asset's AssetDatabase GUID (non-empty — verified)." },
+        assetType: { type: "string" },
+        meshCount: { type: "number" },
+        vertexCount: { type: "number" },
+        materialCount: { type: "number" },
+        subAssetNames: { type: "array", items: { type: "string" } },
+        sceneIntegrated: { type: "boolean" },
+        scenePath: { type: "string" },
+        stagedSha256: { type: "string" },
+        stagedBytes: { type: "number" },
+      },
+      required: ["imported", "guid", "stagedSha256"],
+    },
+    permissions: [engineHeadlessPermission, fileWritePermission],
+    availability: {
+      state: "conditional",
+      reason: "requires a licensed, installed Unity Editor executable matching the project's pinned version exactly; Unity licensing is an external prerequisite that cannot be provisioned by Gamos",
+      prerequisites: ["unity-editor-installed", "unity-license-active", "unity-project-root"],
+    },
+    provenance: enginePluginProvenance("apps/zcode-cli/packages/unity-engine-plugin"),
+    provider: mcpProvider("unity-engine"),
+    prerequisites: [
+      { id: "unity-editor-installed", description: "real Unity Editor executable whose version matches the project's pinned version exactly (the version contract is exact, not a floor)" },
+      { id: "unity-license-active", description: "an activated Unity license (Unity Personal/Plus/Pro sign-in or a CI license file) — an external, user-controlled prerequisite" },
+    ],
+    compatibility: { engineVersions: ">=2022.3", notes: "batch mode -batchmode -nographics -executeMethod Gamos.AssetImport.ImportAsset; FBX/GLB interchange artifacts only (GLB requires the project to carry a glTF importer)" },
+    reversibility: { kind: "reversible", notes: "additive asset under Assets/ plus an additive scene save — removing the staged asset and reverting the scene restores the prior state" },
+    idempotency: { repeatable: true, dedupeKey: "projectRoot+artifactPath+targetAssetPath" },
+    timeout: { defaultMs: 600000, maxMs: 3600000 },
+    cancellation: { supported: true, semantics: "cooperative (SIGTERM to the editor batch process; the already-staged file is re-verified and re-imported idempotently by the next run)" },
+    verification: { method: "engine-query", spec: "the imported asset must load through AssetDatabase with a non-empty GUID and meshCount>0 — a staged file alone does not prove import" },
+  },
 ];
 
 /** Blender capabilities (M2.2, Worker A). */
@@ -689,7 +756,7 @@ export const ENGINE_PLUGIN_METAS: readonly EnginePluginMeta[] = [
     engineFamily: "unity",
     engineVersions: ">=2022.3",
     executable: { kind: "batch", command: "unity-editor", args: ["-batchmode", "-nographics"] },
-    capabilities: ["unity/project.inspect", "unity/scene.modify", "unity/project.build"],
+    capabilities: ["unity/project.inspect", "unity/scene.modify", "unity/project.build", "unity/asset.import"],
     headlessSupport: "full",
     requiresDisplayServer: false,
     provenance: enginePluginProvenance("apps/zcode-cli/packages/unity-engine-plugin"),
