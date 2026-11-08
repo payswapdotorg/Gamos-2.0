@@ -120,6 +120,49 @@ autonomous work closed and green; the single remaining transition
 (M2-G1 → M2 closure → M3 closure → M4 activation) is maintainer-side by
 design.
 
+## Local engine re-provision + full local gates re-verification (same day, third "go")
+
+Checked for maintainer action first: **0 self-hosted runners, 0 repository
+variables, no new events** — the M2-G1 runbook remains unactioned, so the
+blocker is still external. With no maintainer-side input, this session closed
+the one remaining known local gap instead: the sandbox-reset loss of the
+local Blender install (recorded above as "NOT re-provisioned this slice").
+
+- **Real Blender 4.1.1 re-provisioned locally, CI-recipe-exact:** tarball
+  from the recorded URL, sha256 `ab2ea3fe…` strict-checked OK, extracted
+  `blender-4.1.1-linux-x64` (`Blender 4.1.1, build 2024-04-15`), tarball
+  deleted after extraction (2.0 GB free remains), `/home/z/engines/`
+  discovery symlink created exactly like the CI job.
+- **G3/G4 real-runtime gates suite locally: 7/7 passed** (dependent-work
+  ordering, conflict prevention, journal resume, cancellation kills the
+  engine subprocess — all on the real editor).
+- **Full dynamic-workflow-runtime suite locally: 107/107 passed, 0 skipped**
+  (was 100 passed + 7 honest Blender skips after the reset — local coverage
+  now matches CI exactly).
+- **M3.4 reproducibility re-run locally from scratch:** fresh fixed source →
+  both exports to the same output path → **identical digests `55665e6c…`
+  (1736 B ×2) — byte-identical to the committed evidence's artifact digest
+  from the original run**: cross-run, cross-machine export reproducibility,
+  not just within-run. CI strict assertion re-applied to the fresh record
+  (verdict=reproducible, artifactDigestsEqual=true). The fresh record's
+  non-artifact fields differ only honestly (new recordedAt; new source
+  `.blend` digest — blend saves embed non-deterministic metadata; manifest
+  hashes shift accordingly since they embed the source digest and temp
+  paths). The committed canonical evidence was then restored untouched
+  (`git checkout -- evidence/phase-m3/`).
+- **M3.4 handoff bundle re-derived locally:** verdict=
+  **handoff-chain-verified**, 10 hops (9 verified + unity-import
+  honestly-unavailable), hash chain manifest/staged/registry === export
+  digest `7f15af95…`; CI strict assertions all pass; committed canonical
+  evidence restored as above.
+- **Governance re-checked after the sweep:** pinned compliant `631f3383…`
+  (the evidence files are additive surfaces; restoring them byte-exact
+  keeps the tree identical to the audited head).
+
+**Local verification depth now equals CI** (modulo the license-gated Unity
+surfaces, which remain honestly unavailable). No gate claims changed; the
+M2-G1 external blocker and the fail-closed completion chain are unchanged.
+
 ## Environment notes (sandbox)
 
 - **The sandbox was RESET mid-session (after the PR #19 merge):** the clone,
