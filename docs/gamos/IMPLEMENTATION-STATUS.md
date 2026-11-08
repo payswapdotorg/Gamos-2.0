@@ -750,3 +750,79 @@ bundle exists and none is fabricated.
      (M3.1/M3.2 plugin operations, M3.3 generator/runtime integration, M3.5
      end-to-end journey + CI) are the next slices; M3-G1 stays honestly
      blocked while no compliant Unity licensed runner exists.
+
+10. **M3.4/M3.1-source slice — the manifest-emitting Blender export (strict
+    TDD, branch `gamos/m3-blender-manifest-export`):** the first production
+    pipeline slice after the two foundational contracts, per the handoff §6/§7
+    ordering ("define an additive, versioned cross-engine asset manifest
+    before the production pipelines"). The real `blender/asset.export`
+    operation now produces every manifest ingredient, and the domain gained
+    the pipeline-side builder that turns a real export record into a
+    validated manifest:
+    - **Contract extension** (`asset-interchange.ts`): the optional top-level
+      `dependencies` integrity array (handoff §6 file-integrity minimum —
+      "dependent texture/material files and their hashes"; OBJ `.mtl`
+      sidecars are material libraries, not textures). Additive: manifests
+      without dependencies parse unchanged; every dependent file is validated
+      exactly like the artifact (canonical path, 64-hex sha256, positive
+      byteLength).
+    - **Builder** (`asset-interchange-build.ts`, exported through
+      `contract.ts`): `buildExportedManifest` constructs a
+      `status:"exported"` manifest from a real export record and validates it
+      through `parseAssetInterchangeManifest` — `source.assetSha256`
+      REQUIRED (tight provenance), only the reviewed real-exporter formats
+      (fbx/glb/gltf/obj), image/* dependents additionally populate
+      `interchange.textures`, canonical key-order-independent hash. RED
+      `38263157` ("unknown field \"dependencies\"" + Cannot-find-module, 0
+      tests run) → GREEN `576c0e5d` (28/28; domain 338/338).
+    - **Export operation** (blender-engine-plugin): optional
+      `interchange {upAxis y|z, globalScale?}` input plumbed to the REAL
+      exporter kwargs (verified against the Blender 4.1.1 operator surface by
+      direct probe — FBX `axis_up`/`axis_forward`/`global_scale`, OBJ
+      `up_axis`/`forward_axis`/`global_scale`, glTF `export_yup`; GLTF has no
+      global scale → the combination fails closed at the typed boundary AND
+      bridge-side); the bridge echoes the applied settings (observed, never
+      assumed), reports `bpy.app.version_string`, scene unit scale, deduped
+      material names, and discovers dependent files via a bounded
+      before/after directory snapshot diff with per-file sha256; the engine
+      re-verifies every dependent record (missing/empty/hash-or-size
+      mismatch → structured failure — a lying bridge cannot fabricate
+      integrity) and mandates the Blender version (source provenance). Result
+      gains `blenderVersion`, `sourceSha256` (the .blend hashed as exported),
+      `unitScale`, `appliedInterchange` (format/handedness/upAxis/forwardAxis/
+      units/scaleFactor/appliedTransforms/materials), `dependentFiles` with
+      media types. The capability record in `engine-plugin.ts` gained the
+      additive input/output schemas + interchange-inclusive dedupeKey. RED
+      `11aaffd3` (5 unit + 3 integration assertion failures, 6 pre-existing
+      green) → GREEN `7420967a` → HARDEN `c0655b6f`
+      (`verifyExportDependentFileRecords` extracted + 7 adversarial
+      failure-path tests).
+    - **Real-engine INTEGRATE evidence (Blender 4.1.1,
+      `BLENDER_PATH=/home/z/engines/blender-4.1.1-linux-x64/blender`,
+      tarball sha256 `ab2ea3fe…` identical to the CI pin):**
+      `engine-real-blender.integration.test.ts` 9/9 — the FBX
+      manifest-ingredient test exports with declared `{upAxis y, globalScale
+      2}`, asserts `blenderVersion=4.1.1`, `sourceSha256` equal to an
+      independent re-hash of the .blend, `appliedInterchange`
+      `{fbx,right,y,-z,meter,scaleFactor 2}`, builds the manifest through the
+      real domain builder (imported cross-package in the test, same precedent
+      as the dynamic-workflow acceptance suite) and verifies
+      `matchesIntegrity(artifact)` against an independent re-hash
+      (manifestHash `222d338a…`); the OBJ test proves the `.mtl` sidecar
+      (254 bytes) is discovered, hashed and re-verified; the GLB test proves
+      embedded materials (zero dependents) and the `glTF` magic bytes.
+    - Regression on this head: gamos-domain 23 files 338/338; blender plugin
+      5 files 42/42 (real engine) + `tsc --noEmit` + `pnpm run build` (tsc +
+      esbuild MCP bundle) clean; unity/babylon plugin typechecks clean;
+      dynamic-workflow 2037/2037 (after `node scripts/generate-libs.mjs` +
+      `pnpm run build` — the codegen/dist prerequisites are environment
+      steps, not source changes), acceptance 3/3; architecture:check 0
+      violations; governance-check compliant (pin `46c14c90…` unchanged —
+      additive surfaces only, no ledger entry required);
+      governance-self-test 14/14; roadmap-self-test 17/17; roadmap-check
+      valid (M2+M3 active).
+    - **No gate claim:** this is the source leg of M3-G1/M3-G2 only — no
+      gate result is recorded. The target legs (Unity typed import, Babylon
+      typed integration), the M3.3 generator/runtime integration, the M3.5
+      journey and the M3 CI remain open; M3-G1 stays honestly blocked while
+      no compliant Unity licensed runner exists.

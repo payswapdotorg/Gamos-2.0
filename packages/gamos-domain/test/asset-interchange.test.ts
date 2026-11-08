@@ -232,6 +232,50 @@ describe("asset interchange manifest validation (gamos/asset-interchange@1, fail
   });
 });
 
+describe("dependent files (handoff §6 file integrity: dependent texture/material files with hashes)", () => {
+  it("accepts an optional top-level dependencies array of integrity records", () => {
+    const manifest = parseAssetInterchangeManifest({
+      ...validExportedManifest,
+      dependencies: [
+        { path: "staging/mesh.mtl", mediaType: "text/plain", byteLength: 512, sha256: sha("f") },
+        { path: "staging/textures/base.png", mediaType: "image/png", byteLength: 768, sha256: sha("7") },
+      ],
+    });
+    expect(manifest.dependencies).toHaveLength(2);
+    expect(manifest.dependencies?.[0].path).toBe("staging/mesh.mtl");
+    expect(manifest.dependencies?.[1].mediaType).toBe("image/png");
+  });
+
+  it("keeps dependencies optional — a manifest without them still parses (additive field)", () => {
+    const manifest = parseAssetInterchangeManifest(validExportedManifest);
+    expect(manifest.dependencies).toBeUndefined();
+  });
+
+  it("validates every dependent file exactly like the artifact (hash format, path safety, byteLength)", () => {
+    expect(() =>
+      parseAssetInterchangeManifest({
+        ...validExportedManifest,
+        dependencies: [{ path: "staging/mesh.mtl", mediaType: "text/plain", byteLength: 512, sha256: "nothex" }],
+      }),
+    ).toThrow(/sha256/i);
+    expect(() =>
+      parseAssetInterchangeManifest({
+        ...validExportedManifest,
+        dependencies: [{ path: "../escape.mtl", mediaType: "text/plain", byteLength: 512, sha256: sha("f") }],
+      }),
+    ).toThrow(/path/i);
+    expect(() =>
+      parseAssetInterchangeManifest({
+        ...validExportedManifest,
+        dependencies: [{ path: "staging/mesh.mtl", mediaType: "text/plain", byteLength: 0, sha256: sha("f") }],
+      }),
+    ).toThrow(/byteLength/i);
+    expect(() => parseAssetInterchangeManifest({ ...validExportedManifest, dependencies: "mesh.mtl" })).toThrow(
+      /dependencies/i,
+    );
+  });
+});
+
 describe("asset status transitions (single-step forward; failed/cancelled terminal)", () => {
   it("allows exactly one forward step along the chain", () => {
     expect(canTransitionAssetStatus("exported", "export-validated")).toBe(true);

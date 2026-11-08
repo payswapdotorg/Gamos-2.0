@@ -156,16 +156,101 @@ export const SceneRenderInput = z.object({
 });
 export type SceneRenderInput = z.infer<typeof SceneRenderInput>;
 
-export const AssetExportInput = z.object({
-  blendFile: z.string().min(1).describe("Absolute path to the .blend file inside the workspace."),
-  outputPath: z.string().min(1).describe("Absolute artifact path inside the workspace."),
-  format: z.enum(["OBJ", "GLTF", "FBX"]).describe("Export format (GLTF writes a binary .glb)."),
-  selection: z
-    .array(z.string().min(1))
-    .optional()
-    .describe("Object names to export; the whole scene when unset."),
-});
+export const AssetExportInterchange = z
+  .object({
+    upAxis: z.enum(["y", "z"]).describe("Target up axis applied by the exporter (Blender-native is z-up)."),
+    globalScale: z
+      .number()
+      .finite()
+      .positive()
+      .optional()
+      .describe("Uniform scale multiplier applied at export (FBX/OBJ only; the glTF exporter has no global scale setting)."),
+  })
+  .describe("Declared coordinate/scale settings applied by the exporter and recorded in the cross-engine manifest.");
+export type AssetExportInterchange = z.infer<typeof AssetExportInterchange>;
+
+export const AssetExportInput = z
+  .object({
+    blendFile: z.string().min(1).describe("Absolute path to the .blend file inside the workspace."),
+    outputPath: z.string().min(1).describe("Absolute artifact path inside the workspace."),
+    format: z.enum(["OBJ", "GLTF", "FBX"]).describe("Export format (GLTF writes a binary .glb)."),
+    selection: z
+      .array(z.string().min(1))
+      .optional()
+      .describe("Object names to export; the whole scene when unset."),
+    interchange: AssetExportInterchange.optional(),
+  })
+  .superRefine((input, ctx) => {
+    if (input.format === "GLTF" && input.interchange?.globalScale !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["interchange", "globalScale"],
+        message: "the glTF exporter has no global scale setting — declare globalScale only for FBX/OBJ exports",
+      });
+    }
+  });
 export type AssetExportInput = z.infer<typeof AssetExportInput>;
+
+/** The bridge config for the export template (data-only JSON; the bridge maps abstract settings to per-exporter kwargs). */
+export interface ExportBridgeConfig {
+  readonly outputPath: string;
+  readonly format: "OBJ" | "GLTF" | "FBX";
+  readonly selection: readonly string[] | null;
+  readonly interchange: { readonly upAxis: "y" | "z"; readonly globalScale?: number } | null;
+}
+
+/** Build the data-only bridge config for the committed export_asset.py template. */
+export function buildExportBridgeConfig(input: {
+  readonly outputPath: string;
+  readonly format: "OBJ" | "GLTF" | "FBX";
+  readonly selection?: readonly string[];
+  readonly interchange?: AssetExportInterchange;
+}): ExportBridgeConfig {
+  return {
+    outputPath: input.outputPath,
+    format: input.format,
+    selection: input.selection ?? null,
+    interchange: input.interchange ? { upAxis: input.interchange.upAxis, ...(input.interchange.globalScale !== undefined ? { globalScale: input.interchange.globalScale } : {}) } : null,
+  };
+}
+
+/** Media type of the primary export artifact per reviewed format. */
+export function exportArtifactMediaType(format: "OBJ" | "GLTF" | "FBX"): string {
+  switch (format) {
+    case "FBX":
+      return "application/octet-stream";
+    case "GLTF":
+      return "model/gltf-binary";
+    case "OBJ":
+      return "text/plain";
+  }
+}
+
+/** Media type of a dependent/sidecar file by extension (manifest integrity records). */
+export function dependentFileMediaType(fileName: string): string {
+  const extension = fileName.toLowerCase().split(".").pop() ?? "";
+  switch (extension) {
+    case "mtl":
+      return "text/plain";
+    case "png":
+      return "image/png";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "webp":
+      return "image/webp";
+    case "tga":
+      return "image/x-tga";
+    case "bmp":
+      return "image/bmp";
+    case "exr":
+      return "image/x-exr";
+    case "hdr":
+      return "image/vnd.radiance";
+    default:
+      return "application/octet-stream";
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Fixed bridge-script plan (NO dynamic code generation)

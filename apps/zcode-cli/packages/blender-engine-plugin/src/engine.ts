@@ -12,6 +12,8 @@ import {
   SceneModifyInput,
   SceneRenderInput,
   buildBridgeScript,
+  buildExportBridgeConfig,
+  dependentFileMediaType,
   expectationsFromOperations,
   resolveBridgeRoot,
   resolveWorkspacePath,
@@ -103,6 +105,29 @@ export interface RenderSuccess {
   cameraProvisioned: boolean;
 }
 
+/** Interchange semantics actually applied by the exporter (echoed by the bridge, not assumed). */
+export interface AppliedExportInterchange {
+  readonly format: "fbx" | "glb" | "obj";
+  readonly handedness: "left" | "right";
+  readonly upAxis: "y" | "z";
+  readonly forwardAxis?: string;
+  readonly units: string;
+  readonly scaleFactor?: number;
+  readonly appliedTransforms?: string;
+  readonly materials?: {
+    readonly referenced: readonly string[];
+    readonly embedded: boolean;
+  };
+}
+
+/** A dependent/sidecar file written by the export and re-verified by the engine. */
+export interface ExportDependentFileRecord {
+  readonly path: string;
+  readonly mediaType: string;
+  readonly byteLength: number;
+  readonly sha256: string;
+}
+
 export interface ExportSuccess {
   ok: true;
   outputPath: string;
@@ -110,6 +135,16 @@ export interface ExportSuccess {
   sha256: string;
   format: string;
   selection: string[] | null;
+  /** Exact Blender version string from the executing engine (manifest source provenance). */
+  readonly blenderVersion: string;
+  /** sha256 of the source .blend file as exported (manifest source provenance). */
+  readonly sourceSha256: string;
+  /** Scene unit scale (1.0 = meter) observed by the bridge. */
+  readonly unitScale: number;
+  /** The interchange semantics actually applied by the exporter. */
+  readonly appliedInterchange: AppliedExportInterchange;
+  /** Engine-verified dependent/sidecar files (e.g. OBJ .mtl, copied textures). */
+  readonly dependentFiles: readonly ExportDependentFileRecord[];
 }
 
 // ---------------------------------------------------------------------------
@@ -682,6 +717,57 @@ function resolutionAxis(value: unknown, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+/**
+ * Re-verify bridge-reported dependent files against the filesystem (trust but
+ * verify): every record must exist, be non-empty, and its recomputed size and
+ * sha256 must match the bridge report exactly. Exported for failure-path tests.
+ */
+export async function verifyExportDependentFileRecords(
+  records: readonly unknown[],
+): Promise<{ ok: true; records: readonly ExportDependentFileRecord[] } | EngineFailure> {
+  const verified: ExportDependentFileRecord[] = [];
+  for (const entry of records) {
+    if (!entry || typeof entry !== "object" || typeof (entry as Record<string, unknown>).path !== "string" || typeof (entry as Record<string, unknown>).sha256 !== "string") {
+      return {
+        ok: false,
+        code: "export-dependent-file-invalid",
+        message: `bridge reported a malformed dependent file record: ${JSON.stringify(entry)}`,
+      };
+    }
+    const record = entry as { path: string; sha256: string; bytes?: unknown };
+    if (!existsSync(record.path)) {
+      return {
+        ok: false,
+        code: "export-dependent-file-missing",
+        message: `dependent file reported by the bridge is missing: ${record.path}`,
+      };
+    }
+    const dependentBytes = (await stat(record.path)).size;
+    if (dependentBytes <= 0) {
+      return {
+        ok: false,
+        code: "export-dependent-file-empty",
+        message: `dependent file is empty: ${record.path}`,
+      };
+    }
+    const dependentSha = await sha256File(record.path);
+    if (dependentSha !== record.sha256 || dependentBytes !== record.bytes) {
+      return {
+        ok: false,
+        code: "export-dependent-file-hash-mismatch",
+        message: `dependent file integrity mismatch (reported bytes=${String(record.bytes)} sha256=${record.sha256}, observed bytes=${dependentBytes} sha256=${dependentSha}): ${record.path}`,
+      };
+    }
+    verified.push({
+      path: record.path,
+      mediaType: dependentFileMediaType(record.path),
+      byteLength: dependentBytes,
+      sha256: dependentSha,
+    });
+  }
+  return { ok: true, records: verified };
+}
+
 export async function assetExport(
   executable: string,
   input: unknown,
@@ -707,13 +793,22 @@ export async function assetExport(
       message: `blend file not found: ${blendFile}`,
     };
   }
+  // Source provenance: hash the .blend as exported (the export never mutates the source).
+  const sourceSha256 = await sha256File(blendFile);
   await mkdir(path.dirname(outputPath), { recursive: true });
   return withTempDir(async (tmp) => {
     const configPath = path.join(tmp, "export-config.json");
     const reportPath = path.join(tmp, "export-report.json");
     await writeFile(
       configPath,
-      JSON.stringify({ outputPath, format: parsed.data.format, selection: parsed.data.selection ?? null }),
+      JSON.stringify(
+        buildExportBridgeConfig({
+          outputPath,
+          format: parsed.data.format,
+          selection: parsed.data.selection,
+          interchange: parsed.data.interchange,
+        }),
+      ),
     );
     const args = ["-b", blendFile, "--python", bridgeScript("export_asset.py"), "--", configPath, reportPath];
     const { failure, report } = await runBridge(executable, args, options, "asset export");
@@ -736,6 +831,60 @@ export async function assetExport(
         message: `export artifact is empty: ${writtenTo}`,
       };
     }
+
+    // Dependent files: trust but verify — re-hash every bridge-reported sidecar.
+    const dependent = await verifyExportDependentFileRecords(
+      Array.isArray(report?.dependentFiles) ? report.dependentFiles : [],
+    );
+    if (!dependent.ok) {
+      return dependent;
+    }
+    const dependentFiles = dependent.records;
+
+    const blenderVersion =
+      report && typeof report.blenderVersion === "string" && report.blenderVersion.length > 0
+        ? report.blenderVersion
+        : "";
+    if (blenderVersion === "") {
+      return {
+        ok: false,
+        code: "export-provenance-missing",
+        message: "the bridge did not report the executing Blender version (manifest source provenance is mandatory)",
+      };
+    }
+    const unitScale =
+      report && typeof report.unitScale === "number" && Number.isFinite(report.unitScale) ? report.unitScale : 1;
+    const applied =
+      report && typeof report.applied === "object" && report.applied !== null
+        ? (report.applied as Record<string, unknown>)
+        : {};
+    const appliedUpAxis = applied.axisUp === "z" ? "z" : "y";
+    const appliedForwardAxis =
+      typeof applied.axisForward === "string" && applied.axisForward.length > 0 ? applied.axisForward : undefined;
+    const appliedScale =
+      typeof applied.globalScale === "number" && Number.isFinite(applied.globalScale) && applied.globalScale > 0
+        ? applied.globalScale
+        : 1;
+    const materialNames = Array.isArray(report?.materialNames)
+      ? (report.materialNames as unknown[]).filter((name): name is string => typeof name === "string")
+      : [];
+
+    const canonicalFormat =
+      parsed.data.format === "FBX" ? "fbx" : parsed.data.format === "GLTF" ? "glb" : "obj";
+    const appliedInterchange: AppliedExportInterchange = {
+      format: canonicalFormat,
+      handedness: "right",
+      upAxis: appliedUpAxis,
+      ...(appliedForwardAxis !== undefined ? { forwardAxis: appliedForwardAxis } : {}),
+      units: unitScale === 1 ? "meter" : `blender-scene-unit:${unitScale}`,
+      ...(appliedScale !== undefined ? { scaleFactor: appliedScale } : {}),
+      appliedTransforms: `blender-native z-up converted to ${appliedUpAxis}-up${appliedForwardAxis !== undefined ? ` (${appliedForwardAxis} forward)` : ""}; global scale ${appliedScale} applied`,
+      materials: {
+        referenced: materialNames,
+        embedded: canonicalFormat !== "obj",
+      },
+    };
+
     return {
       ok: true,
       outputPath: writtenTo,
@@ -743,6 +892,11 @@ export async function assetExport(
       sha256: await sha256File(writtenTo),
       format: report && typeof report.format === "string" ? report.format : parsed.data.format,
       selection: parsed.data.selection ?? null,
+      blenderVersion,
+      sourceSha256,
+      unitScale,
+      appliedInterchange,
+      dependentFiles,
     };
   });
 }

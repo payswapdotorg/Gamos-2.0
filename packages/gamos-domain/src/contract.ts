@@ -87,6 +87,18 @@ export {
 } from "./domain/asset-interchange.js";
 
 export type {
+  ExportInterchangeFormat,
+  ExportDependentFile,
+  ExportSourceRecord,
+  AppliedInterchangeRecord,
+  ExportedManifestBuildInput,
+} from "./domain/asset-interchange-build.js";
+export {
+  EXPORT_INTERCHANGE_FORMATS,
+  buildExportedManifest,
+} from "./domain/asset-interchange-build.js";
+
+export type {
   AcceptanceCriterion,
   AcceptanceCriterionResult,
   AcceptanceRecord,
