@@ -1036,3 +1036,73 @@ bundle exists and none is fabricated.
       integration + journey legs — the M3.5 end-to-end journey and the M3
       CI remain open; M3-G1 stays honestly blocked while no compliant
       Unity licensed runner exists.
+
+14. **M3-G3/G4 runtime evidence — real engine operations under the REAL
+    Dynamic Workflow runtime (strict TDD evidence slice, branch
+    `gamos/m3-engine-runtime-gates`, stacked on the merged PR #13 head):**
+    a new additive test surface in `dynamic-workflow-runtime/tests/` proves
+    the concurrency, conflict-prevention, resume and cancellation clauses
+    against the production runtime with REAL Blender operations inside the
+    workflow steps — "not only with mocked promises or unit-test state
+    transitions" (handoff §9):
+    - **`GamosEngineDriver`** (tests/gamos-engine-driver.ts): the same
+      structural role as the harness AutoDriver (the driver port is where
+      tool execution happens in production), but every dispatched ask runs
+      a REAL blender-engine-plugin typed op — per-instance
+      AbortControllers (`cancelAsk` kills the in-flight engine subprocess
+      tree through the plugin's `RunBlenderOptions.signal`), per-site
+      dispatch/settlement timestamps (overlap vs serialization proof), and
+      structured EngineFailure recognition (a plugin failure becomes a
+      structured `askFailed` — never a fabricated success). Wired through
+      `runEngineScript → runWorkflowScript(makeDriver)`; zero changes to
+      the shared helpers, the 100 existing runtime tests untouched.
+    - **G3 concurrency (proven overlap):** two real `sceneInspect` ops on
+      distinct blends under `maxConcurrency=2` — ask#2 dispatched 0ms after
+      ask#1; ask#1 settled **1162ms after ask#2 dispatched** (ask#1
+      duration 1162ms, ask#2 1149ms — genuinely parallel); each inspect
+      observed only its own blend's marker cube; journal event order
+      `node-dispatched(ask#2)` before `node-settled(ask#1)`.
+    - **G3 dependent serialization:** real `sceneModify`
+      (GamosRuntimeCube) then real `sceneInspect` observes it — ask#2
+      dispatched 2ms AFTER ask#1 settled; journal order settled <
+      queued/dispatched.
+    - **G3 conflict prevention:** two unordered writes to the same
+      asset-path claim REJECTED by the `parseGamePlan` conflict gate
+      BEFORE execution (nothing runs); the serialized variant (explicit
+      `dependsOn`) executes both real mutations leaving the blend
+      CONSISTENT (final inspect verifies both cubes with exact transforms).
+      HARDEN matrix: case-aliased write/write and unordered read/write
+      overlaps rejected; ordered read-then-write and independent writes to
+      different assets accepted.
+    - **G4 resume:** run 1 completes modify+inspect (real), aborts in the
+      same tick ask#2's journal write is durable — settlement stopped,
+      ask#3 never dispatched; run 2 (same journal + byte-identical script;
+      handlers for the completed steps THROW if re-executed) — zero
+      re-dispatch (cached node-settled ≥ 2), ask#3 runs the REAL export
+      (939 bytes, sha256 `5be0f2fe…`, OBJ content contains GamosResumeCube)
+      — the export reflects the PRE-ABORT mutation. No second journal, no
+      Gamos recovery store.
+    - **G4 cancellation:** abort ~500ms into a real 3200×2400 CYCLES
+      render — settlement stopped (never completed); the in-flight journal
+      node stays `running` (never completed); the dependent ask NEVER
+      dispatched; `cancelAsk` reached the driver; the engine op settled as
+      a structured failure `code='aborted'` ("Blender scene render was
+      aborted and the process tree was killed") — no orphaned subprocess,
+      no render artifact, no fabricated success. HARDEN: a pre-aborted
+      signal stops the run with zero dispatches and zero completed nodes.
+    - Evidence (real Blender 4.1.1 via the shipped discovery root):
+      `gamos-engine-runtime.test.ts` 7/7 (5 core + 2 harden); the full
+      runtime suite 18 files 107/107 (100 pre-existing + 7 in the new file).
+      Regression re-verified on the rebased head (which includes the PR #14
+      plan-builder): gamos-domain 24 files 383/383; the dynamic-workflow
+      acceptance 8/8; architecture:check 0 violations; governance-check
+      compliant (pin `46c14c90…` unchanged — additive test files only); tsc
+      clean.
+    - **No production change was required** — the tests pin the runtime's
+      existing correct behavior as reproducible gate evidence; the honest
+      RED-state note is that these proofs did not exist in the repository
+      before this slice.
+    - **No gate claim by itself:** this is runtime-level G3/G4 evidence;
+      the M3 completion bundle additionally requires the M3.5 in-app
+      journey and the M3 CI legs, and M3-G1 stays honestly blocked while
+      no compliant Unity licensed runner exists.
