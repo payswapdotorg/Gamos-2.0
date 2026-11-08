@@ -1326,3 +1326,39 @@ bundle exists and none is fabricated.
     - **No gate claim changes:** M3-G1 stays honestly blocked; M2 completion
       stays pending (M2-G1 maintainer-side); the roadmap validator fails
       closed; no `evidence/roadmap/M3.json` claimed.
+
+21. **Unity Personal provisioning conclusion corrected (directive §5,
+    2026-11-08, branch `gamos/m3-unity-terms-correction`):** the prior
+    §1.3/§5/§6 conclusion — that a self-hosted runner on any existing machine
+    "fits the §2.8 primary/secondary-computer model and remains the
+    documented compliant free path" — overstated the grant. Corrected in
+    `docs/gamos/UNITY-M2G1-PROVISIONING.md`:
+    - The primary/secondary installation clause does **not, by itself,
+      settle the separate-build-machine question**; Unity's official
+      compliance FAQ position (recorded by the maintainer's review
+      directive): a separate build machine requires a separate license.
+      Unity Build Server cannot be used with Personal (Software Terms §2.5,
+      already recorded verbatim).
+    - The **Gamos use and execution model** is now documented (new §2.5):
+      first-party development — Unity runs locally for the eligible account
+      holder developing the organization's own game project; never offered
+      as a service to end users; no platform/SaaS/service-provider
+      distribution. The open licensing question is solely the machine
+      arrangement.
+    - The corrected paths: the **primary workstation** (attended,
+      license-holder-operated) is the preferred zero-cost arrangement — the
+      one §2.8 most clearly covers; a **dedicated or unattended build
+      machine** (including a self-hosted runner on a secondary machine)
+      requires **Unity Compliance written clarification BEFORE use** (§6
+      step 0 machine-arrangement gate); **GitHub-hosted runners stay not
+      permitted** for a Personal seat — a community CI guide describing the
+      technical mechanism is explicitly not licensing authority.
+    - The §7 blocked statement now lists the written-clarification
+      prerequisite for any dedicated build machine; credentials/license
+      material handling unchanged (local to the authorized user, never in
+      Git/CI). No paid license; no emulator; M2-G1 stays blocked exactly as
+      designed; the maintainer remains the licensing authority and is never
+      asked to enter or commit Unity credentials.
+    - No gate claim changes: M3-G1 stays honestly blocked; M2 completion
+      stays pending (M2-G1 maintainer-side); the roadmap validator fails
+      closed; no `evidence/roadmap/M3.json` claimed.
