@@ -593,3 +593,91 @@ directive: no paid Unity licenses — investigate Unity Personal; full report:
    variable (default `ubuntu-latest` — zero behavior change until the
    maintainer sets it). Roadmap, contracts, plugin code and all Blender/Babylon
    work untouched.
+
+## M2 final-closure audit execution (2026-11-08, directive: docs/gamos/handoffs/2026-11-07-m2-final-closure-and-m3-handoff.md)
+
+Directive received against audited starting commit `0cf1afc7`; executed with
+strict TDD where behavior changed. All commits on `gamos/development`
+(TL-integrated); `main` untouched; M2 remains **active** — no completion
+bundle exists and none is fabricated.
+
+1. **Handoff persisted** (`2ba31dda`): the full final-closure directive under
+   `docs/gamos/handoffs/2026-11-07-m2-final-closure-and-m3-handoff.md` with the
+   standard binding authority note (subordinate to ROADMAP.json).
+2. **M2-A (P0) — Unity gate-status classifier false positive CLOSED**
+   (RED `fec6dd31` → GREEN `919d3ea7` → INTEGRATE `4cb9a7c3`): the preflight
+   console marker `editorLicensed=true` was printed BEFORE the real
+   integration tests ran, so a licensed editor could pass preflight and then
+   fail scene modification or the player build while the `always()` status
+   step still wrote `editor-verified`. The unity CI job now runs the suite
+   with dual reporters (default + JSON per-test results), captures the suite
+   exit code via `PIPESTATUS[0]` (independent of tee/pipefail), and a
+   test-covered classifier (`packages/gamos-domain/src/domain/unity-gate-status.ts`
+   + `scripts/gamos/m2-unity-gate-status.ts`, 25 unit tests incl. the exact
+   defect case, contradictory markers, malformed/missing evidence, skipped
+   required tests, unverified artifacts) derives the status from
+   machine-readable evidence ONLY. `editor-verified` requires: real editor +
+   exact version + exit 0 + every required real-editor test passed with none
+   skipped + verified mutation and build artifacts. Verified end-to-end on
+   this machine: the no-editor state records `unavailable-license`; a
+   simulated licensed-preflight-then-failure records
+   `licensed-editor-integration-failed`.
+3. **M2-B (P1) — exact Unity version contract** (RED `f6726b3a` → GREEN
+   `dccf32e1`): the fixture pins `6000.0.23f1` (revision
+   `ab2b18a5f80dcba39fd8f5ee57b07edc7c0f600f`); the old 2022.3+ floor would
+   silently accept any newer-or-older editor. `parseProjectVersionFile`,
+   revision extraction and `checkUnityVersionContract` implement the EXACT
+   contract (older AND newer editors are incompatible; revision checked where
+   the editor's `-version` output exposes it; missing/malformed metadata
+   fails closed). The integration suite enforces it and the classifier
+   records `editor-present-version-incompatible` — never licensed/verified.
+4. **M2-C (P0) — Software-Terms verification gap CLOSED** (`66589fe4`): the
+   Unity Editor Software Terms was retrieved from its LIVE canonical URL
+   (`https://unity.com/legal/editor-terms-of-service/software`, discovered via
+   the official Legal Information index; the legacy `/legal/software-terms`
+   URL serves a bot-blocked 404 shell) and committed verbatim
+   (`evidence/phase-m2/unity-personal-investigation/software-terms-excerpt.txt`,
+   §1.1/§2.1/§2.4/§2.5/§2.8 + honest reading notes; manifest hash-bound).
+   Recorded conclusions: NO general grant permits an unattended build/CI
+   machine to use a Personal license (§2.4 Build License is paid/Pro-only;
+   §2.5 Build Server explicitly excludes Personal); §2.8 grants
+   primary+secondary computers for a single person, one instance per seat,
+   and its cloud-execution clause does not clearly permit third-party hosted
+   cloud VMs — the self-hosted-runner runbook (Hub activation on the eligible
+   user's existing machine) remains the documented compliant free path.
+   **M2-G1 REMAINS BLOCKED** (attestation, account+activation, runner).
+5. **M2-D (P1) — complete applicable plugin lifecycle PROVEN** (`6f3f4c6b`):
+   new suites through the REAL facade (`bootstrap/tests/engine-plugin-lifecycle.test.ts`
+   5/5, `cli/tests/plugin-host-refusal.test.ts` 2/2): catalog seeding,
+   enable/disable/re-enable with exactly-once MCP registration for all three
+   engine plugins, uninstall→suppression→restorableBuiltins→install-routes-to-restore→re-enable,
+   version-changing marketplace update with runtime-root swap (no stale
+   resolution), missing/corrupted runtime assets failing closed at the real
+   host boundary. Already-covered requirements cited by exact test (version
+   alignment, provenance/hashes, permission denial, cancellation, privilege
+   disclosure).
+6. **M2-E (P1) — honest cross-plugin regression evidence** (`d0588721`):
+   `evidence/phase-m2/regression/m2-regression-evidence.json` records every
+   suite on the exact tested commit: domain 279/279; unity 65 passed | 3
+   SKIPPED (the required real-editor tests count NON-PASSING — no licensed
+   editor; honest state `unavailable-license` per the classifier); REAL
+   Blender 4.1.1 integration 6/6 (modify+hash, Cycles render, OBJ/GLB exports)
+   on a sha256-verified tarball provisioned locally; REAL Babylon integration
+   6/6 (npm ci, vite build, dev-server run/stop, strictPort fail-closed,
+   timeout tree-kill); unit suites 20/20 + 29/29; bootstrap suites 71/71
+   (after building the dist artifacts its requiredSeedPaths assertions depend
+   on, and repairing the stale inherited official-marketplace pluginCount
+   15→18 — a drift M2's additive engine-plugin registration introduced
+   outside its CI path); cli host fail-closed 2/2; architecture 0 violations;
+   roadmap-check valid; governance compliant (pin `7bb6e0bc…`).
+7. **M2-F — gate verification + M3 prepared, NOT activated:** M2-G1 blocked;
+   G2/G3 engine layers green locally (CI journey legs run on the integration-
+   candidate head); G4 lifecycle proof strengthened; G5 regression recorded
+   with the Unity suite non-passing. `ROADMAP.json` unchanged (M2 `active`,
+   M3+ blocked by dependency — `roadmap-check.mjs` validates). No
+   `evidence/roadmap/M2.json`. `docs/gamos/M3-PREPARED-PLAN.md` records the
+   prepared (not started) M3 plan: work packages, the five quoted gates,
+   architecture constraints (extend Dynamic Workflow only; additive
+   resource-claim + asset-manifest contracts; FBX/GLB candidates to be
+   verified by real compatibility tests) and the activation rule (only when
+   M2 completes and the validator reports M3 ready).
