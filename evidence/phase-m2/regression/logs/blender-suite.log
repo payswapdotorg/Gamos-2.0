@@ -1,0 +1,41 @@
+
+ RUN  v4.1.7 /home/z/my-project/gamos-2.0/apps/zcode-cli/packages/blender-engine-plugin
+
+stdout | test/engine-real-blender.integration.test.ts
+[gamos-evidence] real Blender executable: /home/z/engines/blender-4.1.1-linux-x64/blender
+[gamos-evidence] raw version: 4.1.1
+
+stdout | test/engine-real-blender.integration.test.ts > blender-engine plugin real-Blender integration
+[gamos-evidence] bootstrap empty scene: /tmp/gamos-blender-ws-cMxl7E/scene.blend (838176 bytes, sha256=a123e63246658c55e2700bd730975bacde07d99b0056c702e271201c0da4fbef)
+
+stdout | test/engine-real-blender.integration.test.ts > blender-engine plugin real-Blender integration > scene_inspect reports one empty scene from the bootstrapped blend
+[gamos-evidence] inspect: blender=4.1.1 scenes=[Scene]
+
+stdout | test/engine-real-blender.integration.test.ts > blender-engine plugin real-Blender integration > scene_modify applies typed ops, saves atomically, and verifies object state by re-inspection
+[gamos-evidence] modify: saved blend sha256=211ffdfa06d1dcf15f505f0196fc5e164ab1e5a9c79ce3f38feee5dfd22c103b
+
+stdout | test/engine-real-blender.integration.test.ts > blender-engine plugin real-Blender integration > scene_render produces a non-empty CYCLES PNG artifact at the requested resolution
+[gamos-evidence] render artifact /tmp/gamos-blender-ws-cMxl7E/render.png: 15461 bytes, sha256=d2fc4de59a049351d00b4791e2a7d3184cc2aef40db6a94d13d20413cc2fa344
+
+stdout | test/engine-real-blender.integration.test.ts > blender-engine plugin real-Blender integration > asset_export writes a non-empty OBJ artifact for the named selection
+[gamos-evidence] OBJ export /tmp/gamos-blender-ws-cMxl7E/GamosTestCube.obj: sha256=07982852255110f6500fe47c6bd04121e9ad50b407a49f441269865715666504
+
+stdout | test/engine-real-blender.integration.test.ts > blender-engine plugin real-Blender integration > asset_export also covers GLTF (GLB) and FBX formats
+[gamos-evidence] GLTF export /tmp/gamos-blender-ws-cMxl7E/GamosTestCube.glb: sha256=eab8ed232c5f72a8b0636f4023a3cefd74f29a5c39105bce16dc606cfac49593
+
+stdout | test/engine-real-blender.integration.test.ts > blender-engine plugin real-Blender integration > asset_export also covers GLTF (GLB) and FBX formats
+[gamos-evidence] FBX export /tmp/gamos-blender-ws-cMxl7E/GamosTestCube.fbx: sha256=9253367528b1630cc505b41b7158a401b3bdb76e04c195741fc63eb144c313be
+
+ ✓ test/engine-real-blender.integration.test.ts (6 tests) 10287ms
+     ✓ scene_inspect reports one empty scene from the bootstrapped blend  884ms
+     ✓ scene_modify applies typed ops, saves atomically, and verifies object state by re-inspection  2660ms
+     ✓ scene_render produces a non-empty CYCLES PNG artifact at the requested resolution  1436ms
+     ✓ asset_export writes a non-empty OBJ artifact for the named selection  874ms
+     ✓ asset_export also covers GLTF (GLB) and FBX formats  2675ms
+     ✓ runBlenderHeadless with a tiny timeout kills the process tree and reports a structured timeout  572ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  00:51:30
+   Duration  11.13s (transform 79ms, setup 0ms, import 720ms, tests 10.29s, environment 0ms)
+

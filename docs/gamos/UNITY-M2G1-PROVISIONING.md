@@ -18,11 +18,19 @@
 All excerpts below are committed as evidence under
 `evidence/phase-m2/unity-personal-investigation/` (see `manifest.json` there
 for source URLs, SHA-256 hashes and retrieval timestamps). Retrieved
-2026-11-07 from the Gamos dev sandbox via plain HTTPS. **The sandbox could not
-retrieve `https://unity.com/legal/software-terms` (the Unity Editor Software
-Terms EULA): unity.com serves a bot/geo-blocked shell (HTTP 404) to this
-network.** Every clause that matters to build-machine licensing therefore
-carries an explicit verified/unverified marking below.
+2026-11-07 from the Gamos dev sandbox via plain HTTPS. **UPDATE 2026-11-08
+(M2-C, final-closure directive): the Unity Editor Software Terms EULA has
+now been RETRIEVED AND RECORDED.** The 2026-11-07 pass could not reach
+`https://unity.com/legal/software-terms` (bot/geo-blocked 404 shell);
+the LIVE canonical location of the document was subsequently discovered
+via the official Legal Information index (`https://unity.com/legal/eula`)
+and retrieved successfully with plain HTTPS: `https://unity.com/legal/editor-terms-of-service/software`
+(byte-identical with `https://unity.com/legal/terms-of-service/software`).
+Verbatim excerpts of the decisive sections (§1.1, §2.1, §2.4, §2.5, §2.8)
+are committed as `software-terms-excerpt.txt`. Every clause that matters
+to build-machine licensing is now quoted verbatim; the previous
+verified/unverified markings below are preserved for history, with the
+former gap rows updated.
 
 ### 1.1 Unity Personal eligibility — VERIFIED (official pricing page)
 
@@ -87,7 +95,7 @@ eligibility is assumed by this investigation.
   that they have exclusive use of"* — worded for **paid** licenses; the
   Personal machine-count clause lives in the Software Terms EULA (see §1.4).
 
-### 1.3 Build machines / CI — what the retrievable official text actually says
+### 1.3 Build machines / CI — what the official text actually says
 
 | Statement | Status | Where |
 |---|---|---|
@@ -96,20 +104,37 @@ eligibility is assumed by this investigation.
 | "Authorized Users" = identified individuals (employees/consultants/contractors) for whom a subscription was acquired | VERIFIED (ToS) | same |
 | Floating (license-server) model — an organization-level, concurrency-based offering for "complex projects or larger organizations" | VERIFIED | `license-overview-excerpt.txt` |
 | Unity's own hosted CI product (Unity Build Automation) is a separate paid offering | VERIFIED (pricing page feature tables) | `pricing-excerpt.txt` |
-| **The exact Unity Editor Software Terms clause on how many machines a Personal license may run on, and whether an unattended CI/builder machine may use a Personal license** | **NOT VERIFIABLE FROM THIS ENVIRONMENT — unity.com/legal/software-terms is bot/geo-blocked here; maintainer must read it from a normal browser** | — |
+| **Software Terms §2.8 machine-count clause**: "you (and your Authorized Users) may install the Unity Editor on both a primary and a secondary computer or operating system, solely for your convenience, but only for use by a single person"; "only … one instance at any given time per seat"; additional installs only "upon deactivation of the Unity Editor installed on existing computers" (Unity's sole discretion) | **VERIFIED 2026-11-08 (retrieved)** | `software-terms-excerpt.txt` §2.8 |
+| **Software Terms §2.8 cloud-execution clause**: "in no event may third party service providers directly or indirectly distribute, run or use the Unity Editor so that it is executed on or simulated by the cloud or a remote server and transmitted over the Internet or other network except where they are acting on your behalf as an Authorized User in accordance with this Section" | **VERIFIED 2026-11-08 (retrieved)** | `software-terms-excerpt.txt` §2.8 |
+| **Software Terms §2.4 Build License**: a PAID special arrangement — "one (1) subscription to use Unity Pro … install that copy of Unity Pro on up to ten (10) internal build machines … for the sole purposes of publishing and distributing, but not creating, your Projects" (Pro-only; not a Personal path) | **VERIFIED 2026-11-08 (retrieved)** | `software-terms-excerpt.txt` §2.4 |
+| **Software Terms §2.5 Unity Build Server**: "You may not use Unity Build Server with the Unity Personal tier of the Unity Software." | **VERIFIED 2026-11-08 (retrieved)** | `software-terms-excerpt.txt` §2.5 |
 
-**Task 3 conclusion (honest):** a *properly activated* Unity Personal
-installation is usable **by the eligible user who activated it, on their
-machines, through the Unity Hub** (all verified). Whether that activation may
-be *moved to / shared with an unattended self-hosted CI runner* is governed by
-the Software Terms clause this investigation could not retrieve. The
-community-standard practice (GameCI: generate a Personal `.ulf` via Unity Hub,
-store it as a CI secret, install it on the runner — see
-`gameci-community-reference.txt`, marked **third-party, not Unity terms**)
-works mechanically, but **the repository cannot treat it as verified-compliant
-until the maintainer reads the Software Terms and decides.** Until then, the
-only fully-documented official path is: activate Unity Hub on the runner
-machine itself with the eligible account (§6, Option A).
+**Task 3 conclusion (updated 2026-11-08 — the clause is now recorded
+verbatim):** the Software Terms contain **no general grant permitting an
+unattended build/CI machine to use a Personal license**. The only
+build-machine-specific provisions are paid offerings (§2.4 Build License —
+Pro-only; §2.5 Unity Build Server — explicitly excluding the Personal tier).
+What §2.8 grants instead is installation "on both a primary and a secondary
+computer or operating system … only for use by a single person", one
+instance at a time per seat — and §2.8's cloud-execution clause prohibits
+third-party service providers from running the editor on cloud/remote
+servers **except where they are acting on your behalf as an Authorized
+User**. Practical consequences:
+
+* **GitHub-hosted runners are third-party cloud VMs**, not identified
+  Authorized Users — running the editor there is NOT clearly permitted by
+  §2.8 for a Personal seat. The community GameCI practice (generate a
+  Personal `.ulf`, install it on ephemeral CI) remains a THIRD-PARTY
+  mechanism with no authorization in the recorded official text
+  (`gameci-community-reference.txt`, marked third-party, not Unity terms).
+* **A self-hosted runner on an existing machine of the eligible single
+  user, activated through the Unity Hub by that user** (the §6 runbook's
+  Option A), fits the §2.8 primary/secondary-computer model and remains
+  the documented compliant free path.
+
+This is the agent's honest reading of the now-recorded official text; the
+maintainer remains the licensing authority and should read
+`software-terms-excerpt.txt` (or the live page) before activating anything.
 
 ### 1.4 Least-expensive compliant provisioning (task 2)
 
@@ -142,31 +167,49 @@ Remaining existing-runner options:
   editor binary (Blender-precedent CI provisioning — pre-approved, hash
   recorded), but **cannot host the license**: no Unity account credentials
   exist, credentials must stay out of Git/CI artifacts (maintainer rule 5),
-  and the Software-Terms position on Personal-on-ephemeral-CI is unverified
-  (§1.3). The CI therefore continues to record the honest
+  and the now-recorded Software Terms §2.8 cloud-execution clause does not
+  clearly permit a third-party hosted cloud VM to run the editor for a
+  Personal seat (see §1.3). The CI therefore continues to record the honest
   `unavailable-license` / `editor-present-unlicensed` states.
 * **A maintainer-provisioned self-hosted runner** (any existing persistent
   machine where the maintainer can run Unity Hub once): the compliant free
-  path — §6 runbook.
+  path per the recorded §2.8 primary/secondary-computer grant — §6 runbook.
 
-## 3. What this commit changes (and does not change)
+## 3. What this document records (and what the related commits change)
 
 * **Does not change:** `docs/gamos/ROADMAP.json` (M2 stays `active`, M2-G1
   gate untouched), the M2 contracts, the plugin code, all Blender/Babylon
   work, the honest-skip behavior of the Unity integration suite.
-* **Fixes a latent evidence-fidelity bug in the `unity-engine-status` CI job**
-  (`.github/workflows/gamos-m2-e2e.yml`): the job previously recorded
+* **PR #8 (2026-11-07) fixed a latent evidence-fidelity bug** in the
+  `unity-engine-status` CI job: the job previously recorded
   `editor-verified` whenever `UNITY_EDITOR_PATH` merely pointed at an
   executable — an editor binary present but **unactivated** would have
-  produced a fabricated pass-record (exactly what the maintainer's directive
-  forbids). The job now derives the gate status **from the integration
-  suite's own machine evidence** (`editorLicensed=true/false` markers,
-  captured with the suite log into the uploaded artifact), and the env var is
-  plumbed at job level so every step sees the same value.
-* **Adds self-hosted-runner plumbing:** `runs-on` for the unity job reads the
-  repository variable `UNITY_RUNNER_LABEL` (default `ubuntu-latest` — zero
-  behavior change until the maintainer sets it), so the licensed-runner path
-  is actually reachable without editing the workflow again.
+  produced a fabricated pass-record. PR #8 derived the status from the
+  suite's `editorLicensed=true/false` console markers instead, with the env
+  var plumbed at job level, and added the `UNITY_RUNNER_LABEL`
+  self-hosted-runner plumbing (unchanged since).
+* **M2-A (final-closure directive, 2026-11-08) closed the remaining
+  false-positive path** in the same job: the `editorLicensed=true` marker is
+  printed after PREFLIGHT — before the real integration tests complete — so
+  a licensed editor could pass preflight and then fail scene modification or
+  the player build while the `always()` status step still recorded
+  `editor-verified`. The job now runs the suite with dual reporters, captures
+  the suite exit code independently of the tee pipeline (PIPESTATUS[0]), and
+  a tested classifier (`packages/gamos-domain/src/domain/unity-gate-status.ts`
+  + `scripts/gamos/m2-unity-gate-status.ts`) derives the gate status from
+  machine-readable evidence ONLY: the suite's machine-evidence JSON, the
+  vitest JSON per-test results (all required real-editor tests passed, none
+  skipped), the captured exit code, and the retained log (contradiction
+  checks). A licensed preflight followed by a failed suite now records
+  `licensed-editor-integration-failed` — never a pass.
+* **M2-B (2026-11-08) made the version contract exact**: the integration
+  suite now enforces the fixture's pinned editor version (6000.0.23f1,
+  revision ab2b18a5f80dcba39fd8f5ee57b07edc7c0f600f) exactly — an
+  incompatible editor records `editor-present-version-incompatible`, never
+  a licensed or verified state.
+* **M2-C (2026-11-08, this update) closed the Software-Terms retrieval gap**
+  (§1): the Unity Editor Software Terms is now recorded verbatim from its
+  live canonical URL, and §1.3/§5/§7 reflect the actual clauses.
 * **Records the investigation evidence** (this doc +
   `evidence/phase-m2/unity-personal-investigation/`).
 
@@ -181,18 +224,25 @@ Before any activation, the maintainer must attest ALL of:
    test applies);
 3. the application is games/entertainment (it is — otherwise the Industry
    plan test would apply above $1M finances);
-4. (Task 1 of the directive: **read `https://unity.com/legal/software-terms`
+4. ~~(Task 1 of the directive: **read `https://unity.com/legal/software-terms`
    from a normal browser** and record the answer to: *how many machines may a
    Unity Personal license be used on, and is use on an unattended CI/build
-   machine permitted?* — this is the clause the sandbox could not retrieve.)
+   machine permitted?* — this is the clause the sandbox could not retrieve.)~~
+   **UPDATED 2026-11-08:** the Unity Editor Software Terms has been retrieved
+   from the live canonical URL and committed verbatim
+   (`evidence/phase-m2/unity-personal-investigation/software-terms-excerpt.txt`:
+   §1.1/§2.1/§2.4/§2.5/§2.8). The maintainer should still READ the excerpts
+   (or the live page) and confirm the interpretation in §1.3 before any
+   activation — the attestation that the interpretation is correct for this
+   organization remains the maintainer's.
 
 ## 5. Runner decision matrix
 
 | Option | Cost | Editor binary | Activation | Compliant? | Status |
 |---|---|---|---|---|---|
 | Existing dev sandbox | $0 | ❌ disk-infeasible (3.7G/9.9G free) | — | — | Rejected on capability (§2) |
-| GitHub-hosted `ubuntu-latest` | $0 | ✅ (Blender precedent) | ❌ no credentials; Software-Terms position unverified | Unverified | Stays honest-unavailable (default) |
-| Maintainer self-hosted runner (existing machine) | $0 | ✅ | ✅ Unity Hub sign-in by the eligible account | Yes, per §1.2 verified docs | **The documented path** (§6) |
+| GitHub-hosted `ubuntu-latest` | $0 | ✅ (Blender precedent) | ❌ no credentials; §2.8 cloud-execution clause does not clearly permit third-party hosted VMs for a Personal seat (recorded 2026-11-08) | Not clearly permitted | Stays honest-unavailable (default) |
+| Maintainer self-hosted runner (existing machine) | $0 | ✅ | ✅ Unity Hub sign-in by the eligible account | Yes — fits the recorded §2.8 primary/secondary-computer grant | **The documented path** (§6) |
 
 ## 6. Unblock runbook (exact steps for the maintainer)
 
@@ -241,18 +291,23 @@ a filesystem path — no secrets).
 
 1. **Maintainer eligibility attestation** (§4): org revenue/funding < $200K
    USD + no disqualifying client work. Not verifiable from the repository.
-2. **Software Terms verification** (§4 item 4): the Personal machine-count /
+2. ~~**Software Terms verification** (§4 item 4): the Personal machine-count /
    build-machine clause in `https://unity.com/legal/software-terms` — could
    not be retrieved from this network (bot-blocked; recorded in
-   `sandbox-capability.txt`).
+   `sandbox-capability.txt`).~~ **CLOSED 2026-11-08:** the Unity Editor
+   Software Terms was retrieved from the live canonical URL and committed
+   verbatim (§1.3, `software-terms-excerpt.txt`); the maintainer's
+   confirmation of the recorded interpretation replaces the retrieval gap.
 3. **Unity account + activation**: a Unity ID owned by the eligible
    organization/user and a Unity Personal activation performed via Unity Hub
    on the chosen runner machine. **No credentials exist in this environment,
    and none may be fabricated** (also directive rule 5: they must stay out of
    Git/CI artifacts).
 4. **A licensed runner**: the existing sandbox is disk-infeasible (§2);
-   GitHub-hosted runners have no editor/credentials by default. A
-   maintainer-provisioned existing machine per the §6 runbook is required.
+   GitHub-hosted runners have no editor/credentials by default and the
+   recorded §2.8 cloud clause does not clearly permit them for a Personal
+   seat. A maintainer-provisioned existing machine per the §6 runbook is
+   required.
 
 The invocation layer itself is implemented and exercised (54/54 package tests
 including scratch-verified conforming-editor emulation paths; discovery and
@@ -265,7 +320,10 @@ mock, no substitute engine, no roadmap change.
 * Evidence excerpts + manifest:
   `evidence/phase-m2/unity-personal-investigation/` (SHA-256 in
   `manifest.json`).
-* Retrieval method: plain `curl -L` HTTPS GETs on 2026-11-07; HTML→text
-  extraction locally; `agent-browser` was blocked by unity.com bot protection
-  (recorded), so unity.com legal pages beyond the server-rendered
-  pricing/ToS were unreachable from this network.
+* Retrieval method: plain `curl -L` HTTPS GETs on 2026-11-07 (pricing/ToS/
+  docs/FAQ pages) and 2026-11-08 (the Unity Editor Software Terms from its
+  live canonical URL, discovered via the official Legal Information index
+  `unity.com/legal/eula`); HTML→text extraction locally; `agent-browser`
+  was blocked by unity.com bot protection on the LEGACY
+  `/legal/software-terms` URL (recorded) — the live canonical URLs above
+  need no bypass and serve the document publicly.

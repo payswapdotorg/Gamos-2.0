@@ -1,0 +1,19 @@
+apps/zcode-cli                           |  WARN  Unsupported engine: wanted: {"node":"24.14.0"} (current: {"node":"v24.22.2","pnpm":"10.33.2"})
+
+ RUN  v4.1.7 /home/z/my-project/gamos-2.0/apps/zcode-cli/packages/unity-engine-plugin
+
+ ✓ test/discovery.test.ts (19 tests) 47ms
+ ✓ test/project.test.ts (10 tests) 42ms
+ ✓ test/typed-ops.test.ts (12 tests) 27ms
+ ✓ test/bridge-content.test.ts (10 tests) 7ms
+ ✓ test/version-contract.test.ts (14 tests) 7ms
+stdout | test/engine-real-unity.integration.test.ts
+SKIP: real Unity Editor not available on this runner — M2-G1 integration gate NOT passing (honest unavailable state per directive §8: status=unavailable, reason=no Unity Editor executable found (searched PATH for unity-editor/unity and common install roots)). HOW TO PROVISION: install the exact Unity Editor 6000.0.23f1 (the fixture project's pinned version, revision ab2b18a5f80dcba39fd8f5ee57b07edc7c0f600f), activate it with YOUR OWN license credentials (an external, user-controlled prerequisite — never fabricated; Unity Personal activation is Unity Hub sign-in only, see docs/gamos/UNITY-M2G1-PROVISIONING.md), and set UNITY_EDITOR_PATH to the editor executable (e.g. /opt/Unity/Hub/Editor/6000.0.23f1/Editor/Unity). The invocation layer in src/engine.ts is fully real and will drive the licensed editor the moment one is provisioned.
+
+ ↓ test/engine-real-unity.integration.test.ts (3 tests | 3 skipped)
+
+ Test Files  5 passed | 1 skipped (6)
+      Tests  65 passed | 3 skipped (68)
+   Start at  00:53:01
+   Duration  1.43s (transform 163ms, setup 0ms, import 574ms, tests 130ms, environment 0ms)
+

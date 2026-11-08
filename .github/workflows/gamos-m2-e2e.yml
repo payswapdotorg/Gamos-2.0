@@ -24,13 +24,24 @@ name: gamos-m2-e2e
 #   Job "unity-engine-status": runs the unity-engine-plugin suite. GitHub-hosted
 #     runners have no licensed Unity Editor — licensing is an external,
 #     user-controlled prerequisite that is NEVER fabricated (directive §8).
-#     The job records the HONEST gate status: with UNITY_EDITOR_PATH unset the
-#     integration tests skip with the explicit "M2-G1 NOT PASSING" reason and
-#     the job writes unity-gate-status.json = unavailable-license (the job
-#     passes while the recorded status keeps the gate closed — the roadmap
-#     completion check refuses M2 completion without real gate evidence).
-#     With UNITY_EDITOR_PATH set (self-hosted licensed runner) the real
-#     integration runs and must pass, writing status = editor-verified.
+#     M2-A (final-closure directive): the job runs the suite with dual
+#     reporters (default + JSON per-test results) and captures the suite exit
+#     code independently of the tee pipeline (PIPESTATUS[0]). The gate status
+#     is then derived by the CLASSIFIER (scripts/gamos/m2-unity-gate-status.ts
+#     -> gamos-domain unity-gate-status.ts) from machine-readable evidence
+#     only: the suite's own machine-evidence JSON (editor discovery, exact
+#     version contract 6000.0.23f1+revision, preflight license classification,
+#     verified mutation/build artifacts), the vitest JSON per-test results
+#     (every required real-editor test passed, none skipped), the captured
+#     exit code, and the retained log (contradiction checks). A preflight
+#     success alone can NEVER produce editor-verified (the false-positive
+#     path this closes); a licensed editor whose suite fails records
+#     licensed-editor-integration-failed; an unlicensed/unavailable/version-
+#     incompatible editor keeps its honest non-passing status. With
+#     UNITY_EDITOR_PATH unset the integration tests skip and the job records
+#     unity-gate-status.json = unavailable-license (the job passes while the
+#     recorded status keeps the gate closed — the roadmap completion check
+#     refuses M2 completion without real gate evidence).
 #
 # Honest-evidence rules: every engine job uploads its evidence artifacts
 # (logs, rendered images, build outputs, gate-status JSON); no key material is
@@ -47,6 +58,7 @@ on:
       - "scripts/gamos/m2-ui-journey.mjs"
       - "scripts/gamos/m2-local-model-server.mjs"
       - "scripts/gamos/m2-capability-cli.ts"
+      - "scripts/gamos/m2-unity-gate-status.ts"
       - "apps/zcode-cli/packages/babylon-engine-plugin/test/fixture/**"
       - "apps/zcode-cli/packages/unity-engine-plugin/test/fixture/**"
       - ".github/workflows/gamos-m2-e2e.yml"
@@ -107,7 +119,10 @@ jobs:
         run: |
           set -e
           echo "::group::unity-engine-plugin unit suites"
-          pnpm --filter @zcode/unity-engine-plugin exec vitest run test/typed-ops.test.ts test/discovery.test.ts test/project.test.ts test/bridge-content.test.ts
+          pnpm --filter @zcode/unity-engine-plugin exec vitest run test/typed-ops.test.ts test/discovery.test.ts test/project.test.ts test/bridge-content.test.ts test/version-contract.test.ts
+          echo "::endgroup::"
+          echo "::group::unity M2-A gate-status classifier (gamos-domain)"
+          pnpm exec vitest run --project gamos-domain test/unity-gate-status.test.ts
           echo "::endgroup::"
           echo "::group::blender-engine-plugin unit suites"
           pnpm --filter @zcode/blender-engine-plugin exec vitest run test/typed-ops.test.ts test/discovery.test.ts
@@ -217,10 +232,12 @@ jobs:
     # docs/gamos/UNITY-M2G1-PROVISIONING.md §6): set the repository variables
     # UNITY_RUNNER_LABEL (e.g. gamos-unity) and UNITY_EDITOR_PATH (activated
     # editor executable on that runner). Until then the default hosted-runner
-    # path records the honest unavailable state. The gate status below is
-    # derived from the integration suite's OWN machine evidence
-    # (editorLicensed=true/false markers), never from the mere presence of
-    # an editor binary — an unactivated editor is NOT a passing gate.
+    # path records the honest unavailable state. The gate status is derived
+    # by the CLASSIFIER from the suite's machine-readable evidence (machine
+    # evidence + per-test results + captured exit code + retained log) —
+    # never from the mere presence of an editor binary, and never from a
+    # preflight marker alone (M2-A: a licensed preflight followed by a failed
+    # integration records licensed-editor-integration-failed, not a pass).
     runs-on: ${{ vars.UNITY_RUNNER_LABEL || 'ubuntu-latest' }}
     timeout-minutes: 30
     env:
@@ -240,60 +257,50 @@ jobs:
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - name: Run the unity-engine-plugin suite (honest skip when no licensed editor)
-        # The suite log is retained as evidence; the gate-status step below
-        # classifies from the suite's own [gamos-evidence] markers.
+        # Dual reporters: the default reporter colors the job log while the
+        # JSON reporter writes machine-readable per-test results (the suite
+        # ALWAYS writes its own machine-evidence JSON alongside). The exit
+        # code is captured via PIPESTATUS[0] — independent of tee and of
+        # pipefail semantics — and re-exported as the step's own exit code.
         run: |
-          set -o pipefail
-          pnpm --filter @zcode/unity-engine-plugin exec vitest run test 2>&1 | tee evidence-unity-suite.log
+          set +e
+          pnpm --filter @zcode/unity-engine-plugin exec vitest run test \
+            --reporter=json --reporter=default \
+            --outputFile=evidence-unity-suite.json \
+            2>&1 | tee evidence-unity-suite.log
+          SUITE_EXIT=${PIPESTATUS[0]}
+          set -e
+          printf '%s\n' "$SUITE_EXIT" > evidence-unity-suite.exit
+          echo "unity suite exit code: $SUITE_EXIT (captured via PIPESTATUS[0], independent of the tee pipeline)"
+          exit "$SUITE_EXIT"
+        env:
+          GAMOS_UNITY_SUITE_EVIDENCE: ${{ github.workspace }}/evidence-unity-machine.json
       - name: Record the honest M2-G1 gate status
         if: always()
         run: |
           mkdir -p evidence/phase-m2
-          # The suite's own evidence markers decide the recorded state:
-          #   editorLicensed=true  -> real licensed editor integration ran and passed
-          #   editorLicensed=false -> editor binary present but UNACTIVATED (license material missing)
-          #   SKIP banner          -> no usable editor on this runner
-          if grep -q 'editorLicensed=true' evidence-unity-suite.log 2>/dev/null; then
-            EVIDENCE_LINE=$(grep -m1 'editorLicensed=' evidence-unity-suite.log | tr -d '\r')
-            EXE_LINE=$(grep -m1 'real Unity Editor executable:' evidence-unity-suite.log | tr -d '\r' || true)
-            STATUS=$(python3 - "$EVIDENCE_LINE" "$EXE_LINE" <<'PY'
-          import json, sys
-          ev, exe = sys.argv[1], sys.argv[2]
-          editor = exe.split('executable:', 1)[1].strip() if 'executable:' in exe else None
-          print(json.dumps({
-            "gate_id": "M2-G1",
-            "status": "editor-verified",
-            "editor": editor,
-            "suite_evidence": ev.strip(),
-            "note": "recorded ONLY from the integration suite's own licensed-editor evidence (editorLicensed=true); a present-but-unactivated editor can never produce this status",
-          }))
-          PY
-          )
-          elif grep -q 'editorLicensed=false' evidence-unity-suite.log 2>/dev/null; then
-            EVIDENCE_LINE=$(grep -m1 'editorLicensed=' evidence-unity-suite.log | tr -d '\r')
-            STATUS=$(python3 - "$EVIDENCE_LINE" <<'PY'
-          import json, sys
-          print(json.dumps({
-            "gate_id": "M2-G1",
-            "status": "editor-present-unlicensed",
-            "suite_evidence": sys.argv[1].strip(),
-            "reason": "the Unity Editor binary is present and invoked for real, but it is NOT activated — Unity Personal activation requires a Unity Hub sign-in by the eligible account (docs/gamos/UNITY-M2G1-PROVISIONING.md §6); the honest license-required negative path is what the suite proved",
-            "note": "M2-G1 NOT PASSING — an unactivated editor is never a passing integration gate (directive §8)",
-          }))
-          PY
-          )
-          elif grep -q 'SKIP: real Unity Editor not available' evidence-unity-suite.log 2>/dev/null; then
-            if [ -n "${UNITY_EDITOR_PATH:-}" ] && [ -x "${UNITY_EDITOR_PATH:-}" ]; then
-              STATUS='{"gate_id":"M2-G1","status":"editor-present-unverified","reason":"UNITY_EDITOR_PATH is set and executable but the suite could not verify the editor (discovery probe or version gate rejected it — check the editor version: 6000.0.23f1 expected)","note":"M2-G1 NOT PASSING"}'
-            else
-              STATUS='{"gate_id":"M2-G1","status":"unavailable-license","reason":"no licensed Unity Editor on GitHub-hosted runners; Unity licensing is an external, user-controlled prerequisite (directive §8) and is never fabricated; the compliant free path (Unity Personal + self-hosted licensed runner) is documented in docs/gamos/UNITY-M2G1-PROVISIONING.md","note":"M2-G1 NOT PASSING — the milestone cannot complete until a licensed runner provides UNITY_EDITOR_PATH and the real integration passes"}'
-            fi
-          else
-            STATUS='{"gate_id":"M2-G1","status":"suite-failed-no-gate-evidence","reason":"the unity-engine-plugin suite did not produce a machine-readable licensed/unlicensed marker (it may have failed — see unity-suite-output.log in this artifact)","note":"M2-G1 NOT PASSING"}'
-          fi
+          # The classifier (gamos-domain unity-gate-status.ts) consumes the
+          # machine evidence, the vitest JSON per-test results, the captured
+          # exit code and the retained log — and fails closed on anything
+          # missing/malformed/contradictory. Missing input files map to null
+          # inputs; a crashed suite can never produce a passing gate record.
+          pnpm exec esbuild scripts/gamos/m2-unity-gate-status.ts \
+            --bundle --platform=node --format=esm --outfile=/tmp/m2-unity-gate-status.mjs
+          node /tmp/m2-unity-gate-status.mjs \
+            --evidence evidence-unity-machine.json \
+            --results evidence-unity-suite.json \
+            --exit evidence-unity-suite.exit \
+            --log evidence-unity-suite.log \
+            --output evidence/phase-m2/unity-gate-status.json \
+            --run-id "${{ github.run_id }}-${{ github.run_attempt }}"
+          # Retain the complete suite output and machine-readable evidence in
+          # the uploaded artifact (M2-A rule 8).
           cp evidence-unity-suite.log evidence/phase-m2/unity-suite-output.log 2>/dev/null || true
-          echo "$STATUS" | python3 -c "import json,sys; d=json.load(sys.stdin); d['recorded_at']='${{ github.run_id }}-${{ github.run_attempt }}'; open('evidence/phase-m2/unity-gate-status.json','w').write(json.dumps(d, indent=2))"
-          cat evidence/phase-m2/unity-gate-status.json
+          cp evidence-unity-machine.json evidence/phase-m2/unity-suite-machine-evidence.json 2>/dev/null || true
+          cp evidence-unity-suite.json evidence/phase-m2/unity-suite-reporter.json 2>/dev/null || true
+          cp evidence-unity-suite.exit evidence/phase-m2/unity-suite-exit-code.txt 2>/dev/null || true
+          echo "--- retained gate evidence files:"
+          ls -la evidence/phase-m2/ || true
       - name: Upload M2 evidence
         if: always()
         uses: actions/upload-artifact@v4

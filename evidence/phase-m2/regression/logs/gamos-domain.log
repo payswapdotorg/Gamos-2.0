@@ -1,0 +1,28 @@
+
+ RUN  v4.1.4 /home/z/my-project/gamos-2.0
+
+ ✓ |gamos-domain| test/intent-resolution.test.ts (15 tests) 26ms
+ ✓ |gamos-domain| test/plan-workflow.test.ts (8 tests) 21ms
+ ✓ |gamos-domain| test/harden.test.ts (23 tests) 24ms
+ ✓ |gamos-domain| test/engine-plugin-security.test.ts (25 tests) 15ms
+ ✓ |gamos-domain| test/engine-versions.test.ts (25 tests) 11ms
+ ✓ |gamos-domain| test/engine-plugin.test.ts (24 tests) 12ms
+ ✓ |gamos-domain| test/unity-gate-status.test.ts (25 tests) 7ms
+ ✓ |gamos-domain| test/plugin-trust.test.ts (16 tests) 7ms
+ ✓ |gamos-domain| test/provenance-contract.test.ts (22 tests) 10ms
+ ✓ |gamos-domain| test/project-probes.test.ts (9 tests) 10ms
+ ✓ |gamos-domain| test/game-plan.test.ts (14 tests) 10ms
+ ✓ |gamos-domain| test/game-spec.test.ts (12 tests) 9ms
+ ✓ |gamos-domain| test/capability-registry.test.ts (22 tests) 10ms
+ ✓ |gamos-domain| test/vendor-integrity.test.ts (4 tests) 6ms
+ ✓ |gamos-domain| test/package-boundary.test.ts (3 tests) 8ms
+ ✓ |gamos-domain| test/game-concept.test.ts (8 tests) 7ms
+ ✓ |gamos-domain| test/permission-gate.test.ts (12 tests) 7ms
+ ✓ |gamos-domain| test/game-artifact.test.ts (7 tests) 6ms
+ ✓ |gamos-domain| test/discovery-record.test.ts (5 tests) 6ms
+
+ Test Files  19 passed (19)
+      Tests  279 passed (279)
+   Start at  00:53:04
+   Duration  3.13s (transform 372ms, setup 0ms, import 818ms, tests 211ms, environment 1ms)
+

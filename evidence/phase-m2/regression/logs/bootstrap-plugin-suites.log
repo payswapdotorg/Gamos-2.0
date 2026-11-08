@@ -1,0 +1,52 @@
+
+ RUN  v4.1.7 /home/z/my-project/gamos-2.0/apps/zcode-cli/packages/bootstrap
+
+ ✓ tests/plugins.test.ts (47 tests) 17644ms
+     ✓ can disable one document plugin without disabling the other formats or search  469ms
+     ✓ keeps same-name marketplace listings isolated by stable plugin id  380ms
+     ✓ keeps the catalog and immutable cache for suppressed built-ins  556ms
+     ✓ marks update-available when a newer version exists in the manifest  362ms
+     ✓ marks update-available via source.sha when the manifest entry has no version  365ms
+     ✓ marks update-available via zip source sha256 when the manifest entry has no version  576ms
+     ✓ lists suppressed official plugins as restorable built-ins  422ms
+     ✓ keeps the ui component type on a suppressed bundled document plugin  460ms
+     ✓ includes the merged ZCode official marketplace and Claude marketplace for empty storage  462ms
+     ✓ installs from a known marketplace by lazy-loading its missing manifest  415ms
+     ✓ installs and enables a marketplace plugin from a zip URL source through the facade  631ms
+     ✓ uninstalls a built-in by suppressing it and purging config  946ms
+     ✓ keeps a built-in uninstalled within the same facade session  765ms
+     ✓ restores a suppressed built-in so it re-seeds on next resolve  905ms
+     ✓ routes a direct install of a suppressed bundled plugin to restore without creating a marketplace record  787ms
+     ✓ clears stale builtin suppression when an official CDN entry with the same id is installed  539ms
+     ✓ returns null when uninstalling a plugin that is not installed  590ms
+     ✓ returns and persists marketplace refresh diagnostics while keeping the last snapshot  508ms
+     ✓ reseeds official plugin cache when hook executable mode changes  425ms
+     ✓ projects restore legacy sessions skills and commands only when enabled  556ms
+     ✓ projects bundled iOS simulator skills, commands, and MCP when enabled  485ms
+     ✓ projects bundled Android emulator skills, commands, and MCP when enabled  528ms
+     ✓ persists sensitive plugin options in the selected User or Workspace config  1328ms
+     ✓ writes Workspace enablement without mutating User config  608ms
+     ✓ writes nested Workspace plugin state to the Workspace-owned config  507ms
+     ✓ keeps Marketplace default enablement in User config for a legacy Workspace scope  756ms
+     ✓ ignores Marketplace declarations from Workspace config  497ms
+     ✓ resolves User relative marketplace paths from the declaring config directory  503ms
+     ✓ keeps official marketplace projection when User declares a reserved id  625ms
+     ✓ default-enables skill-creator through the app-startup plugin discovery path  501ms
+ ✓ tests/plugins-protocol.test.ts (19 tests) 3412ms
+     ✓ does not discover an inline plugin from Workspace plugin directories  554ms
+     ✓ keeps the User projection independent from Workspace enable overrides  344ms
+     ✓ projects the host node_repl association for the official browser-use plugin  540ms
+     ✓ restoreBuiltinPlugin clears suppression via protocol handler  797ms
+     ✓ restores a suppressed bundled plugin through the locked install handler without deadlocking  635ms
+ ✓ tests/engine-plugin-lifecycle.test.ts (5 tests) 7698ms
+     ✓ the three engine plugins seed into the official marketplace catalog (version 0.1.0, filesystem source, engine MCP declared)  723ms
+     ✓ enable projects the engine MCP server; disable removes it from the tool surface; re-enable restores it EXACTLY ONCE (no duplicate registrations)  2336ms
+     ✓ uninstall of a bundled engine plugin suppresses it (gone from discovery, listed as restorable); install routes to restore and re-seeds it  3680ms
+     ✓ a version-changing marketplace update swaps the resolved runtime root without stale resolution (engine-plugin-shaped package)  558ms
+     ✓ a missing declared runtime asset fails closed: the validator reports it and no server presence is fabricated  398ms
+
+ Test Files  3 passed (3)
+      Tests  71 passed (71)
+   Start at  00:50:33
+   Duration  44.29s (transform 6.42s, setup 0ms, import 15.04s, tests 28.75s, environment 0ms)
+

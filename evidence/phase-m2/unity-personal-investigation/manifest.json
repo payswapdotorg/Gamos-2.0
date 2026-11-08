@@ -2,8 +2,8 @@
   "purpose": "M2-G1 Unity Personal licensing investigation evidence (maintainer directive 2026-11-07: no paid Unity licenses; verify eligibility; determine the least-expensive compliant provisioning path; respect Unity build-machine licensing; keep credentials/license material out of Git)",
   "recorded_at": "2026-11-07T16:36:00Z",
   "investigated_by": "Gamos TL",
-  "retrieval_environment": "Gamos dev sandbox (plain HTTPS GET via curl; agent-browser blocked by unity.com bot protection \u2014 recorded in sandbox-capability.txt)",
-  "verification_gap": "https://unity.com/legal/software-terms (the Unity Editor Software Terms EULA) is bot/geo-blocked from the sandbox network (HTTP 404 shell) \u2014 the exact Personal machine-count / build-machine clause could NOT be verified from this environment and MUST be read by the maintainer from a normal browser before any CI license activation is relied upon",
+  "retrieval_environment": "Gamos dev sandbox. 2026-11-07 pass: plain HTTPS GET via curl; agent-browser blocked by unity.com bot protection (recorded in sandbox-capability.txt); unity.com/legal/software-terms served a 404 shell. 2026-11-08 pass: the LIVE canonical Software Terms URLs were discovered via the official Legal Information index (unity.com/legal/eula) and retrieved successfully with plain curl (Firefox UA) \u2014 no bot bypass involved; the document is served publicly at those URLs.",
+  "verification_gap": "CLOSED 2026-11-08: the Unity Editor Software Terms was retrieved successfully from its LIVE canonical URL https://unity.com/legal/editor-terms-of-service/software (byte-identical to https://unity.com/legal/terms-of-service/software; the legacy /legal/software-terms URL recorded as bot-blocked on 2026-11-07 serves a 404 shell from this network). Verbatim excerpts of \u00a71.1, \u00a72.1, \u00a72.4, \u00a72.5 and \u00a72.8 \u2014 including the decisive build-machine/machine-count/cloud-execution clause \u00a72.8 \u2014 are committed as software-terms-excerpt.txt below. The maintainer remains the licensing authority and should read the excerpts (or the live page) before any activation; M2-G1 stays BLOCKED on the attestation, the eligible account + Hub activation, and a compliant runner.",
   "files": [
     {
       "file": "pricing-excerpt.txt",
@@ -60,6 +60,16 @@
       "description": "honest record of why the existing dev sandbox cannot host the Unity Editor",
       "sha256": "5f6b9a4be7d44c24e9f408db195aa649a481fb454828002908eaa23c8aff5ad9",
       "bytes": 2837
+    },
+    {
+      "file": "software-terms-excerpt.txt",
+      "source_url": "https://unity.com/legal/editor-terms-of-service/software",
+      "alternate_source_url": "https://unity.com/legal/terms-of-service/software",
+      "source_note": "both URLs serve the byte-identical HTML document (md5 5b5913a5e9211be2daad8fb8356860dc, 610761 bytes; title 'Unity Editor Software Terms'); discovered via the official Legal Information index https://unity.com/legal/eula",
+      "description": "Unity Editor Software Terms EULA \u2014 verbatim \u00a71.1 (tier eligibility/financial thresholds), \u00a72.1 (Unity Editor license grant), \u00a72.4 (Build License, Pro-only paid), \u00a72.5 (Unity Build Server \u2014 not usable with Personal), \u00a72.8 (concurrent use; copies \u2014 the machine-count and cloud-execution clause), plus clearly-separated honest reading notes",
+      "retrieved_at": "2026-11-08T00:00:00Z",
+      "sha256": "1c96ac26fc97d0a676db64c46682c54a13b6ef7d632535ed5ab6c1e36029fcee",
+      "bytes": 14460
     }
   ]
 }
