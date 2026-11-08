@@ -38,7 +38,22 @@ const COMPLETE_CAPABILITY_RECORD = {
   output: { type: "object", properties: { report: { type: "string" } }, required: ["report"] },
   permissions: [{ kind: "command-execution" as const, scope: "read-only", rationale: "filesystem listing only" }],
   availability: { state: "available" as const, reason: "local probes present", prerequisites: [] },
-  provenance: { publisher: "official" as const, source: "gamos-2.0 repository", commitSha: "a".repeat(40) },
+  // Provenance follows the canonical gamos/provenance@2 shape (contract 09
+  // revision 2, canonicalized in M2.4): publisher vocabulary is
+  // "zcode-official" | "gamos-tl" | "community" and the source is STRUCTURED
+  // ({ type: "repository", repo, commitSha, path }) — the pre-revision-2
+  // loose form ({ publisher: "official", source: "…" }) is stale fixture
+  // drift repaired here (same authorized inherited-test-repair class as the
+  // M2-F trust-anchor rotation).
+  provenance: {
+    publisher: "gamos-tl" as const,
+    source: {
+      type: "repository" as const,
+      repo: "payswapdotorg/Gamos-2.0",
+      commitSha: "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
+      path: "packages/gamos-domain/src/domain/capability-registry.ts",
+    },
+  },
   provider: { kind: "agent-tool" as const, identity: "gamos-domain@1.0.0" },
   prerequisites: [],
   compatibility: { runtime: "node>=24", notes: "pure data" },

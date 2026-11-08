@@ -681,3 +681,72 @@ bundle exists and none is fabricated.
    resource-claim + asset-manifest contracts; FBX/GLB candidates to be
    verified by real compatibility tests) and the activation rule (only when
    M2 completes and the validator reports M3 ready).
+
+8. **M3 activation (maintainer-authorized waiver, 2026-11-08):** The repository
+   maintainer explicitly directed "you can proceed with M3"
+   (`docs/gamos/ADR/0007-m3-maintainer-authorized-activation.md`, recorded
+   verbatim in `ROADMAP.json` → `milestones[M3].activation_waiver`). The
+   roadmap validator (`scripts/gamos/roadmap-check.mjs`) gained a fail-closed
+   activation-waiver mechanism — TDD: RED `6af0f542` (self-test scenario 13
+   assertion failure `[DEPENDENCY] M3 cannot be active before dependencies
+   complete: M2` vs `[]`) → GREEN this commit (self-test 17/17). The waiver
+   authorizes activation ONLY, never completion: M2 stays `active`, M2-G1 stays
+   honestly blocked, no `evidence/roadmap/M2.json` exists, and an M3 completion
+   bundle still requires M2 complete plus all five M3 gates passing. No
+   baseline-tree or control file was modified (no pin rotation required).
+   M3 implementation begins per `docs/gamos/M3-PREPARED-PLAN.md` §1–§6.
+
+9. **M3 implementation opened — the two TL-owned foundational contracts are
+   real and green (strict TDD), before any production pipeline per the
+   final-closure handoff §6 ("define an additive, versioned cross-engine asset
+   manifest before the production pipelines are implemented"):**
+   - **M3.3 resource-claim contract `gamos/resource-claims@1`** (RED
+     `5d438313` → GREEN `5596a105`): canonical workspace-confined
+     claim paths (traversal/backslash/control/Windows-unsafe/non-ASCII/reserved
+     devices fail closed), claim-set validation (exact schema version, enums,
+     read-over-generated-output rejected, duplicates rejected), overlap
+     semantics (equality, case-fold aliasing, segment-wise containment) and
+     `findClaimConflicts` implementing handoff §5.3 rules 1–4 (unordered
+     reads compatible; unordered read/write + write/write flagged; explicit or
+     transitive `dependsOn` ordering is THE remediation — reasons say so, no
+     silent serialization; case-aliased claims fail closed as
+     ambiguous-alias). Integrated additively into the GamePlan wire format
+     (`steps[].resourceClaims`, optional — unchanged plans hash
+     byte-identically; claims are plan identity) with a parse-time conflict
+     gate in `parseGamePlan`. 31/31 contract+integration tests.
+   - **M3.4 asset-interchange manifest `gamos/asset-interchange@1`** (RED `a7f09532` →
+     GREEN `39517fbd`): handoff §6 minimums — identity/provenance (five real
+     engine families, exact versions, canonical paths, exporter capability),
+     file integrity (path/mediaType/byteLength/64-hex sha256 for artifact and
+     dependent textures), interchange semantics (format, handedness, upAxis,
+     units, scaleFactor, uvChannels, materials, animation, unsupported
+     warnings), target verification (importer, importedPath/importedSha256,
+     validation, buildArtifact, evidence), exact field sets everywhere, status
+     coupling (import-pending+ ⇒ target; imported+ ⇒ imported identity+hash;
+     built+ ⇒ buildArtifact; runtime-verified ⇒ validation passed + evidence —
+     a file on disk does not prove import), single-step forward transitions
+     with failed/cancelled terminal, `matchesIntegrity` helper, canonical
+     serialize + deterministic hash. 18/18 tests.
+   - **Inherited-test repair:** `dynamic-workflow/tests/gamos-plan-acceptance.test.ts`
+     was RED (3/3) from stale fixture drift — pre-revision-2 provenance
+     vocabulary (`publisher: "official"`, loose string source) vs the
+     canonical `gamos/provenance@2` structured shape (M2.4). Repaired to the
+     canonical vocabulary with a real repository commit reference (same
+     authorized inherited-test-repair class as the M2-F trust-anchor
+     rotation); 3/3 green — the GamePlan→real-compiler acceptance also
+     re-proves that the resource-claims integration still generates
+     compiler-clean scripts.
+   - **Module-cycle fix caught by `pnpm run architecture:check`:** the
+     checker (correctly) counts type-only imports, so resource-claims.ts now
+     declares a structural `ClaimableStep` view instead of importing
+     `GamePlanStep` — dependency direction is game-plan → resource-claims
+     only; architecture 0 violations (full check).
+   - Regression on this head: gamos-domain 328/328 (22 files; +49 tests vs
+     the M2-E record's 279), acceptance 3/3, governance compliant (pin
+     `46c14c90…`, unchanged — no control files touched), governance
+     self-test 14/14, roadmap self-test 17/17, roadmap-check valid (M2+M3
+     active), architecture 0 violations, stale-phrases clean.
+   - **No gate claim:** no M3-G1..G5 result is recorded — the pipelines
+     (M3.1/M3.2 plugin operations, M3.3 generator/runtime integration, M3.5
+     end-to-end journey + CI) are the next slices; M3-G1 stays honestly
+     blocked while no compliant Unity licensed runner exists.

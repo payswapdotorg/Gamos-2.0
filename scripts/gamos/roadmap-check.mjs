@@ -114,11 +114,60 @@ export function validateRoadmap(roadmap, options = {}) {
   if (active.length > policy.parallel_active_milestones_max) {
     fail("STATUS","active milestone count " + active.length + " exceeds configured maximum " + policy.parallel_active_milestones_max);
   }
+  // ADR-0007 activation-waiver mechanism: a milestone may become active before its
+  // dependencies complete ONLY through a complete, recorded maintainer authorization.
+  // The waiver authorizes activation ONLY — never completion — and fails closed when
+  // absent, malformed, or when its committed decision-record reference is missing.
+  function validateActivationWaiver(m) {
+    const w = m.activation_waiver;
+    if (typeof w !== "object" || w === null || Array.isArray(w)) {
+      fail("WAIVER",m.id + ": activation_waiver must be an object");
+      return false;
+    }
+    let valid = true;
+    if (w.basis !== "maintainer-authorized-waiver") {
+      fail("WAIVER",m.id + ": activation_waiver.basis must be exactly \"maintainer-authorized-waiver\"");
+      valid = false;
+    }
+    if (w.authorized_by !== "repository maintainer") {
+      fail("WAIVER",m.id + ": activation_waiver.authorized_by must be exactly \"repository maintainer\"");
+      valid = false;
+    }
+    if (!Number.isFinite(Date.parse(String(w.authorized_at ?? "")))) {
+      fail("WAIVER",m.id + ": activation_waiver.authorized_at must be a parseable ISO-8601 timestamp");
+      valid = false;
+    }
+    for (const key of ["directive","reason","reference"]) {
+      if (typeof w[key] !== "string" || !w[key].trim()) {
+        fail("WAIVER",m.id + ": activation_waiver." + key + " must be a non-empty string");
+        valid = false;
+      }
+    }
+    if (valid && repoRoot && typeof w.reference === "string" && w.reference.trim()) {
+      const referencePath = safeRepoPath(repoRoot,w.reference);
+      if (!referencePath || !existsSync(referencePath)) {
+        fail("WAIVER",m.id + ": activation_waiver.reference missing or path escapes repository: " + w.reference);
+        valid = false;
+      }
+    }
+    return valid;
+  }
+
   const completeIds = new Set(milestones.filter(m => m.status === "complete").map(m => m.id));
   for (const m of milestones) {
+    const waiverValid = m.activation_waiver === undefined ? false : validateActivationWaiver(m);
     const missingDependencies = (m.depends_on || []).filter(dep => !completeIds.has(dep));
     if ((m.status === "active" || m.status === "complete") && missingDependencies.length) {
-      fail("DEPENDENCY",m.id + " cannot be " + m.status + " before dependencies complete: " + missingDependencies.join(", "));
+      if (m.status === "complete" || !waiverValid) {
+        let message = m.id + " cannot be " + m.status + " before dependencies complete: " + missingDependencies.join(", ");
+        if (m.status === "active" && m.activation_waiver !== undefined && !waiverValid) {
+          message += " (activation_waiver present but invalid — fail closed)";
+        }
+        if (m.status === "complete" && m.activation_waiver !== undefined) {
+          message += " (an activation waiver never authorizes completion)";
+        }
+        fail("DEPENDENCY",message);
+      }
     }
     if (m.status === "complete") {
       const ev = m.completion_evidence;

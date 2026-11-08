@@ -1,23 +1,28 @@
-# Gamos M3 — Prepared Implementation Plan (NOT ACTIVATED)
+# Gamos M3 — Prepared Implementation Plan (ACTIVATED 2026-11-08 under ADR-0007)
 
 > **Authority note (binding):** This document is a PREPARED EXECUTION PLAN,
 > subordinate to `docs/gamos/ROADMAP.json` (the sole milestone authority), the
 > frozen contracts under `docs/gamos/contracts/`, and repository governance.
-> **M3 is NOT active.** It becomes activatable only when M2 is `complete` and
-> `scripts/gamos/roadmap-check.mjs` reports M3 dependency-ready; the TL then
-> activates it through the canonical roadmap without routine maintainer
-> approval (final-closure handoff §3). Until then this plan creates no
-> milestone status, no gate definitions and no acceptance criteria — every
-> gate listed below is quoted from ROADMAP.json, which remains normative.
+> **M3 became `active` on 2026-11-08** through the maintainer-authorized
+> activation waiver recorded in `ROADMAP.json`
+> (`milestones[M3].activation_waiver`) and `docs/gamos/ADR/0007-m3-maintainer-authorized-activation.md`.
+> The waiver authorizes activation only — never completion: M2 remains `active`
+> with M2-G1 honestly blocked, and every M3 completion rule below applies
+> verbatim (an M3 completion bundle still requires M2 complete + all five M3
+> gates passing). Every gate listed is quoted from ROADMAP.json, which remains
+> normative.
 
 **Prepared:** 2026-11-08 (final-closure directive §3: "While closing M2,
 prepare M3's contract and implementation plan, but do not begin M3
 implementation PRs or change M3 to active.")
-**Current blocking fact:** M2 remains `active` with **M2-G1 blocked** (Unity
-licensed-editor prerequisite external — `docs/gamos/UNITY-M2G1-PROVISIONING.md`
-§7: maintainer eligibility attestation, eligible Unity account + Hub
-activation, compliant runner). No `evidence/roadmap/M2.json` completion bundle
-exists. Nothing in this plan may be implemented until that changes.
+**Activation:** 2026-11-08 — the maintainer's explicit directive ("you can
+proceed with M3", recorded verbatim in ADR-0007 and in
+`milestones[M3].activation_waiver`) authorized activation before M2 completes.
+M2 remains `active` with **M2-G1 blocked** (Unity licensed-editor prerequisite
+external — `docs/gamos/UNITY-M2G1-PROVISIONING.md` §7: maintainer eligibility
+attestation, eligible Unity account + Hub activation, compliant runner). No
+`evidence/roadmap/M2.json` completion bundle exists, and M3 completion still
+requires M2 complete plus all five M3 gates passing with hash-bound evidence.
 
 ---
 
@@ -107,10 +112,14 @@ end-to-end M3 journey. The canonical completion file is
 `evidence/roadmap/M3.json` (repo template, hash-verifiable, workflow-run-bound
 to the tested commit).
 
-## 7. What is deliberately NOT done now
+## 7. Activation record (supersedes the original §7 restriction)
 
-- M3 is not set to `active` in ROADMAP.json.
-- No M3 implementation PRs, branches, schemas, code or fixtures are created.
-- No frozen contract is modified.
-- The first action after M2 completion + validator readiness: the TL updates
-  ONLY M3's status in ROADMAP.json, then begins M3.1–M3.5 per this plan.
+- M3 was set to `active` in ROADMAP.json on 2026-11-08 under the maintainer's
+  explicit directive ("you can proceed with M3", recorded verbatim in ADR-0007
+  and in `milestones[M3].activation_waiver`). The original activation rule
+  (only after M2 completion + validator dependency-ready) remains the default
+  path for every OTHER milestone; the waiver is scoped to M3, fails closed in
+  the validator, and never authorizes completion.
+- Implementation proceeds per this plan: M3.1–M3.5, strict TDD, honest-blocked
+  reporting for any Unity-dependent gate while no compliant licensed runner
+  exists.
