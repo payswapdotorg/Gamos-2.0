@@ -1,0 +1,111 @@
+{
+  "purpose": "M2-E honest cross-plugin regression evidence (final-closure directive \u00a72): the M2 regression candidate run on the exact tested source commit, identifying every suite INCLUDING the non-passing Unity integration (skipped = non-passing).",
+  "recorded_at": "2026-11-08T01:10:00Z",
+  "tested_commit": "6f3f4c6bc5f16625ebc2f89e1626f32458f43ce6",
+  "integration_branch": "gamos/development",
+  "environment": {
+    "machine": "Gamos dev sandbox (CI-equivalent local run)",
+    "node": "v24.22.2",
+    "pnpm": "10.33.2",
+    "blender": "4.1.1 (download.blender.org release tarball, sha256 ab2ea3fe991601a5e6bd2cda786ecaa919c0b39e0550e59978b5d40270c260d3 verified before extraction)",
+    "unity": "NOT AVAILABLE \u2014 no licensed Unity Editor (M2-G1 prerequisite external; docs/gamos/UNITY-M2G1-PROVISIONING.md)"
+  },
+  "unity_gate_honest_state": {
+    "gate_id": "M2-G1",
+    "status": "unavailable-license",
+    "reason": "no licensed Unity Editor on this machine; the three required real-editor integration tests (scene_modify, project_build, timeout tree-kill) are SKIPPED and counted NON-PASSING per the final-closure directive (M2-E: 'A skipped Unity integration suite must remain a non-passing Unity integration result')",
+    "verified_by": "the M2-A gate-status classifier consuming the suite's own machine evidence (evidence/phase-m2/regression/logs/unity-machine-evidence.json)"
+  },
+  "suites": [
+    {
+      "suite": "gamos-domain (provenance, engine-plugin, Worker C security, M2-A/B classifier)",
+      "command": "pnpm exec vitest run --project gamos-domain",
+      "result": "279 passed (279)",
+      "exit_code": 0,
+      "log": "logs/gamos-domain.log"
+    },
+    {
+      "suite": "unity-engine-plugin full package suite (unit + integration; NO licensed editor on this machine)",
+      "command": "pnpm --filter @zcode/unity-engine-plugin exec vitest run test",
+      "result": "65 passed | 3 skipped (68) \u2014 the 3 required real-editor integration tests are SKIPPED (no licensed Unity Editor; discovery=unavailable)",
+      "exit_code": 0,
+      "note": "M2-G1 NON-PASSING: a skipped Unity integration suite is a non-passing Unity integration result (final-closure directive M2-E); the honest state is unavailable-license",
+      "log": "logs/unity-suite.log"
+    },
+    {
+      "suite": "unity-engine-plugin version contract (M2-B exact 6000.0.23f1+revision)",
+      "command": "pnpm --filter @zcode/unity-engine-plugin exec vitest run test/version-contract.test.ts",
+      "result": "14 passed (14)",
+      "exit_code": 0
+    },
+    {
+      "suite": "blender-engine-plugin REAL integration (Blender 4.1.1, sha256-verified tarball)",
+      "command": "BLENDER_PATH=/home/z/engines/blender-4.1.1-linux-x64/blender pnpm --filter @zcode/blender-engine-plugin exec vitest run test/engine-real-blender.integration.test.ts",
+      "result": "6 passed (6) \u2014 real scene modify with hash verification, real Cycles CPU render (render.png sha256 d2fc4de5\u2026), OBJ/GLB exports with sha256, timeout tree-kill",
+      "exit_code": 0,
+      "log": "logs/blender-suite.log"
+    },
+    {
+      "suite": "blender-engine-plugin unit suites",
+      "command": "pnpm --filter @zcode/blender-engine-plugin exec vitest run test/typed-ops.test.ts test/discovery.test.ts",
+      "result": "20 passed (20)",
+      "exit_code": 0
+    },
+    {
+      "suite": "babylon-engine-plugin REAL integration (real Node/npm toolchain, npm ci from committed lockfile, vite build, dev-server run + health check + port-freed-on-stop, strictPort fail-closed, timeout tree-kill)",
+      "command": "pnpm --filter @zcode/babylon-engine-plugin exec vitest run test/engine-real-babylon.integration.test.ts",
+      "result": "6 passed (6)",
+      "exit_code": 0,
+      "log": "logs/babylon-suite.log"
+    },
+    {
+      "suite": "babylon-engine-plugin unit suites",
+      "command": "pnpm --filter @zcode/babylon-engine-plugin exec vitest run test/typed-ops.test.ts test/discovery.test.ts test/project.test.ts",
+      "result": "29 passed (29)",
+      "exit_code": 0
+    },
+    {
+      "suite": "bootstrap plugin lifecycle suites incl. the new M2-D engine-plugin-lifecycle tests (install/restore, disable/re-enable exactly-once, uninstall suppression, version-changing update, runtime-missing fail-closed)",
+      "command": "pnpm --filter @zcode/bootstrap exec vitest run tests/plugins.test.ts tests/plugins-protocol.test.ts tests/engine-plugin-lifecycle.test.ts",
+      "result": "71 passed (71)",
+      "exit_code": 0,
+      "note": "after two honest repairs: building node-repl-host/browser-use-plugin dist artifacts (build-state, not source defects) and updating the stale official-marketplace pluginCount 15->18 inherited from M2's additive engine-plugin registration",
+      "log": "logs/bootstrap-plugin-suites.log"
+    },
+    {
+      "suite": "cli plugin host fail-closed boundary (M2-D R8)",
+      "command": "pnpm --filter @zcode/cli exec vitest run tests/plugin-host-refusal.test.ts",
+      "result": "2 passed (2) \u2014 refuses nonexistent server.js and corrupted no-main module, exit 1 both",
+      "exit_code": 0
+    },
+    {
+      "suite": "architecture check",
+      "command": "pnpm run architecture:check",
+      "result": "violations: 0 (baseline 0, new 0)",
+      "exit_code": 0
+    },
+    {
+      "suite": "roadmap check (M2 active; M3+ blocked on M2)",
+      "command": "node scripts/gamos/roadmap-check.mjs",
+      "result": "roadmap structure, source anchors, dependencies and completion evidence valid; active: M2; ready: (none); blocked: M3, M4, M5, M6, M7",
+      "exit_code": 0
+    },
+    {
+      "suite": "governance check (pin 7bb6e0bcf0eec361c7fc142b6201bfccd66732777cf449faed31e786a7acfe55)",
+      "command": "node scripts/gamos/governance-check.mjs --pin 7bb6e0bcf0eec361c7fc142b6201bfccd66732777cf449faed31e786a7acfe55",
+      "result": "compliant \u2014 15 hash-verified governance files, 9 ledger entries, vs baseline deleted 0 modified 8 added 301",
+      "exit_code": 0
+    }
+  ],
+  "honest_non_passing": [
+    "M2-G1 Unity real integration: NON-PASSING (no licensed editor; skipped suite) \u2014 M2 therefore CANNOT be promoted to complete; ROADMAP.json keeps M2 active with G1 blocked"
+  ],
+  "scope_note": "The full inherited ZCode build + desktop journeys and the \u00a79 in-app M2 journey run in CI (gamos-m2-e2e workflow, all five jobs) on the pushed integration-candidate head; this local record covers every engine/domain/lifecycle/architecture/governance suite runnable on this machine. Inherited bootstrap plugin suites required two honest repairs recorded in the commit: (1) building the node-repl-host and browser-use-plugin dist artifacts the suite's requiredSeedPaths assertions depend on (build state, not source defects), (2) updating the stale hardcoded official-marketplace pluginCount 15->18 \u2014 a count M2's additive engine-plugin registration changed without updating the inherited assertion (the bootstrap suite is not in the M2 CI path, so the drift was invisible until this regression run).",
+  "m2_gate_summary": {
+    "M2-G1": "NOT PASSING (blocked: licensed editor prerequisite external \u2014 maintainer attestation, eligible account + Hub activation, compliant runner; docs/gamos/UNITY-M2G1-PROVISIONING.md \u00a77)",
+    "M2-G2": "engine-layer PASSING locally (real Blender 4.1.1 integration 6/6 + unit suites 20/20; CI journey leg on the PR head)",
+    "M2-G3": "engine-layer PASSING locally (real Babylon toolchain integration 6/6 + unit suites 29/29; CI journey/browser leg on the PR head)",
+    "M2-G4": "lifecycle proof STRENGTHENED (new M2-D suite: install/restore, disable/re-enable exactly-once, uninstall suppression, version-changing update, runtime-asset fail-closed, host refusal; permission denial/cancellation/privilege disclosure cited from existing suites)",
+    "M2-G5": "this regression record: all runnable suites green; Unity integration non-passing (skipped) \u2014 G5 does NOT authorize M2 completion while G1 is blocked"
+  }
+}

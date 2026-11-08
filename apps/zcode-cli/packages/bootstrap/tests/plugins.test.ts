@@ -614,7 +614,7 @@ describe("ZCode plugins", () => {
             id: "zcode-plugins-official",
             isOfficial: true,
             name: "zcode-plugins-official",
-            pluginCount: 15,
+            pluginCount: 18, // M2 (Gamos): +3 first-party engine plugins (unity/blender/babylon-engine) seeded into the official marketplace
             source: {
               source: "url",
               url: "https://cdn-zcode.z.ai/zcode/official-plugin/marketplace.json",
@@ -2395,7 +2395,7 @@ describe("ZCode plugins", () => {
       expect(
         overview.marketplaces.find((marketplace) => marketplace.id === "zcode-plugins-official"),
       ).toMatchObject({
-        pluginCount: 15,
+        pluginCount: 18, // M2 (Gamos): +3 first-party engine plugins (unity/blender/babylon-engine) seeded into the official marketplace
         source: {
           source: "url",
           url: "https://cdn-zcode.z.ai/zcode/official-plugin/marketplace.json",

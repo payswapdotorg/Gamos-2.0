@@ -1,0 +1,37 @@
+
+ RUN  v4.1.7 /home/z/my-project/gamos-2.0/apps/zcode-cli/packages/babylon-engine-plugin
+
+stdout | test/engine-real-babylon.integration.test.ts
+[gamos-evidence] node executable: /usr/bin/node
+[gamos-evidence] node raw version: 24.22.2
+[gamos-evidence] npm version (PATH probe): 11.19.1
+
+stdout | test/engine-real-babylon.integration.test.ts > babylon-engine plugin real-Node/Vite/Babylon integration
+[gamos-evidence] fixture package-lock.json sha256 (committed): ca4e45a7a0d7c9de74842cb823294c410e13f97209a5040e442f8b0c75f91e0b
+[gamos-evidence] npm ci: 4508ms, lockfile sha256 after install: ca4e45a7a0d7c9de74842cb823294c410e13f97209a5040e442f8b0c75f91e0b
+
+stdout | test/engine-real-babylon.integration.test.ts > babylon-engine plugin real-Node/Vite/Babylon integration > project_inspect reports the node toolchain version, @babylonjs/core dependency, scripts, and vite config
+[gamos-evidence] inspect: node=24.22.2 npm=11.19.1 babylonDeps=[@babylonjs/core@^8.0.0] scripts=dev,build viteConfig=true
+
+stdout | test/engine-real-babylon.integration.test.ts > babylon-engine plugin real-Node/Vite/Babylon integration > project_inspect of a non-Babylon directory fails closed with not-a-babylon-project
+[gamos-evidence] negative path: not-a-babylon-project — no @babylonjs/* dependency found in /tmp/gamos-babylon-ws-VGu9MW/not-babylon/package.json (checked dependencies and devDependencies) — refusing to operate on a non-Babylon project
+
+stdout | test/engine-real-babylon.integration.test.ts > babylon-engine plugin real-Node/Vite/Babylon integration > project_build runs the declared build script and verifies the dist/index.html artifact
+[gamos-evidence] vite build: 13625ms, dist/index.html 358 bytes, sha256=1a5edab9faec354f855c70310ce9d420aec21b4fba69c4156ee2f83a37775c15
+
+stdout | test/engine-real-babylon.integration.test.ts > babylon-engine plugin real-Node/Vite/Babylon integration > project_run starts the dev server on a free port, health-checks the real HTML, and stopRuntime frees the port
+[gamos-evidence] runtime: http://127.0.0.1:34925/ pid=12135 script=dev htmlSha256=4247902409344f36c2efabd7b5de554330a39596bd5c8fb6823e290c116eddd2 readyIn=546ms
+
+stdout | test/engine-real-babylon.integration.test.ts > babylon-engine plugin real-Node/Vite/Babylon integration > project_run on an occupied port with strictPort fails closed with port-conflict (no silent retry)
+[gamos-evidence] port conflict on 39323: port-conflict — dev server failed to start: port 39323 is already in use (strictPort — no silent retry)
+
+ ✓ test/engine-real-babylon.integration.test.ts (6 tests) 23236ms
+     ✓ project_build runs the declared build script and verifies the dist/index.html artifact  13629ms
+     ✓ project_run starts the dev server on a free port, health-checks the real HTML, and stopRuntime frees the port  626ms
+     ✓ project_run on an occupied port with strictPort fails closed with port-conflict (no silent retry)  4004ms
+
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+   Start at  00:47:14
+   Duration  24.10s (transform 178ms, setup 0ms, import 646ms, tests 23.24s, environment 0ms)
+

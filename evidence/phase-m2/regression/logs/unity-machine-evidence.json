@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "discovery": {
+    "status": "unavailable",
+    "executable": null,
+    "raw_version": null,
+    "reason": "no Unity Editor executable found (searched PATH for unity-editor/unity and common install roots)"
+  },
+  "editor_revision": null,
+  "version_contract": null,
+  "preflight": null,
+  "scene_mutation": null,
+  "build_artifact": null
+}
