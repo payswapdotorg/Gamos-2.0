@@ -1,7 +1,7 @@
 {
   "schema": "gamos/m3-capability-plan@1",
-  "generatedAt": "2026-11-08T14:14:00.199Z",
-  "workspaceRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default",
+  "generatedAt": "2026-11-08T19:57:49.500Z",
+  "workspaceRoot": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default",
   "registryRecords": 13,
   "enginePluginSourceCommit": "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00",
   "capabilities": [
@@ -275,7 +275,7 @@
   "plan": {
     "schemaId": "gamos/cross-engine-plan@1",
     "planId": "gamos-m3-cross-engine",
-    "planSha256": "a813e23d8289070c23a40df0f09fd7514ea1384f55739a60ca27670d121b2fe5",
+    "planSha256": "66c58caae738c768efc7c188be88faf5b0109533f27fe40d1224676a8c28d489",
     "request": {
       "planId": "gamos-m3-cross-engine",
       "conceptRef": {
@@ -286,7 +286,7 @@
         "recordId": "gamos-m3-journey-acceptance",
         "recordSha256": "da837dfa0cc1e4d8f199758f43a4f13fdec500655e43b56d6d0605b49917a384"
       },
-      "workspaceRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default",
+      "workspaceRoot": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default",
       "source": {
         "projectIdentity": "gamos-m3-blender",
         "blendFile": "gamos-m3-blender/scene.blend"
@@ -298,7 +298,7 @@
       },
       "format": "glb",
       "assetName": "gamos-asset",
-      "now": "2026-11-08T14:14:00Z"
+      "now": "2026-11-08T19:57:49Z"
     },
     "stepCount": 5,
     "steps": [
@@ -308,8 +308,8 @@
         "capabilityVersion": "1.0.0",
         "dependsOn": [],
         "input": {
-          "blendFile": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-blender/scene.blend",
-          "outputPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
+          "blendFile": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-blender/scene.blend",
+          "outputPath": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
           "format": "GLTF"
         },
         "resourceClaims": [
@@ -333,8 +333,8 @@
           "export-asset"
         ],
         "input": {
-          "manifestPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb.manifest.json",
-          "artifactPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb"
+          "manifestPath": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb.manifest.json",
+          "artifactPath": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb"
         },
         "resourceClaims": [
           {
@@ -357,8 +357,8 @@
           "validate-export"
         ],
         "input": {
-          "projectRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
-          "artifactPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
+          "projectRoot": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app",
+          "artifactPath": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
           "assetName": "gamos-asset"
         },
         "resourceClaims": [
@@ -382,7 +382,7 @@
           "integrate-asset"
         ],
         "input": {
-          "projectRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app"
+          "projectRoot": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app"
         },
         "resourceClaims": [
           {
@@ -405,7 +405,7 @@
           "build-project"
         ],
         "input": {
-          "projectRoot": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app"
+          "projectRoot": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/gamos-m3-babylon-app"
         },
         "resourceClaims": [
           {

@@ -76,10 +76,10 @@ describe("M3 journey evidence provenance (directive §3 — fail-closed)", () =>
     expect(ids.length).toBeGreaterThanOrEqual(7);
     for (const id of ids) {
       const row = stages[id];
-      expect(`${id}.run_token`, "stage row must carry the run token of the run that executed it").toEqual(
+      expect(row.run_token, `${id}: stage row must carry the run token of the run that executed it`).toEqual(
         expect.stringMatching(/^GAMOS-M3-\d{14}$/),
       );
-      expect(`${id}.at`, "stage row must carry its execution timestamp").toEqual(expect.any(String));
+      expect(row.at, `${id}: stage row must carry its execution timestamp`).toEqual(expect.any(String));
     }
   });
 

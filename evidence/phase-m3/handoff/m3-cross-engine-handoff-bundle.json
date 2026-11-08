@@ -1,14 +1,14 @@
 {
   "schema": "gamos/m3-cross-engine-handoff-bundle@1",
-  "recordedAt": "2026-11-08T15:21:58Z",
+  "recordedAt": "2026-11-08T20:03:04Z",
   "derivedFrom": [
     {
       "path": "evidence/phase-m3/journey/m3-journey-evidence.json",
-      "sha256": "53d88f7167f054d9978bd16224594c163810bf4e402b1126e9d050ca4e6670bc"
+      "sha256": "f80ac5b0058a8e22c21c98f2f7de665b358eb3ca971cb31768614bc4abc15e3e"
     },
     {
       "path": "evidence/phase-m3/journey/m3-capability-plan.json",
-      "sha256": "e69524e8c401932461a784e1fbb3b36ce19dfbd42d81103e64509ce55da2aea9"
+      "sha256": "381c5649361ddab68400a025490823de9f932b995a5089664d85c66de332de48"
     },
     {
       "path": "evidence/phase-m3/reproducibility/m3-repeat-export-reproducibility.json",
@@ -22,7 +22,7 @@
       "engine": "core",
       "record": {
         "evidenceFile": "evidence/phase-m3/journey/m3-capability-plan.json",
-        "evidenceSha256": "e69524e8c401932461a784e1fbb3b36ce19dfbd42d81103e64509ce55da2aea9",
+        "evidenceSha256": "381c5649361ddab68400a025490823de9f932b995a5089664d85c66de332de48",
         "planVerdict": "ok",
         "planStepCount": 5,
         "planResourceClaimCount": 9,
@@ -37,7 +37,7 @@
       "record": {
         "denial_blocked_mutation": true,
         "export_artifact_absent_after_denial": true,
-        "baseline_blend_sha256": "48327468592dd466873d1068d1ca2393abefb8424893ea17f33cb389170acb16"
+        "baseline_blend_sha256": "a27b9e957f22099d314dd99cf0ae27f6dcdd9e68121d65bd0e6d8e9d6541b33e"
       },
       "status": "verified",
       "verifiedBy": "the M3J4 denial leg: the source mutation was blocked at the existing permission gate (blend sha256 unchanged, no staging artifact)"
@@ -46,7 +46,7 @@
       "id": "source",
       "engine": "blender",
       "record": {
-        "saved_blend_sha256": "6e1257d61d86138cf80ce0de7a70e1ffc1bb292786d74bd1da86083a3bf7911a",
+        "saved_blend_sha256": "0a99036c12d9d7e5b31e821ec48761b87a269082d132301ebfcd3e39f8e6477d",
         "blend_mutated_by_approved_scene_modify": true
       },
       "status": "verified",
@@ -72,7 +72,7 @@
       "record": {
         "manifestId": "gamos-m3-cross-engine-manifest",
         "status": "exported",
-        "manifest_sha256": "9f544b92ebd30eccae67fdbff2e789dd2b7a39b78354abb025d61791b7b47fd3",
+        "manifest_sha256": "204613007d876bd5ac494510fc432eba80488b415d99a4c5914157b309bc49d2",
         "artifact": {
           "path": "staging/gamos-asset.glb",
           "mediaType": "model/gltf-binary",
@@ -122,7 +122,7 @@
       "id": "runtime-verification",
       "engine": "babylon",
       "record": {
-        "runtime_url": "http://127.0.0.1:33655/",
+        "runtime_url": "http://127.0.0.1:33653/",
         "assertions": {
           "url_matches_runtime": true,
           "babylon_ready_flag": true,

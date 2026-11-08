@@ -1284,3 +1284,45 @@ bundle exists and none is fabricated.
     - **No gate claim changes:** M3-G1 stays honestly blocked; M2 completion
       stays pending (M2-G1 maintainer-side); the roadmap validator fails
       closed; no `evidence/roadmap/M3.json` claimed.
+
+19. **M3 journey evidence provenance correction (directive §3, 2026-11-08,
+    branch `gamos/m3-journey-provenance`):** the committed M3 journey evidence
+    identified its generating script as `scripts/gamos/m2-ui-journey.mjs` —
+    an un-updated verbatim copy in the evidence initializer — and a same-class
+    env bug silently disabled the local-model transcript
+    (`M2_LOCAL_MODEL_TRANSCRIPT` passed while `m3-local-model-server.mjs`
+    reads `M3_LOCAL_MODEL_TRANSCRIPT`; the transcript was never written
+    despite the metadata claim).
+    - **TDD:** RED commit first —
+      `tests/gamos-journey-evidence-provenance.test.ts` failed 5/6 against
+      the then-committed bundle (script identity, source sha256, CI
+      identity, per-stage run tokens, merged-chunk distinction); the RED
+      state was re-proven in CI (the branch gates job failed exactly those
+      five assertions and nothing else).
+    - **Fix:** `m3-ui-journey.mjs` self-identifies (`script`, `revision: 2`,
+      `derived_from` now cites m2 as the machinery source), records
+      `source_sha256` (self-hash), a `ci` block (GITHUB_RUN_ID /
+      GITHUB_RUN_ATTEMPT / GITHUB_SHA ambient env, null on local runs),
+      per-stage `run_token` + `merged_from_prior_chunk` flags, a tagged
+      merge for legacy rows, and summary
+      `stages_executed_this_run` / `stages_merged_from_prior_chunks` so a
+      chunked local continuation can never be misrepresented as one
+      continuous run; the transcript env name fixed. CI journey-job asserts
+      extended fail-closed on all of it (ambient-env equality for run id and
+      tested commit).
+    - **Evidence refresh (the authoritative single-run proof):** the fresh
+      CI journey on the fix commit (run `42517218036` @ `79d51b36`, workflow
+      attempt 1, run token `GAMOS-M3-20261108195716`) produced a clean
+      M3J0–M3J6 pass from a clean checkout — its artifact now IS the
+      committed `evidence/phase-m3/journey/` bundle (verdict pass, all 7
+      stages in one run, zero merged chunks, transcript now real), and the
+      M3.4 handoff bundle was REGENERATED through its own script against it
+      (verdict `handoff-chain-verified`, export digest `7f15af95…`
+      unchanged, derivedFrom hashes re-bound to the new journey evidence +
+      capability plan). Nothing was hand-edited.
+    - **Verification:** provenance test 6/6 green against the refreshed
+      bundle; entropy-qualified key scan on the new evidence clean; the
+      journey CI job on the fix commit success (new asserts passing in CI).
+    - **No gate claim changes:** M3-G1 stays honestly blocked; M2 completion
+      stays pending (M2-G1 maintainer-side); the roadmap validator fails
+      closed; no `evidence/roadmap/M3.json` claimed.

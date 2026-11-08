@@ -1,15 +1,14 @@
 {
- "url": "http://127.0.0.1:5174/?restoreSession=true&supportsSettings=true&initialWorkspacePath=%2Fhome%2Fz%2Fmy-project%2Fgamos-2.0%2F.phaseb-m3-home%2F.zcode%2Fworkspace%2Fdefault&initialWorkspacePurpose=conversation&zcodeLaunchMarks=%7B%22createdAt%22%3A1794146748270%2C%22mainStart%22%3A1794146750317%2C%22appReady%22%3A1794146750428%2C%22loadUrl%22%3A1794146750609%7D",
+ "url": "http://127.0.0.1:5174/?restoreSession=true&supportsSettings=true&initialWorkspacePath=%2Fhome%2Frunner%2Fwork%2FGamos-2.0%2FGamos-2.0%2F.phaseb-m3-home%2F.zcode%2Fworkspace%2Fdefault&initialWorkspacePurpose=conversation&zcodeLaunchMarks=%7B%22createdAt%22%3A1794167838200%2C%22mainStart%22%3A1794167840079%2C%22appReady%22%3A1794167840243%2C%22loadUrl%22%3A1794167840346%7D",
  "title": "ZCode",
  "readyState": "complete",
  "testIds": [
+  "onboarding-page",
   "desktop-window-controls",
   "window-control-minimize",
   "window-control-maximize",
   "window-control-close",
-  "oauth-login-button-zai",
-  "oauth-login-button",
-  "login-use-api-key-button"
+  "onboarding-mesh-background"
  ],
  "buttons": [
   {
@@ -28,18 +27,78 @@
    "disabled": false
   },
   {
-   "text": "Connect to Z.ai\nGlobal",
-   "tid": "oauth-login-button-zai",
+   "text": "",
+   "tid": null,
    "disabled": false
   },
   {
-   "text": "Connect to BigModel\nCN",
-   "tid": "oauth-login-button",
+   "text": "Software / Data / AI",
+   "tid": null,
    "disabled": false
   },
   {
-   "text": "Use API key",
-   "tid": "login-use-api-key-button",
+   "text": "Entrepreneurship / Freelancing / OPC",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "QA / Operations / Security",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Product / Project / Solutions",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "UI / UX / Visual Design",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Students / Teaching / Research",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Finance / Accounting / Consulting",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Media / Content Creation",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Operations / Commerce / Customer Service",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Marketing / Brand / PR",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Legal / Administration / HR",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Other professions",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Skip",
+   "tid": null,
+   "disabled": false
+  },
+  {
+   "text": "Next",
+   "tid": null,
    "disabled": false
   }
  ]

@@ -1,5 +1,5 @@
 {
-  "db_path": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/cli/db/db.sqlite",
+  "db_path": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/cli/db/db.sqlite",
   "tables": [
     "schema_migration",
     "session",
@@ -29,70 +29,76 @@
   ],
   "session_rows": [
     {
-      "sessionId": "sess_77ada983-3b7e-4e28-9551-2ba1c4dc708e",
+      "sessionId": "sess_7336ce5b-ad08-44d0-b248-659d62678762",
+      "present": true
+    },
+    {
+      "sessionId": "sess_7336ce5b-ad08-44d0-b248-659d62678762",
+      "present": true
+    },
+    {
+      "sessionId": "sess_7336ce5b-ad08-44d0-b248-659d62678762",
+      "present": true
+    },
+    {
+      "sessionId": "sess_7336ce5b-ad08-44d0-b248-659d62678762",
       "present": true
     }
   ],
   "engine_tool_records": [
     {
-      "table": "session",
-      "col": "title",
-      "marker": "asset_import",
-      "rows": 1
-    },
-    {
       "table": "message",
       "col": "data",
       "marker": "mcp__plugin_blender-engine",
-      "rows": 6
+      "rows": 5
     },
     {
       "table": "message",
       "col": "data",
       "marker": "mcp__plugin_babylon-engine",
-      "rows": 6
+      "rows": 5
     },
     {
       "table": "message",
       "col": "data",
       "marker": "mcp__plugin_unity-engine",
-      "rows": 6
+      "rows": 5
     },
     {
       "table": "message",
       "col": "data",
       "marker": "GamosM3Cube",
-      "rows": 6
+      "rows": 2
     },
     {
       "table": "message",
       "col": "data",
       "marker": "asset_export",
-      "rows": 10
+      "rows": 6
     },
     {
       "table": "message",
       "col": "data",
       "marker": "asset_integrate",
-      "rows": 10
+      "rows": 5
     },
     {
       "table": "message",
       "col": "data",
       "marker": "asset_import",
-      "rows": 10
+      "rows": 5
     },
     {
       "table": "message",
       "col": "data",
       "marker": "gamos-asset",
-      "rows": 8
+      "rows": 4
     },
     {
       "table": "part",
       "col": "data",
       "marker": "mcp__plugin_blender-engine",
-      "rows": 9
+      "rows": 3
     },
     {
       "table": "part",
@@ -110,31 +116,31 @@
       "table": "part",
       "col": "data",
       "marker": "GamosM3Cube",
-      "rows": 19
+      "rows": 7
     },
     {
       "table": "part",
       "col": "data",
       "marker": "asset_export",
-      "rows": 17
+      "rows": 5
     },
     {
       "table": "part",
       "col": "data",
       "marker": "asset_integrate",
-      "rows": 7
+      "rows": 3
     },
     {
       "table": "part",
       "col": "data",
       "marker": "asset_import",
-      "rows": 7
+      "rows": 3
     },
     {
       "table": "part",
       "col": "data",
       "marker": "gamos-asset",
-      "rows": 14
+      "rows": 8
     },
     {
       "table": "part",
@@ -176,7 +182,7 @@
       "table": "tool_usage",
       "col": "tool_name",
       "marker": "mcp__plugin_blender-engine",
-      "rows": 9
+      "rows": 3
     },
     {
       "table": "tool_usage",
@@ -194,7 +200,7 @@
       "table": "tool_usage",
       "col": "tool_name",
       "marker": "asset_export",
-      "rows": 3
+      "rows": 1
     },
     {
       "table": "tool_usage",
@@ -212,13 +218,13 @@
       "table": "session_input",
       "col": "payload",
       "marker": "GamosM3Cube",
-      "rows": 6
+      "rows": 2
     },
     {
       "table": "session_input",
       "col": "payload",
       "marker": "asset_export",
-      "rows": 6
+      "rows": 2
     },
     {
       "table": "session_input",
@@ -236,8 +242,8 @@
       "table": "session_input",
       "col": "payload",
       "marker": "gamos-asset",
-      "rows": 8
+      "rows": 4
     }
   ],
-  "checked_at": "2026-11-08T14:22:01.982Z"
+  "checked_at": "2026-11-08T19:59:55.282Z"
 }

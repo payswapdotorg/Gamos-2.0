@@ -1,12 +1,12 @@
 {
   "ok": true,
-  "outputPath": "/home/z/my-project/gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
+  "outputPath": "/home/runner/work/Gamos-2.0/Gamos-2.0/.phaseb-m3-home/.zcode/workspace/default/staging/gamos-asset.glb",
   "bytes": 1984,
   "sha256": "7f15af95da4102655cf7e134b9167c9b05a43d8af7e44a0acb5119f09561bcb6",
   "format": "GLTF",
   "selection": null,
   "blenderVersion": "4.1.1",
-  "sourceSha256": "74741b8b6b2feba1816187526659eef137e58a2bc19f5b71308015735621be96",
+  "sourceSha256": "0a99036c12d9d7e5b31e821ec48761b87a269082d132301ebfcd3e39f8e6477d",
   "unitScale": 1,
   "appliedInterchange": {
     "format": "glb",
