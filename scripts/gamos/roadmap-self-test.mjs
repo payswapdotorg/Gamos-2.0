@@ -211,7 +211,9 @@ test("a maintainer-authorized activation waiver permits active despite an incomp
   const x = withM3Waiver(clone());
   const r = validateRoadmap(x);
   assert.deepEqual(r.errors,[]);
-  assert.deepEqual(r.active,["M2","M3"]);
+  // The waived milestone itself must be active; the full live active list is not
+  // pinned here (it legitimately grew with M4's activation under ADR-0008/0009).
+  assert.ok(r.active.includes("M3"),"waived M3 must be active");
 });
 test("an activation waiver with an unrecognized basis fails closed",() => {
   const x = withM3Waiver(clone(),{basis:"tl-discretion"});
@@ -244,7 +246,9 @@ test("the activation waiver is scoped to the authorized milestone only",() => {
   // from the live phase_policy value (raised 2 -> 3 by ADR-0009): the point here
   // is the SCOPING of the waiver plus overflow at the CONFIGURED maximum.
   x.phase_policy.parallel_active_milestones_max = 2;
-  x.milestones.find(m => m.id === "M4").status = "active"; // same incomplete dependency, no waiver
+  const m4 = x.milestones.find(m => m.id === "M4");
+  m4.status = "active"; // same incomplete dependency
+  delete m4.activation_waiver; // the live M4 waiver (ADR-0008) must not leak into this fixture
   assert.deepEqual(codes(validateRoadmap(x)),["STATUS","DEPENDENCY"]);
 });
 console.log("1.." + count);

@@ -524,10 +524,18 @@
     {
       "id": "M4",
       "title": "Godot and Unreal engine integrations",
-      "status": "planned",
+      "status": "active",
       "depends_on": [
         "M2"
       ],
+      "activation_waiver": {
+        "basis": "maintainer-authorized-waiver",
+        "authorized_by": "repository maintainer",
+        "authorized_at": "2026-11-09",
+        "directive": "Active M4",
+        "reason": "M2 remains active with M2-G1 honestly blocked on the external Unity licensed-editor prerequisite (maintainer-side provisioning per docs/gamos/UNITY-M2G1-PROVISIONING.md §7). The maintainer explicitly directed M4 activation on 2026-11-09 ('Active M4'), recorded as that authorization in ADR-0008; the active-slot condition was then satisfied by the maintainer's limit-3 policy directive recorded in ADR-0009. This waiver authorizes activation only — never completion: M2-G1 stays blocked, no evidence/roadmap/M2.json completion bundle exists, and every completion rule applies verbatim.",
+        "reference": "docs/gamos/ADR/0008-m4-activation-authorization-and-slot-gate.md"
+      },
       "objective": "Extend the same capability/plugin contract to Godot and Unreal without weakening the first three integrations.",
       "outcomes": [
         "Godot uses native CLI/headless workflows plus an editor bridge where needed.",
