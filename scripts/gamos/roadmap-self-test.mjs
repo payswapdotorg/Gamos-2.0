@@ -240,6 +240,10 @@ test("an activation waiver never permits completion before dependencies complete
 });
 test("the activation waiver is scoped to the authorized milestone only",() => {
   const x = withM3Waiver(clone());
+  // Pin this scenario's own concurrency policy so the assertion stays decoupled
+  // from the live phase_policy value (raised 2 -> 3 by ADR-0009): the point here
+  // is the SCOPING of the waiver plus overflow at the CONFIGURED maximum.
+  x.phase_policy.parallel_active_milestones_max = 2;
   x.milestones.find(m => m.id === "M4").status = "active"; // same incomplete dependency, no waiver
   assert.deepEqual(codes(validateRoadmap(x)),["STATUS","DEPENDENCY"]);
 });

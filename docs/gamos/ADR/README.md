@@ -14,6 +14,7 @@ decision requires a documented Architecture Change Request (new ADR marked
 | [0006](0006-m0-closure-contract-revision-2-and-phase-b-integrity.md) | Phase-0 contract revision 2 (M0-closure corrections A/B) & Phase B journey test integrity | Accepted |
 | [0007](0007-m3-maintainer-authorized-activation.md) | M3 activation under a maintainer-authorized dependency waiver (activation only, never completion) | Accepted |
 | [0008](0008-m4-activation-authorization-and-slot-gate.md) | M4 activation authorization recorded; exercise gated on an available active slot (waiver does not open one) | Accepted |
+| [0009](0009-active-limit-3-policy.md) | Active-milestone limit raised to 3 by explicit maintainer policy (value change only; no dependency/waiver/completion effect) | Accepted |
 
 Planned ADRs (to be authored with the corresponding work packages):
 native engine adapters · plugin capability

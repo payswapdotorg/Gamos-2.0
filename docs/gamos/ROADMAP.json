@@ -39,7 +39,7 @@
   "phase_policy": {
     "phase_advancement_owner": "Gamos TL",
     "user_confirmation_required": false,
-    "parallel_active_milestones_max": 2,
+    "parallel_active_milestones_max": 3,
     "active_milestones_are_dependency_gated": true,
     "rule": "The TL advances to any milestone whose dependencies are complete and whose required acceptance gates have passing evidence. No additional user approval is required to begin the next planned phase.",
     "exceptions_requiring_explicit_authorization": [
