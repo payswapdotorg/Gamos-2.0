@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   validateEnginePluginPackage,
 } from "../src/domain/engine-plugin-package.js";
-import { registerEnginePluginCapabilities, ENGINE_PLUGIN_CAPABILITIES, validateEnginePluginMeta, ENGINE_PLUGIN_METAS } from "../src/domain/engine-plugin.js";
+import { registerEnginePluginCapabilities, ENGINE_PLUGIN_CAPABILITIES, validateEnginePluginMeta, ENGINE_PLUGIN_METAS, M2_ENGINE_PLUGIN_SOURCE_COMMIT, M4_ENGINE_PLUGIN_SOURCE_COMMIT } from "../src/domain/engine-plugin.js";
 import type { EnginePluginMeta } from "../src/domain/engine-plugin.js";
 import { resolveCapability, registerCapability } from "../src/domain/capability-registry.js";
 import type { CapabilityRecord } from "../src/domain/capability-registry.js";
@@ -29,10 +30,13 @@ import { completeCapabilityRecord } from "./fixtures.js";
  */
 
 /** Reads the actual shipped manifest of an engine plugin package. */
+function packagesRoot(): string {
+  return fileURLToPath(new URL("../../../apps/zcode-cli/packages/", import.meta.url));
+}
+
 function readShippedPlugin(pluginDir: string): { manifest: Record<string, unknown>; packageJson: Record<string, unknown> } {
-  const packagesRoot = fileURLToPath(new URL("../../../apps/zcode-cli/packages/", import.meta.url));
-  const manifest = JSON.parse(readFileSync(`${packagesRoot}${pluginDir}/.zcode-plugin/plugin.json`, "utf8"));
-  const packageJson = JSON.parse(readFileSync(`${packagesRoot}${pluginDir}/package.json`, "utf8"));
+  const manifest = JSON.parse(readFileSync(`${packagesRoot()}${pluginDir}/.zcode-plugin/plugin.json`, "utf8"));
+  const packageJson = JSON.parse(readFileSync(`${packagesRoot()}${pluginDir}/package.json`, "utf8"));
   return { manifest, packageJson };
 }
 
@@ -261,6 +265,20 @@ describe("Worker C — no engine plugin bypasses the registry or lifecycle (M2.5
   it("the shipped metas are exactly the manifests' inline gamos fields (single source of truth)", () => {
     for (const meta of ENGINE_PLUGIN_METAS as EnginePluginMeta[]) {
       const dir = `${meta.pluginId}-plugin`;
+      // M4 WP-1 interim (honest scope): the godot-engine plugin PACKAGE ships in
+      // WP-2 (delivery plan §3 order 2 — the domain records + meta land first in
+      // order 1); for a meta whose package is not yet shipped, the manifest
+      // agreement leg does not exist yet, so this test asserts the INTERIM
+      // invariant instead: the meta itself must still validate fail-closed
+      // against the shipped registry (every declared id resolves). When WP-2
+      // ships the package directory, the full manifest-agreement assertions
+      // engage for it automatically (existsSync self-heals — no silent skip:
+      // a shipped package can never dodge the agreement check).
+      if (!existsSync(`${packagesRoot()}${dir}/.zcode-plugin/plugin.json`)) {
+        const result = validateEnginePluginMeta(meta, shippedRegistry);
+        expect(result.ok, `${dir} (package not yet shipped — WP-2): meta must validate against the shipped registry — ${result.ok ? "" : result.reason}`).toBe(true);
+        continue;
+      }
       const { manifest } = readShippedPlugin(dir);
       // The manifest's inline gamos fields must independently validate against the
       // SAME registry (the manifest `name` maps to the meta `pluginId`).
@@ -304,15 +322,24 @@ describe("M2 audit — shipped provenance identifies the REAL integration commit
    * commit cannot identify a repository source: contract 09 §4 requires the
    * structured source to identify "a repository, commit and path".
    *
-   * These tests pin the REAL source-of-record commit for the engine plugins'
-   * 0.1.0 line: the PR #5 integration merge that first shipped all three plugin
-   * packages in the integrated tree (CI run 42356695328 verified that exact
-   * tree). The CI workflow additionally proves object-realness with
-   * `git cat-file -t <sha>` (the domain package stays pure — no git subprocess
-   * here; format + exact-value + cross-surface agreement is what the domain can
-   * and must enforce).
+   * These tests pin the REAL source-of-record commit per shipped line: the M2
+   * 0.1.0 line (unity/blender/babylon) is pinned to the PR #5 integration merge
+   * that first shipped all three plugin packages in the integrated tree (CI run
+   * 42356695328 verified that exact tree); the M4 godot 1.0.0 line (WP-1) is
+   * pinned to M4_ENGINE_PLUGIN_SOURCE_COMMIT — the capability-contracts branch
+   * commit where the field-level record contracts those records implement
+   * verbatim were authored and CI-verified (run 42703013035), merged onto the
+   * integrated tree at 0afbc650 (CI 42718440007). The CI workflow additionally
+   * proves object-realness with `git cat-file -t <sha>` (the domain package
+   * stays pure — no git subprocess here; format + exact-value + cross-surface
+   * agreement is what the domain can and must enforce).
    */
-  const REAL_INTEGRATION_COMMIT = "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00";
+  const REAL_INTEGRATION_COMMIT = M2_ENGINE_PLUGIN_SOURCE_COMMIT;
+
+  /** The per-line source-of-record pin: every family's line names its OWN real commit (no cross-line drift, no synthetic values). */
+  function expectedSourceCommit(engineFamily: string): string {
+    return engineFamily === "godot" ? M4_ENGINE_PLUGIN_SOURCE_COMMIT : REAL_INTEGRATION_COMMIT;
+  }
 
   /** Detects synthetic placeholder SHAs: an 8-hex block repeated 5×, all zeros, or all one char. */
   function isSyntheticPlaceholder(commitSha: string): boolean {
@@ -337,7 +364,7 @@ describe("M2 audit — shipped provenance identifies the REAL integration commit
     }
   });
 
-  it("every shipped manifest identifies the exact real integration commit (PR #5 merge)", () => {
+  it("every shipped manifest identifies the exact real integration commit of its line (PR #5 merge for the M2 plugins)", () => {
     for (const pluginDir of pluginDirs) {
       const { manifest } = readShippedPlugin(pluginDir);
       const provenance = manifest.provenance as { source?: { commitSha?: string; repo?: string; path?: string } };
@@ -346,7 +373,7 @@ describe("M2 audit — shipped provenance identifies the REAL integration commit
     }
   });
 
-  it("the domain records (metas + capabilities) carry the SAME real commit — no manifest/domain provenance drift", () => {
+  it("the domain records (metas + capabilities) carry the SAME real commit as their line — no manifest/domain provenance drift", () => {
     for (const meta of ENGINE_PLUGIN_METAS as EnginePluginMeta[]) {
       expect(
         isSyntheticPlaceholder(meta.provenance.source.type === "repository" ? meta.provenance.source.commitSha : ""),
@@ -354,7 +381,7 @@ describe("M2 audit — shipped provenance identifies the REAL integration commit
       ).toBe(false);
       expect(meta.provenance.source.type).toBe("repository");
       if (meta.provenance.source.type === "repository") {
-        expect(meta.provenance.source.commitSha).toBe(REAL_INTEGRATION_COMMIT);
+        expect(meta.provenance.source.commitSha).toBe(expectedSourceCommit(meta.engineFamily));
       }
     }
     for (const record of ENGINE_PLUGIN_CAPABILITIES) {
@@ -364,7 +391,8 @@ describe("M2 audit — shipped provenance identifies the REAL integration commit
           isSyntheticPlaceholder(source.commitSha),
           `${record.id} capability provenance commitSha is synthetic`,
         ).toBe(false);
-        expect(source.commitSha).toBe(REAL_INTEGRATION_COMMIT);
+        const family = record.engineFamily ?? "core";
+        expect(source.commitSha).toBe(expectedSourceCommit(family));
       }
     }
   });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   validateEnginePluginMeta,
   registerEnginePluginCapabilities,
+  validateEngineVersionsPredicate,
   ENGINE_PLUGIN_CAPABILITIES,
   ENGINE_PLUGIN_METAS,
 } from "../src/domain/engine-plugin.js";
@@ -178,7 +179,7 @@ describe("Plugin-declared capabilities MUST resolve to complete registry records
 });
 
 describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
-  it("ships records for all three engines with append-only ids", () => {
+  it("ships records for the shipped engine families with append-only ids (M2 three + M4 godot)", () => {
     const ids = ENGINE_PLUGIN_CAPABILITIES.map((r) => r.id).sort();
     expect(ids).toEqual([
       "babylon/asset.integrate",
@@ -189,6 +190,12 @@ describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
       "blender/scene.inspect",
       "blender/scene.modify",
       "blender/scene.render",
+      "godot/asset.import",
+      "godot/project.build",
+      "godot/project.inspect",
+      "godot/project.run",
+      "godot/scene.modify",
+      "godot/script.check",
       "unity/asset.import",
       "unity/project.build",
       "unity/project.inspect",
@@ -221,7 +228,7 @@ describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
       expect(record.provenance.publisher).toBe("gamos-tl");
       expect(record.provenance.source.type).toBe("repository");
       expect(record.provider.kind).toBe("mcp-server");
-      expect(record.provider.identity).toMatch(/^plugin:(unity|blender|babylon)-engine:engine$/);
+      expect(record.provider.identity).toMatch(/^plugin:(unity|blender|babylon|godot)-engine:engine$/);
     }
   });
 
@@ -258,10 +265,10 @@ describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
   });
 });
 
-describe("Shipped engine-plugin metas (gamos/engine-plugin@2 for the three M2 plugins)", () => {
-  it("ships metas for unity-engine, blender-engine and babylon-engine plugins", () => {
+describe("Shipped engine-plugin metas (gamos/engine-plugin@2 for the M2 plugins + M4 godot)", () => {
+  it("ships metas for unity-engine, blender-engine, babylon-engine and godot-engine plugins", () => {
     const ids = ENGINE_PLUGIN_METAS.map((m) => m.pluginId).sort();
-    expect(ids).toEqual(["babylon-engine", "blender-engine", "unity-engine"]);
+    expect(ids).toEqual(["babylon-engine", "blender-engine", "godot-engine", "unity-engine"]);
   });
 
   it("every meta validates and its capabilities resolve against the shipped records", () => {
@@ -288,5 +295,95 @@ describe("Shipped engine-plugin metas (gamos/engine-plugin@2 for the three M2 pl
     const blender = byId.get("blender-engine")!;
     expect(blender.headlessSupport).toBe("full");
     expect(blender.requiresDisplayServer).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// M4 WP-1 (Worker B lane) — the canonical Godot engine capability records and
+// the godot-engine plugin meta, per docs/gamos/M4-CAPABILITY-CONTRACTS.md §2/§4
+// (the binding field-level contract). The tests below are the §5 RED design:
+// they fail because the required behavior is MISSING (no godot/* records, no
+// godot-engine meta) — not because of syntax, import or runner failure. The
+// pre-verified RED state on the baseline tree is recorded in the contracts
+// doc §6 (missing-behavior signatures only).
+// ---------------------------------------------------------------------------
+
+describe("Canonical M4 Godot engine capability records (M4 WP-1, Worker B)", () => {
+  it("ships records for all six godot capabilities with append-only ids", () => {
+    const ids = ENGINE_PLUGIN_CAPABILITIES.filter((r) => r.engineFamily === "godot").map((r) => r.id).sort();
+    expect(ids).toEqual([
+      "godot/asset.import",
+      "godot/project.build",
+      "godot/project.inspect",
+      "godot/project.run",
+      "godot/scene.modify",
+      "godot/script.check",
+    ]);
+  });
+
+  it("registers every godot record without error (complete execution-safety metadata)", () => {
+    const godotRecords = ENGINE_PLUGIN_CAPABILITIES.filter((r) => r.engineFamily === "godot");
+    expect(godotRecords.length).toBe(6);
+    for (const record of godotRecords) {
+      expect(() => registerCapability(record)).not.toThrow();
+    }
+  });
+
+  it("read-only godot operations declare read-only permissions; mutations declare engine-headless + filesystem-write", () => {
+    const byId = new Map(ENGINE_PLUGIN_CAPABILITIES.map((r) => [r.id, r]));
+    for (const id of ["godot/project.inspect", "godot/script.check"]) {
+      const kinds = byId.get(id)!.permissions.map((p) => p.kind);
+      expect(kinds).toEqual(["command-execution"]);
+    }
+    for (const id of ["godot/scene.modify", "godot/asset.import", "godot/project.build"]) {
+      const kinds = byId.get(id)!.permissions.map((p) => p.kind).sort();
+      expect(kinds).toEqual(["engine-headless", "filesystem-write"]);
+    }
+  });
+
+  it("mutations register recoverable (never reversible-on-promise); reads register reversible", () => {
+    const byId = new Map(ENGINE_PLUGIN_CAPABILITIES.map((r) => [r.id, r]));
+    expect(byId.get("godot/project.inspect")!.reversibility.kind).toBe("reversible");
+    expect(byId.get("godot/script.check")!.reversibility.kind).toBe("reversible");
+    expect(byId.get("godot/scene.modify")!.reversibility.kind).toBe("recoverable");
+    expect(byId.get("godot/asset.import")!.reversibility.kind).toBe("recoverable");
+    expect(byId.get("godot/project.build")!.reversibility.kind).toBe("recoverable");
+    expect(byId.get("godot/project.run")!.reversibility.kind).toBe("recoverable");
+  });
+
+  it("godot compatibility uses the family grammar (>=4.2), never universal SemVer", () => {
+    for (const r of ENGINE_PLUGIN_CAPABILITIES.filter((r) => r.engineFamily === "godot")) {
+      expect(validateEngineVersionsPredicate("godot", r.compatibility.engineVersions!)).toBe(true);
+    }
+  });
+
+  it("conditional godot records fail closed when the godot-installed prerequisite is NOT satisfied", () => {
+    const registry = registerEnginePluginCapabilities();
+    const resolved = resolveCapability(registry, { id: "godot/scene.modify" });
+    expect(resolved.ok).toBe(false);
+    if (!resolved.ok) expect(resolved.error.code).toBe("missing-prerequisite");
+  });
+
+  it("every godot record carries a verification spec (never exit-code-only)", () => {
+    for (const r of ENGINE_PLUGIN_CAPABILITIES.filter((r) => r.engineFamily === "godot")) {
+      expect(r.verification.method).toMatch(/^(output-schema|artifact-hash|filesystem-probe|engine-query)$/);
+      expect(r.verification.spec.length).toBeGreaterThan(20);
+    }
+  });
+});
+
+describe("M4 Godot engine-plugin meta (gamos/engine-plugin@2)", () => {
+  it("ships the godot-engine meta whose every declared capability resolves", () => {
+    const meta = ENGINE_PLUGIN_METAS.find((m) => m.pluginId === "godot-engine");
+    expect(meta).toBeDefined();
+    const registry = registerEnginePluginCapabilities();
+    expect(validateEnginePluginMeta(meta!, registry).ok).toBe(true);
+  });
+
+  it("declares full headless support, no display server, and the family-grammar predicate >=4.2", () => {
+    const meta = ENGINE_PLUGIN_METAS.find((m) => m.pluginId === "godot-engine")!;
+    expect(meta.headlessSupport).toBe("full");
+    expect(meta.requiresDisplayServer).toBe(false);
+    expect(meta.engineVersions).toBe(">=4.2");
   });
 });
