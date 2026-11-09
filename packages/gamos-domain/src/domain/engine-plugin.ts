@@ -15,7 +15,7 @@
  */
 
 import type { EngineFamily } from "./game-concept.js";
-import type { CapabilityRecord, JsonSchemaSpec, PermissionSpec, AvailabilitySpec } from "./capability-registry.js";
+import type { CapabilityRecord, JsonSchemaSpec, AvailabilitySpec } from "./capability-registry.js";
 import { registerCapability } from "./capability-registry.js";
 import { evaluateVersionPredicate, parseUnityVersion, parseBlenderVersion, parseBabylonToolchainVersion, parseGodotVersion, parseUnrealVersion } from "./discovery/engine-versions.js";
 import type { ProvenanceRef } from "./provenance.js";
@@ -176,58 +176,16 @@ export function validateEnginePluginMeta(
 // Canonical M2.4 capability records (append-only once published).
 // ---------------------------------------------------------------------------
 
-/**
- * The REAL source-of-record commit for the engine plugins' 0.1.0 line: the PR #5
- * integration merge that first shipped all three plugin packages in the
- * integrated tree (CI run 42356695328 verified that exact tree). Provenance is
- * exact (contract 09 §4): a shipped ref must name a commit object that exists.
- * A later plugin version bump points at ITS own shipping commit — the 0.1.0
- * source-of-record stays pinned here (append-only semantics, directive §5).
- */
-export const M2_ENGINE_PLUGIN_SOURCE_COMMIT = "c9c397a1ac29dbdab2b7cbad89cad17a394d9d00";
-
-const enginePluginProvenance = (path: string): ProvenanceRef => ({
-  publisher: "gamos-tl",
-  source: {
-    type: "repository",
-    repo: "payswapdotorg/Gamos-2.0",
-    commitSha: M2_ENGINE_PLUGIN_SOURCE_COMMIT,
-    path,
-  },
-  surfaces: ["mcp"],
-  reviewedBy: "gamos-tl",
-  reviewRef: "M2 engine plugin integration (TL-reviewed)",
-});
-
-const mcpProvider = (pluginId: string) => ({
-  kind: "mcp-server" as const,
-  identity: `plugin:${pluginId}:engine`,
-  discoveredVia: "zcode-plugin-lifecycle (installed_plugins.json + marketplace cache)",
-});
-
-const readOnlyCommandPermission: PermissionSpec = {
-  kind: "command-execution",
-  scope: "read-only",
-  rationale: "read-only filesystem probes of the declared project/workspace",
-};
-
-const engineHeadlessPermission: PermissionSpec = {
-  kind: "engine-headless",
-  scope: "declared-workspace",
-  rationale: "typed engine operation through the real engine executable in headless/batch mode (existing permission-gated agent execution)",
-};
-
-const fileWritePermission: PermissionSpec = {
-  kind: "filesystem-write",
-  scope: "declared-workspace",
-  rationale: "the typed operation persists engine files (scene/project/artifact) inside the declared workspace",
-};
-
-const networkLocalPermission: PermissionSpec = {
-  kind: "network-access",
-  scope: "loopback",
-  rationale: "the runtime bridge starts a local dev server on a loopback port",
-};
+// The shared record helpers (permission constants, provider identity and the
+// canonical M2/M4 provenance helpers + source-of-record commits) live in
+// engine-plugin-shared.ts since the M4 WP-1 registration; the M2 records'
+// call sites below are unchanged. The M2/M4 source-commit constants remain
+// re-exported from THIS module (the historical public API surface).
+export { M2_ENGINE_PLUGIN_SOURCE_COMMIT, M4_ENGINE_PLUGIN_SOURCE_COMMIT } from "./engine-plugin-shared.js";
+import { enginePluginProvenance, m4EnginePluginProvenance, mcpProvider, readOnlyCommandPermission, engineHeadlessPermission, fileWritePermission, networkLocalPermission } from "./engine-plugin-shared.js";
+// The M4 godot capability records (M4 WP-1, Worker B) — registration data in
+// its own module since the max-lines split; spread into ENGINE_PLUGIN_CAPABILITIES below.
+import { godotCapabilities } from "./engine-plugin-godot.js";
 
 /** Unity capabilities (M2.1, Worker A). */
 const unityCapabilities: readonly CapabilityRecord[] = [
@@ -729,10 +687,11 @@ const babylonCapabilities: readonly CapabilityRecord[] = [
   },
 ];
 
-/** The canonical M2 capability records for the three engine plugins (append-only). */
+/** The canonical M2 + M4 capability records for the engine plugins (append-only). */
 export const ENGINE_PLUGIN_CAPABILITIES: readonly CapabilityRecord[] = [
   ...unityCapabilities,
   ...blenderCapabilities,
+  ...godotCapabilities,
   ...babylonCapabilities,
 ];
 
@@ -780,5 +739,27 @@ export const ENGINE_PLUGIN_METAS: readonly EnginePluginMeta[] = [
     headlessSupport: "full",
     requiresDisplayServer: false,
     provenance: enginePluginProvenance("apps/zcode-cli/packages/babylon-engine-plugin"),
+  },
+  // M4 WP-1 (Worker B): the godot-engine meta per M4-CAPABILITY-CONTRACTS §4.1 —
+  // mirrors the shipped blender-engine shape exactly (cli kind, full headless
+  // support, no display server); the executable resolves via contract 04
+  // machine-local discovery (the pinned verified 4.2.2 recipe is the reference
+  // installation). Registers together with the six §2 godot records.
+  {
+    pluginId: "godot-engine",
+    engineFamily: "godot",
+    engineVersions: ">=4.2",
+    executable: { kind: "cli", command: "godot", args: ["--headless"] },
+    capabilities: [
+      "godot/project.inspect",
+      "godot/scene.modify",
+      "godot/script.check",
+      "godot/asset.import",
+      "godot/project.build",
+      "godot/project.run",
+    ],
+    headlessSupport: "full",
+    requiresDisplayServer: false,
+    provenance: m4EnginePluginProvenance("apps/zcode-cli/packages/godot-engine-plugin"),
   },
 ];
