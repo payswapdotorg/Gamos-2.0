@@ -217,3 +217,76 @@ the external M2-G1 blocker is unchanged.
 - The reproducibility/handoff scripts import the blender plugin's BUILT dist
   (`dist/` is gitignored): build `pnpm --filter @zcode/blender-engine-plugin
   build` before running them locally.
+
+## Directive §3/§4/§5 corrections — session close (2026-11-08, fifth/sixth "go")
+
+The maintainer's recovery-review directive (accepted: recovery `50c0d13f`,
+exact-code-head M3 run `42512664248` on `7aa217bc`, with the distinction
+recorded — the M3 workflow ran on `7aa217bc`; the docs-only `50c0d13f` was
+separately governance-verified) ordered two P0 proof corrections and a
+Unity-terms correction. All three landed as focused branches + PRs, strict
+TDD where applicable:
+
+- **PR #22 (§3, provenance, merged `5804a1e3`):** RED first (5/6 assertions
+  failing against the stale bundle, re-proven in branch CI); the m3 journey
+  script now self-identifies (`revision: 2`, `source_sha256`, a `ci` block
+  with ambient GITHUB_RUN_ID/GITHUB_SHA, per-stage `run_token` +
+  `merged_from_prior_chunk`, summary `stages_executed_this_run` /
+  `stages_merged_from_prior_chunks`); the same-class
+  `M3_LOCAL_MODEL_TRANSCRIPT` env bug fixed (the transcript was silently
+  disabled — now real); CI asserts extended fail-closed with ambient-env
+  equality. The committed evidence bundle is now the authoritative fresh
+  single-run CI journey artifact (run `42517218036` @ `79d51b36`, token
+  `GAMOS-M3-20261108195716`, all 7 stages in one clean-checkout run, zero
+  merged chunks) and the M3.4 handoff bundle was REGENERATED through its own
+  script against it (derivedFrom hashes re-bound; export digest `7f15af95…`
+  unchanged). Ledger entry 19.
+- **PR #24 (§4, durable resume, merged `06c0dcbc`):** the most important
+  remaining M3 runtime item, closed. RED first (the production-path proof
+  was not assembled in tests); GREEN is the REAL production stack in two
+  SEPARATE processes — `createSqliteSessionStore().workflowJournalStore()`
+  (the SQLite `dwf_*` journal), `createDynamicWorkflowRunService` (bootstrap
+  service: `reconcileOrphanRuns` + `AgentRuntimeWorkflowDriver` + the real
+  harness), a real-Blender actor seam at the `createActorRuntime` factory —
+  killed with a whole-process-group SIGKILL after ≥2 ops committed, resumed
+  via `service.resume` in a NEW process. All six tests green (locally ×4,
+  CI): zero re-dispatch with cached settles, the pending step runs against
+  real Blender, output matches the pre-interruption mutation, journaled
+  result BYTES identical across the restart; harden cases: mid-flight
+  re-dispatch, `script_mismatch` refusal, `not_resumable` duplicate,
+  cancel-during-op (stopped persisted cancelled, never completed, dependent
+  never dispatched), missing-artifact loud failure. `GamosEngineDriver` is
+  not involved. Ledger entry 20. CI needed two honest harness fixes,
+  recorded in-commit: the production-chain build step (workspace exports
+  point at dist) and the 50ms cancel window + interim-report complete-flag
+  (found by CI's faster runner and repeated local runs; three consecutive
+  full-suite greens after).
+- **PR #23 (§5, Unity terms, merged `ff4ec096`):** the provisioning
+  conclusion corrected — the primary/secondary clause does NOT settle the
+  separate-build-machine question (compliance FAQ: separate machine,
+  separate license); the Gamos first-party use model documented (§2.5); the
+  PRIMARY workstation is the preferred zero-cost arrangement; any dedicated
+  build machine (incl. a self-hosted runner on a secondary machine) needs
+  Unity Compliance WRITTEN clarification BEFORE use (new §6 step 0 gate);
+  GitHub-hosted runners stay not permitted for Personal — community CI
+  guides are explicitly not licensing authority. The maintainer only
+  attests eligibility privately; credentials/license material never enter
+  Git/CI. Ledger entry 21.
+
+**Final-head verification (§6):** on the exact merge head `06c0dcbc` —
+local chain green (governance pin `631f3383…`, self-test 14/14, roadmap
+valid, architecture 0 violations, gamos-domain 383/383, plan acceptance
+8/8, full runtime package suite **119 passed + 1 skipped** with real
+Blender); CI: governance (push + dispatch) success ×2 and **m3-e2e ALL
+FOUR JOBS success ×2** (push + `workflow_dispatch` runs `42537440037` /
+`42537849165`) — including the provenance-asserted fresh journey on this
+exact commit and the real-Blender gates job with the full durable-resume
+suite.
+
+**Unchanged by design (§7):** M2 and M3 remain `active`; M2-G1 blocked
+(now additionally on the Unity Compliance clarification for any dedicated
+build machine, or the primary-workstation path); ADR-0007's activation
+waiver preserved; the roadmap validator fails closed; no
+`evidence/roadmap/M3.json`. The run `42512664248` remains valid evidence
+for `7aa217bc`; the full matrix was re-run on the corrected head as
+directed.
