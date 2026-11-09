@@ -13,7 +13,7 @@
  * scripts/gamos/m1-context-cli.ts) and runs the bundle with node.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import {
   registerEnginePluginCapabilities,
   ENGINE_PLUGIN_CAPABILITIES,
@@ -75,12 +75,36 @@ const resolved = REQUESTED.map((request) => {
   };
 });
 
-// The three shipped plugin metas + manifests must agree (the INTEGRATE seam).
+// The shipped plugin metas + manifests must agree (the INTEGRATE seam).
+// M4 WP-1 interim (honest scope): a meta whose plugin PACKAGE is not yet
+// shipped reads no manifest — it is REPORTED as package-not-yet-shipped
+// instead of crashing. The godot-engine meta was registered in M4 WP-1
+// (order 1: the domain records + meta land first); its plugin package ships
+// in WP-2 (order 2) per delivery plan §3. When that package directory ships,
+// the manifest read engages for it automatically (existsSync self-heals — a
+// shipped package can never dodge the agreement record). The m2-e2e CI run
+// 42720962126 on 8f3d0068 failed exactly here (M2J3: ENOENT
+// apps/zcode-cli/packages/godot-engine-plugin/.zcode-plugin/plugin.json) —
+// the honest fix is scoping, not fabricating a package ahead of its slice.
 const pluginsRoot = "apps/zcode-cli/packages/";
 const shipped = ENGINE_PLUGIN_METAS.map((meta) => {
-  const manifest = JSON.parse(
-    readFileSync(`${pluginsRoot}${meta.pluginId}-plugin/.zcode-plugin/plugin.json`, "utf8"),
-  );
+  const manifestPath = `${pluginsRoot}${meta.pluginId}-plugin/.zcode-plugin/plugin.json`;
+  if (!existsSync(manifestPath)) {
+    return {
+      pluginId: meta.pluginId,
+      engineFamily: meta.engineFamily,
+      engineVersions: meta.engineVersions,
+      manifestName: null,
+      manifestVersion: null,
+      declaredCapabilities: [...meta.capabilities],
+      provenanceCommit: null,
+      provenanceCommitIsSourceOfRecord: null,
+      mcpServerEntry: null,
+      packageNotYetShipped: true,
+      note: "domain records + meta registered before the plugin package ships (delivery plan §3 order sequencing); the manifest-agreement record engages automatically once the package directory exists",
+    };
+  }
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   return {
     pluginId: meta.pluginId,
     engineFamily: meta.engineFamily,
