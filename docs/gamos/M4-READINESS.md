@@ -20,6 +20,20 @@ closure; all governance/domain/plan/runtime gates and the reproducibility
 digest `55665e6c…` / handoff digest `7f15af95…` re-verified identical on this
 machine before this document was written.
 
+**Amended:** 2026-11-09 (later, same day), under the maintainer's correction
+directive "M4 — Readiness Corrections and Implementation Entry Conditions"
+(reviewed head `3bc4d250`): the readiness delivery was ACCEPTED with its
+investigation preserved; this amendment corrects security assumptions and
+the activation entry conditions only — §2.2 Unreal rows (server-side
+listener verification, the chosen honest authentication model, documented
+transaction semantics, no editor termination, exact API source references),
+§3 loopback-binding requirement, §4.1 Godot trust boundary + runs relabeled
+REAL FEASIBILITY PROBES, §4.2 rewritten (allowlisted typed mutations only —
+no generic function.call; corrected teardown), §5 live-editor permission
+mapping (engine-gui semantics), §6 negative tests, §10 worker-preparation
+note, §11 relabel, §12 explicit concurrency-slot requirement, §13 correction
+record. M4 remains planned (blocked) — this amendment activates nothing.
+
 ---
 
 ## Deliverable 1 — Architecture and capability inventory (ground truth)
@@ -88,10 +102,10 @@ dispatch through `AgentRuntimeWorkflowDriver` (the test-only
 
 | # | Threat | Vector | Mitigation (prepared) |
 |---|---|---|---|
-| U-T1 | Network exposure | RC endpoint reachable off-host | bind 127.0.0.1 ONLY (verified default: HTTP 30010 / WS 30020 are localhost endpoints); the plugin MUST refuse a non-loopback configured host — fail closed before any request. |
-| U-T2 | Default credentials | UE's Remote Control default passphrase is PUBLIC knowledge ("smh ue, this is stupid" — published in client libraries) | auth REQUIRED, non-default credential supplied out-of-band via env (never in Git/CI logs); unauthenticated 401/403 ⇒ `unavailable` with reason `auth-required`, never a retry storm; constant-time compare; credential zeroization after teardown. |
-| U-T3 | Irreversible mutation | remote property/function calls | every mutation goes through a typed-op with `transaction: true` (editor transaction = undo/redo integration, the RC API's own reversibility mechanism) PLUS an explicit pre-mutation snapshot record; ops without a verified rollback path are NOT registered (contract 02 reversibility field fail-closes registration). |
-| U-T4 | Zombie editor session | teardown skipped on failure | safe teardown is a first-class op: undo-transaction rollback of the exact ops applied, then connection dispose, then editor process termination (SIGTERM→grace→SIGKILL escalation, mirroring unity-engine-plugin `engine.ts:177-203`); teardown failures are surfaced, never swallowed. |
+| U-T1 | Network exposure | RC endpoint reachable off-host | TWO layers, both required. (a) Client side: the plugin refuses any non-loopback configured host at construction — fail closed before any request. (b) Server side: a client connecting to 127.0.0.1 proves NOTHING about the editor's actual binding — the plugin must verify the REAL listeners (HTTP bind address, WS bind address, ports, actual listening sockets by inspection on the evidence machine) and resolve to `unavailable` (reason `rc-listener-not-loopback`) unless BOTH listeners bind loopback exclusively; a LAN unreachability negative test (request from a second machine must fail) is mandatory M4-G2 evidence. The "two localhost endpoints" default is the CLIENT library's documented behavior (unreal-rc README:19), not a server-side proof. |
+| U-T2 | Authentication assumptions | UE's RC authentication behavior is NOT uniformly documented; the client library itself discloses that "some Unreal versions require the `Passphrase` header for `/remote/batch` even when other HTTP routes appear to work without it" (unreal-rc README:56) — the header may gate some routes only, and the default passphrase is public | CHOSEN MODEL (honest, verifiable): an explicitly documented SAME-USER OPERATING-SYSTEM TRUST BOUNDARY — the security boundary is the OS user that owns both the editor process and the Gamos plugin process, NOT any client-supplied header — PLUS Gamos permission approval for EVERY mutation through the existing permission broker. The Passphrase header is treated as an opaque transport token (sent for route compatibility), NEVER claimed as server-side authentication; a claim of server-side auth would additionally require the live negative test (server rejects a wrong passphrase on EVERY route) and no such claim is made in readiness. Residual risk recorded honestly: any same-user local process can reach a loopback RC endpoint — deployment guidance (dedicated editor user, OS firewall) belongs in the M4.2 provisioning doc. 401/403-style refusals ⇒ `unavailable` with reason `auth-required`, never a retry storm. |
+| U-T3 | Irreversible mutation | remote property/function calls | documented API contracts used verbatim: property mutation via access mode `WRITE_TRANSACTION_ACCESS` (unreal-rc `dist/internal/schemas.d.ts:3`, applied at `batch.js:14-19`) and function mutation via `generateTransaction: true` (`schemas.d.ts:8`, `batch.js:9`). These transactions are EDITOR UNDO HISTORY SUPPORT, not a universal rollback guarantee. Every registered mutation carries the full five-part chain: (1) pre-mutation snapshot, (2) typed operation, (3) expected post-mutation state, (4) a verified rollback or compensating operation, (5) post-rollback verification against the snapshot. An operation that cannot be reversed RELIABLY is NOT advertised as reversible — contract 02's reversibility field fail-closes registration either way. |
+| U-T4 | Zombie editor session | teardown skipped on failure | the connector ATTACHES to an existing editor it does NOT own. Disconnect is a first-class op that MUST: stop in-flight requests and event subscriptions; close WebSocket and HTTP client resources; roll back ONLY the connector's authorized changes (per the U-T3 chain); clear connection and session state; and surface teardown failures — never swallow them. It must NEVER terminate the maintainer's Unreal Editor process. Process-termination authority exists ONLY for processes explicitly launched and owned by a Gamos process supervisor, under the appropriate user authorization. |
 | U-T5 | SSRF/redirect via object paths | `/Game/...` path grammar | strict object-path grammar validation before any request (fail-closed parse, like `parseGodotVersion`); no free-form URL construction anywhere. |
 | U-T6 | Long-lived sockets | WebSocket auto-reconnect hiding failures | no auto-reconnect in the plugin layer (the harness owns lifecycle); request timeouts per op; a wedged editor resolves to `timeout`, not a hang. |
 | U-T7 | Version drift | UE5 route/auth shape differences across versions | route discovery via `GET /remote/info` (lists actual routes) instead of hardcoded paths where possible; contract tests pin the schema; unknown route shape ⇒ `unknown`, fail closed. |
@@ -109,12 +123,39 @@ UNKNOWN and MUST be re-verified against a live editor during M4.2
 implementation — the RED test plan (§6) encodes the contract, not incidental
 URL shapes.
 
+**Exact source references (re-verified for this amendment against the
+`unreal-rc@0.6.0` tarball; registry shasum
+`282ba517df83b81d462c86ced3029d6d0b0982af`):**
+- `WRITE_TRANSACTION_ACCESS` — AccessModeSchema literals
+  `READ_ACCESS | WRITE_ACCESS | WRITE_TRANSACTION_ACCESS`:
+  `dist/internal/schemas.d.ts:3`; applied for transactional property writes at
+  `dist/internal/batch.js:14-19`; documented at `README.md:150`.
+- `generateTransaction` — optional Boolean on the object-call request:
+  `dist/internal/schemas.d.ts:8`, applied at `dist/internal/batch.js:9`;
+  call route `PUT /remote/object/call` (`batch.js:39`); `README.md:72-78`
+  states the transaction flag exists "for undo/redo in the editor".
+- Ports — HTTP `30010` (`README.md:23`, `dist/internal/http.js:6`),
+  WebSocket `30020` (`README.md:24`, `dist/internal/ws.js:8`).
+- Client host default `127.0.0.1` — `dist/internal/http.js:5`,
+  `dist/internal/ws.js:7` (CLIENT-side default; NOT evidence of the server's
+  bind address — see U-T1).
+- Passphrase honesty — `README.md:56` (per-version, per-route
+  inconsistency); the default value is the public string
+  (`dist/internal/http.js:8`).
+- Property route `PUT /remote/object/property`, describe
+  `PUT /remote/object/describe`, search `PUT /remote/search/assets`
+  (`batch.js:45,49,57,65`).
+These are the CLIENT library's encoding of the API contract; the selected
+UE version's actual SERVER behavior (binding, per-route auth enforcement)
+must be re-verified live at M4.2 — the corrections in this amendment exist
+precisely because client-side facts are not server-side proofs.
+
 ## Deliverable 3 — Version and availability matrix (prepared)
 
 | Engine | Version gate (predicate) | Discovery source | Availability states possible |
 |---|---|---|---|
 | Godot | `>=4.2` (family grammar; mono suffix tracked but NOT required) | `GODOT_PATH` → PATH `godot` → common roots incl. `/home/z/engines/godot-*-linux-x64/godot` (CI convention) | available / unavailable / unknown (unparseable `--version`) |
-| Unreal | `>=5.3` (brand-prefix grammar `++UE<n>+Release-…` supported) | `UNREAL_EDITOR_PATH` (editor exe) AND RC endpoint probe `GET /remote/info` on 127.0.0.1:30010 | available / unavailable (`editor-absent`, `rc-endpoint-absent`, `auth-required`, `version-unknown`) / unknown |
+| Unreal | `>=5.3` (brand-prefix grammar `++UE<n>+Release-…` supported) | `UNREAL_EDITOR_PATH` (editor exe) AND RC endpoint probe `GET /remote/info` on 127.0.0.1:30010 AND verified loopback-only listener binding (actual socket inspection of the HTTP and WS listeners on the evidence machine — see U-T1) | available / unavailable (`editor-absent`, `rc-endpoint-absent`, `rc-listener-not-loopback`, `auth-required`, `version-unknown`) / unknown |
 
 Godot `--version` output verified this session:
 `4.2.2.stable.official.15073afe3` — matches `parseGodotVersion` exactly
@@ -141,6 +182,18 @@ The bridge contract is DATA-ONLY: the input JSON is a frozen typed-op shape
 (zod-validated in TS), the bridge script maps it to explicit Godot API calls
 (allowlisted op types only — no `eval`-equivalents, no free-form GDScript).
 
+**Trust boundary (explicit, per the correction directive):** launching Godot
+against a user project is NOT itself a sandbox. Project scripts, editor
+plugins and import behavior are PROJECT-CONTROLLED EXECUTION SURFACES — the
+engine process must be treated as executing project-supplied code with the
+invoking user's privileges. The plugin's mandatory mitigations (all already
+in the design, now stated as requirements): never interpolate user text into
+GDScript source; validate typed operations and paths (absolute-only, no `..`,
+no symlink escape); confine reads and writes to authorized workspaces; use
+bounded process execution with process-group cancellation; verify engine
+results by reading the resulting project state back (not exit codes); and
+report missing templates, malformed resources and failed imports honestly.
+
 Proposed initial op set (each a capability record, contract 03 rule 1 —
 declared ids must resolve):
 
@@ -153,8 +206,10 @@ declared ids must resolve):
 | project build (export) | preset, outPath (pre-created dir) | `--export-release` exit + ELF/PCK existence + sha256 + size bounds | `godot/project.build` |
 | run verify | exported binary path | run `--headless --quit-after N`, assert exit 0 + no crash lines | `godot/project.run` |
 
-**Verified bridge facts from this session's real runs** (all executed on
-Godot 4.2.2-stable in the preparation sandbox):
+**Verified bridge facts from this session's REAL FEASIBILITY PROBES** (all
+executed on Godot 4.2.2-stable in the preparation sandbox; these are
+feasibility probes, NOT M4-G1 evidence — M4-G1 remains unimplemented and
+unpassed until the real plugin completes its acceptance journey):
 - `PackedScene.pack()` requires `owner` set on children AFTER `add_child` —
   owner-before-add silently drops the subtree (caught by read-back
   verification, exactly why engine-query verification is mandatory).
@@ -169,15 +224,27 @@ Godot 4.2.2-stable in the preparation sandbox):
   `~/.local/share/godot/export_templates/<exact-version-string>/` — version
   string mismatch (e.g. `4.2.2.stable` vs `4.2.2`) fails closed.
 
-### 4.2 Unreal plugin (`unreal-engine-plugin`, the RC client)
+### 4.2 Unreal plugin (`unreal-engine-plugin`, the RC client) — corrected design
 
 **Execution model:** NO process spawn for ops. The plugin is an HTTP/WS
-CLIENT to an already-running, maintainer-provided Unreal Editor with the
-Remote Control plugin enabled. Loopback-only connector refuses non-127.0.0.1
-hosts at construction. Every request: typed request/response (zod), per-op
-timeout, auth header, structured failure taxonomy
-(`{rc-unreachable, rc-auth-required, rc-route-unknown, rc-schema-mismatch,
-rc-timeout, rc-transaction-failed}`).
+CLIENT that ATTACHES to an already-running, maintainer-provided Unreal
+Editor with the Remote Control plugin enabled — an editor the plugin does
+NOT own and must NEVER terminate. The loopback-only connector refuses
+non-127.0.0.1 hosts at construction, and the actual server listeners (HTTP
+bind, WS bind, ports, sockets) are VERIFIED, not assumed (U-T1).
+Authentication follows the chosen same-user OS trust-boundary model with
+per-mutation Gamos permission approval (U-T2); the Passphrase header is
+transport compatibility, not authentication. Every request: typed
+request/response (zod), per-op timeout, structured failure taxonomy
+(`{rc-unreachable, rc-auth-required, rc-listener-not-loopback,
+rc-route-unknown, rc-schema-mismatch, rc-timeout, rc-transaction-failed}`).
+
+**Operation allowlist (corrected):** unrestricted remote function execution,
+remote Python execution and remote console-command execution are DISABLED —
+no generic `function.call` capability is exposed to the model. Only
+individually reviewed, typed operations are registered; object paths,
+property names, function names and request schemas are validated against
+the allowlist before any request is built.
 
 Proposed initial op set:
 
@@ -185,15 +252,17 @@ Proposed initial op set:
 |---|---|---|---|
 | connection info | `GET /remote/info` | read-only | `unreal/connection.inspect` |
 | object describe | describe (objectPath) | read-only | `unreal/object.inspect` |
-| property read | getProperty(s) | read-only | `unreal/property.read` |
-| property write | setProperty `transaction:true` + pre-snapshot | undo transaction + snapshot restore | `unreal/property.write` |
-| function call | call `transaction:true` | undo transaction | `unreal/function.call` |
-| teardown | n/a (plugin-owned) | rollback → dispose → editor terminate | (not a capability; plugin lifecycle) |
+| property read | getProperty(s) (`READ_ACCESS`) | read-only | `unreal/property.read` |
+| property write (allowlisted properties only) | setProperty `WRITE_TRANSACTION_ACCESS` + pre-snapshot | U-T3 five-part chain (undo-transaction + snapshot restore + post-rollback verification against the snapshot) | `unreal/property.write` |
+| allowlisted typed function invocation | `PUT /remote/object/call` with `generateTransaction: true`; functionName ∈ reviewed allowlist | U-T3 five-part chain | `unreal/function.invoke` (per-function registration — NOT a generic call) |
+| disconnect | n/a (plugin lifecycle) | stop requests + subscriptions → close WS/HTTP resources → roll back ONLY connector-authorized changes → clear state → report failures; NEVER terminate the editor | (not a capability; plugin lifecycle) |
 
-`unreal/property.write` and `unreal/function.call` are the ONLY native-mutation
-ops; both carry the reversibility contract (contract 02 registration
-fail-closes without it) and the M4-G2 acceptance exercises one full
-write→verify→rollback→verify cycle.
+`unreal/property.write` and the per-function `unreal/function.invoke`
+registrations are the ONLY native-mutation ops; both carry the full
+reversibility contract (contract 02 registration fail-closes without it) and
+the M4-G2 acceptance exercises one complete
+write→verify→rollback→verify-against-snapshot cycle plus a teardown proof
+that leaves the editor process alive.
 
 ## Deliverable 5 — Permission and process-privilege mapping
 
@@ -201,16 +270,20 @@ write→verify→rollback→verify cycle.
 |---|---|---|---|
 | godot/project.inspect, script.check | `command-execution` (read-only scope) | `exec` (gated) | spawns `godot --headless`; no network; filesystem read-only |
 | godot/scene.modify, asset.import, project.build, project.run | `engine-headless` + `filesystem-write` | `engine-headless` (native-mutation gated path) | spawns `godot --headless`; writes confined to projectRoot + run temp; template dir read |
-| unreal/connection.inspect, object.inspect, property.read | `command-execution`? NO — network op | `network` (loopback-scoped) | plugin itself spawns nothing; talks HTTP/WS to 127.0.0.1:30010/30020 |
-| unreal/property.write, function.call | `network-access` (scope: loopback-rc-endpoint) + `engine-headless` (semantic class: live-editor mutation) | `native-mutation` via gated path | remote side executes INSIDE the editor process with editor privileges — disclosed as such; approval is for the mutation, not just the socket |
+| unreal/connection.inspect, object.inspect, property.read | `command-execution`? NO — network op | `network` (loopback-scoped) | plugin itself spawns nothing; talks HTTP/WS to verified-loopback 127.0.0.1:30010/30020 |
+| unreal/property.write, function.invoke (per-function) | `network-access` (scope: loopback-rc-endpoint) + `engine-gui` (semantic class: LIVE-EDITOR mutation — never described as headless execution) | `native-mutation` via gated path | the record distinguishes ALL FOUR: (a) permission to invoke the capability; (b) permission to mutate the editor (the gated native-mutation approval); (c) the OS privileges of the process hosting the editor (the maintainer's user — disclosed, not assumed); (d) the editor process is EXTERNALLY OWNED (not spawned or supervised by Gamos) |
 
 Rules preserved verbatim from contract 06: no GUI→headless downgrade; native
 mutations require one of the NATIVE_MUTATION_KINDS declared AND granted;
-`display-server-required` denies when a display server is absent. Unreal adds
-a new nuance the M4.4 review must bless: the mutation executes in a process
-the plugin does not own (the maintainer's editor) — the permission rationale
-must name that host boundary, and teardown authority is the plugin's
-obligation, not the user's.
+`display-server-required` denies when a display server is absent. Live
+Unreal Editor mutations map to the EXISTING `engine-gui` semantics plus the
+loopback-scoped network permission — they are never described as headless
+execution. The M4.4 review must bless the recorded four-fold distinction
+above (invoke permission / mutation permission / host-process OS privileges
+/ external ownership). NO new permission system is introduced — the
+existing broker, kinds and scopes carry the load. Teardown authority is the
+plugin's obligation (rollback of its own authorized changes only), never
+the user's, and never extends to the editor process itself.
 
 ## Deliverable 6 — G1–G4 RED test plans (TDD entry points; NOT yet written)
 
@@ -219,6 +292,10 @@ A unit test can never substitute for an engine gate (roadmap
 `journey_acceptance`; directive: 单元测试 ≠ 引擎集成).
 
 **M4-G1 (Godot real integration) — RED plan:**
+0. STATUS: the Godot 4.2.2-stable runs recorded in §4.1/§7/§11 are REAL
+   FEASIBILITY PROBES, not gate evidence — M4-G1 is unimplemented and
+   unpassed until the real `godot-engine-plugin` completes its full
+   acceptance journey on a shipped plugin.
 1. RED: `godot-engine-plugin` discovery — no binary, `GODOT_PATH` unset ⇒
    `{status:"unavailable", reason:"no godot executable found"}`; env pointing
    at a non-Godot binary ⇒ `version-unknown` (fail closed, never
@@ -235,20 +312,39 @@ A unit test can never substitute for an engine gate (roadmap
    `--check-only` negative + positive → `--export-release` → run-exported-
    binary headless → evidence bundle with per-stage artifacts + digests.
 
-**M4-G2 (Unreal authenticated RC) — RED plan:**
-1. RED: connector refuses non-loopback host AT CONSTRUCTION (throw, not
-   warn); refuses ws:// to non-127.0.0.1; refuses credential embedded in
-   object paths.
-2. RED: unauthenticated endpoint (401/403) ⇒ `rc-auth-required`, NO retry
-   with the credential, NO fallback to unauthenticated mode.
-3. RED: unknown route shape / schema mismatch ⇒ `rc-unknown` (fail closed).
-4. RED: write op without pre-snapshot record ⇒ refused before request.
-5. GREEN→EVIDENCE (requires maintainer-provided licensed UE5 machine with RC
-   enabled — honest-unavailable pattern like Unity M2-G1): full
-   write→verify→rollback→verify cycle + teardown proof (no live socket, no
-   residual transaction) + evidence bundle. In-sandbox: contract tests with
-   a pinned local mock RC server ONLY for protocol shape — explicitly labeled
-   non-gate.
+**M4-G2 (Unreal authenticated RC) — RED plan (corrected):**
+1. RED: connector refuses non-loopback CONFIGURED host AT CONSTRUCTION
+   (throw, not warn); refuses ws:// to non-127.0.0.1; refuses credential
+   embedded in object paths.
+2. RED (server-side isolation — U-T1): listener verification — actual
+   socket inspection proves the HTTP AND WS listeners bind loopback
+   exclusively; any non-loopback binding ⇒ `unavailable` with reason
+   `rc-listener-not-loopback` (fail closed). Plus the LAN negative test: a
+   request from a second machine MUST fail — evidence-machine item.
+3. RED (authentication — U-T2): no-credential and wrong-passphrase requests
+   must NOT bypass the Gamos permission layer — EVERY mutation requires
+   broker approval regardless of transport; the plugin never presents the
+   Passphrase header as authentication. A claim of server-side enforcement
+   would additionally require the live negative test (server rejects a
+   wrong passphrase on EVERY route) — not made in readiness.
+4. RED (allowlist — §4.2): non-allowlisted function name / property /
+   object path / request shape ⇒ refused BEFORE any request is built;
+   remote Python and console-command surfaces absent by construction.
+5. RED: unknown route shape / schema mismatch ⇒ `rc-unknown` (fail closed).
+6. RED (transactions — U-T3): write op without pre-snapshot record ⇒
+   refused before request; rollback verification compares post-rollback
+   state against the snapshot (not just an API ack).
+7. RED (ownership — U-T4): disconnect stops requests and subscriptions,
+   closes WS/HTTP resources, clears state, reports failures — and the
+   editor process is STILL ALIVE after teardown (negative test: no
+   editor-termination path exists in the connector at all).
+8. GREEN→EVIDENCE (requires maintainer-provided licensed UE5 machine with
+   RC enabled — honest-unavailable pattern like Unity M2-G1): full
+   write→verify→rollback→verify-against-snapshot cycle + listener-binding
+   and LAN-unreachability evidence + teardown proof (no live socket, no
+   residual transaction, editor alive) + evidence bundle. In-sandbox:
+   contract tests with a pinned local mock RC server ONLY for protocol
+   shape — explicitly labeled non-gate (a mock can never satisfy M4-G2).
 
 **M4-G3 (engine selection and honest unavailability) — RED plan:**
 1. RED: required-Godot-unavailable + Blender installed ⇒ `substitution-proposed`
@@ -272,6 +368,10 @@ A unit test can never substitute for an engine gate (roadmap
 3. ZCode inherited regression: `pnpm run verify:pre-push` scope (lint, docs
    stale-phrase, db schema, architecture, engineering affected) + the
    inherited-test determinism suite (20/20 provider-stop/auto-driver).
+4. Unity remains an EXTERNAL dependency: M4-G4 cannot be passed by silently
+   treating the unavailable Unity integration as a successful engine test —
+   the honest-unavailable gate-status stands unless the maintainer's
+   licensed runner exists.
 
 ## Deliverable 7 — Installation verification runbook (Godot — VERIFIED this session)
 
@@ -371,11 +471,20 @@ the existing plugins: zod + MCP SDK only).
 | 8 | M4.4 privilege/network/permission review + five-engine regression (G4) | TL + Worker C | closing authority |
 | 9 | M4-G3 engine-selection regression suite | Worker B + TL | spans domain + plugins |
 
+While M4 remains planned, workers MAY prepare isolated, non-implementation
+design and test artifacts (RED tests that fail against absent packages,
+contract fixtures, provisioning drafts) — but NO M4 production
+implementation PR may merge before the formal activation condition (§12)
+holds.
+
 ## 11 — Sandbox feasibility assessment (this machine, honestly)
 
-- **Godot: FEASIBLE, PROVEN.** Every G1 leg ran for real this session on
-  Godot 4.2.2-stable (see §1/§4.1/§7 evidence). Fits 2 vCPU / 3.9 GB RAM /
-  2.2 GB free disk with the selective-template recipe.
+- **Godot: FEASIBLE — real feasibility probes executed.** The §4.1/§7 runs
+  (real Godot 4.2.2-stable binary: bridge pattern, import, check-only,
+  export, run-verify) prove the RECIPES and surface the traps; they are NOT
+  M4-G1 gate legs and do not make M4-G1 passed — that requires the shipped
+  plugin's full acceptance journey. Fits 2 vCPU / 3.9 GB RAM / 2.2 GB free
+  disk with the selective-template recipe.
 - **Unreal editor: INFEASIBLE here — honestly recorded.** UE5 editor
   requires GPU/display, multi-GB RAM, and tens of GB of disk; this sandbox
   has none of those. M4-G2's real leg therefore follows the Unity M2-G1
@@ -387,12 +496,57 @@ the existing plugins: zod + MCP SDK only).
   a working typed client — plus TL knowledge; version-variable details are
   marked UNKNOWN in §2.2 and MUST be re-verified live at implementation.
 
-## 12 — Activation condition (unchanged, binding)
+## 12 — Activation condition (corrected per the maintainer's directive; binding)
 
-M4 implementation begins ONLY when: (a) M2 is complete (M2-G1 executed
-maintainer-side per `docs/gamos/UNITY-M2G1-PROVISIONING.md` §7–§9), OR (b)
-the maintainer records an activation waiver in `ROADMAP.json`
-(`milestones[M4].activation_waiver`) with a committed ADR (ADR-0007
-precedent), and the roadmap validator passes. Until then this document is
-preparation only: M4 stays `planned` (blocked), M2/M3 stay `active`, the
-two-active limit stands, and no M4 acceptance is claimed anywhere.
+Formal M4 activation requires ALL FOUR conditions:
+
+1. **Dependency:** M2 is complete (M2-G1 executed maintainer-side per
+   `docs/gamos/UNITY-M2G1-PROVISIONING.md` §7–§9), OR an explicit, valid
+   maintainer-authorized activation waiver is recorded for M4.
+2. **Waiver ADR (if a waiver is used):** a valid committed ADR documents
+   that waiver (ADR-0007 precedent).
+3. **An available active-milestone slot.** Current state: M2 active, M3
+   active — BOTH configured active slots are occupied; M4 is planned. A
+   waiver does NOT override the concurrency limit: the configured maximum
+   must not be changed, no active milestone may be demoted, and M2/M3
+   requirements must not be weakened to force M4 activation. A slot opens
+   only through a legitimate dependency transition (an active milestone
+   completing on its own gates).
+4. **A successful roadmap validator run** on the activation commit.
+
+Until ALL FOUR hold, this document is preparation only: M4 stays `planned`
+(blocked), M2/M3 stay `active`, the two-active limit stands, and no M4
+acceptance is claimed anywhere. No M4 production implementation PR may
+merge before activation (worker preparation artifacts per §10 are
+permitted).
+
+## 13 — Correction record (2026-11-09 amendment)
+
+Amended under the maintainer's directive "M4 — Readiness Corrections and
+Implementation Entry Conditions" (reviewed head `3bc4d250`). The original
+readiness delivery was ACCEPTED with its investigation preserved; this
+amendment corrects security assumptions and entry conditions only:
+
+| Area | Correction |
+|---|---|
+| §12 | Activation requires ALL FOUR conditions incl. an available active-milestone slot; a waiver explicitly does NOT override the two-active concurrency limit; the configured maximum, M2/M3 statuses and requirements are untouchable. |
+| §2.2 U-T1 | Client loopback refusal necessary but insufficient — server-side listener verification (bind addresses, ports, actual sockets, LAN negative test) mandatory; a client connecting to 127.0.0.1 proves nothing about server binding. |
+| §2.2 U-T2 | Authentication model REPLACED with the chosen honest model: same-user OS trust boundary + per-mutation Gamos permission approval; the Passphrase header is transport compatibility, never claimed as server-side authentication (the client library itself documents per-route inconsistency, README:56). |
+| §2.2 U-T3 | Transaction semantics corrected to the documented contracts — `WRITE_TRANSACTION_ACCESS` (property) / `generateTransaction: true` (function) — treated as editor Undo History support, NOT universal rollback; the five-part reversibility chain is mandatory; unreliable reversal is not advertised as reversible. |
+| §2.2 U-T4 | Teardown corrected: the connector never terminates the maintainer's editor; process-termination authority exists only for Gamos-supervisor-owned processes. |
+| §2.2 sources | Exact file:line references for the Unreal API contract re-verified against the `unreal-rc@0.6.0` tarball (registry shasum `282ba517…`). |
+| §3 | Unreal availability gains `rc-listener-not-loopback` and a verified-binding requirement. |
+| §4.1 | Explicit Godot trust boundary (engine launch is not a sandbox; project-controlled execution surfaces); runs relabeled REAL FEASIBILITY PROBES — M4-G1 unimplemented and unpassed. |
+| §4.2 | Generic `function.call` REMOVED — allowlisted per-function typed invocations only; remote Python / console-command / unrestricted remote function execution disabled; disconnect lifecycle fully specified (never terminates the editor). |
+| §5 | Live-editor mutations mapped to existing `engine-gui` semantics + loopback network permission — never described as headless; the four-fold permission/privilege/ownership distinction recorded; no new permission system. |
+| §6 | G1 status note added; G2 RED plan extended with the negative tests (listener binding, LAN unreachability, auth non-bypass, allowlist refusal, rollback-against-snapshot, editor-alive-after-teardown); G4 gains the explicit Unity-external-dependency rule. |
+| §10 | Worker preparation of isolated non-implementation artifacts permitted while planned; no production implementation PRs before activation. |
+| §11 | Godot relabeled from "FEASIBLE, PROVEN" to feasibility-probes status with the explicit not-gate-evidence distinction. |
+
+Not changed: the accepted investigation results (§1 inventory, Godot 4.2.2
+findings, Unreal research disclosure, worker allocation and ordering, the
+honest Unreal-infeasible statement), the M2/M3 roadmap statuses, ADR-0007,
+the G1–G4 gate definitions (§6 remains binding — no fixtures, mocks,
+API-shape simulations or unit-only results may satisfy them), and repository
+governance. M4 remains `planned` (blocked); nothing in this amendment
+activates M4 or claims any acceptance.
