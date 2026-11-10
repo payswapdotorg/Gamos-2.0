@@ -83,6 +83,21 @@ export const FunctionInvokeInput = z.object({
 });
 export type FunctionInvokeInputT = z.infer<typeof FunctionInvokeInput>;
 
+// -- rollback (the five-part chain's legs 4–5; not a registered capability) --
+
+export const RollbackToSnapshotInput = z.object({
+  objectPath: objectPathSchema,
+  property: z
+    .string()
+    .min(1)
+    .max(128)
+    .refine((p) => isValidPropertyName(p), {
+      message: "property name must satisfy the identifier grammar (allowlisted, fail-closed)",
+    }),
+  preSnapshot: z.unknown(),
+});
+export type RollbackToSnapshotInputT = z.infer<typeof RollbackToSnapshotInput>;
+
 // ---------------------------------------------------------------------------
 // The reviewed property-mutation allowlist (M4 WP-5)
 // ---------------------------------------------------------------------------

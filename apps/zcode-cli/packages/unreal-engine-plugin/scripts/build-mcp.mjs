@@ -5,7 +5,14 @@ import { build } from "esbuild";
 const packageRoot = resolve(import.meta.dirname, "..");
 const serverOutputPath = resolve(packageRoot, "dist", "mcp", "server.js");
 
+// The `ws` dependency is CommonJS; inject a real createRequire so the ESM
+// bundle's require shim resolves node builtins at runtime (the repo's
+// browser-use-plugin build convention — the artifact stays ESM).
+const nodeRequireBanner = `import { createRequire as __zcodeCreateRequire } from "node:module";
+const require = __zcodeCreateRequire(import.meta.url);`;
+
 await build({
+  banner: { js: nodeRequireBanner },
   bundle: true,
   entryPoints: [resolve(packageRoot, "src", "mcp", "server.ts")],
   format: "esm",

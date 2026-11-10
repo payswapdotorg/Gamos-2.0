@@ -741,6 +741,66 @@
         "date": "2026-11-10T01:20:00Z",
         "decision_ref": "M4 delivery plan §3 order 2 + §4 TDD slice discipline (maintainer-activated M4); TL review of the WP-2 lifecycle registration (the AUTH-0006 precedent class applied to the godot line)"
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0015",
+      "phase": "M4",
+      "date": "2026-11-10T08:15:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "M4 WP-5 lifecycle registration (delivery plan §3 order 5, executed under the maintainer-activated M4 milestone — directive 'Active M4' + the 'raise the active limit to 3' policy, ADR-0008/0009): the unreal-engine plugin package ships (apps/zcode-cli/packages/unreal-engine-plugin with .zcode-plugin/plugin.json declaring mcpServers, the five unreal/* capabilities, the M4 line's per-family source-of-record provenance eebcf6b7), so two baseline-tracked files require minimal additive modification, exactly the GAMOS-AUTH-0014 precedent class for registering an engine plugin into the EXISTING ZCode plugin lifecycle: (1) scripts/build-desktop-agent-cli.mjs — one requiredDevPluginRuntimeBuilds entry for @zcode/unreal-engine-plugin (dist/mcp/server.js), enforcing the file's own declared rule 'every official plugin whose plugin.json declares mcpServers must be registered here', so the agent CLI chain builds the Unreal MCP server and verifies the real entry file before the agent bundle starts (the connector ATTACHES to a running editor — the dist is only the MCP server entry, nothing is spawned); (2) pnpm-lock.yaml — the unreal workspace node added by the WP-5 RED commit (77e7ea34: +28 lines) plus the ws dependency classification (+3/-3), so the frozen-lockfile CI install resolves the new workspace package (GAMOS-AUTH-0005/0006/0014 precedent for registering a new workspace package in the lockfile; ws@8.20.0 is already an upstream-locked package — no new external resolution). No governance control file, frozen contract or protected upstream behavior is altered; the unreal-engine-plugin package itself is new files (additive allowed); the app-catalog surfaces are NOT touched in this slice — the shipped-package validators (now enumerating five shipped plugins), the m2 capability CLI's manifest-agreement read (the unreal-engine packageNotYetShipped interim self-heals closed, exactly the WP-2 godot precedent) and the new gamos-m4-unreal-e2e contract workflow carry the WP-5 evidence.",
+      "risk": "low",
+      "affected_functionality": "Build-chain registration only: the desktop agent CLI chain additionally builds and entry-verifies unreal-engine-plugin/dist/mcp/server.js; the lockfile gains one workspace node (ws reclassified from dev to runtime dependency of the new package only). No M2/M3 surface changes; the m2-e2e workflow (extended with the unreal path filter + the five-manifest git-object loop + the five-plugin typecheck loop + the unreal contract suite group) re-proves the M2 journeys with the fifth package shipped — the m2 capability CLI's existsSync manifest read engages for unreal automatically (per-family source-of-record pin), verified locally exactly as the journey runs it (exit 0, verdict ok, 23 records, unreal srcOfRecord=true, unresolved exactly the unity/scene.modify honest negative path).",
+      "new_functionality": "The unreal-engine plugin package ships as a real workspace package whose MCP dist is built and verified by the agent CLI chain; CI gains the gamos-m4-unreal-e2e workflow (zero external fetches — the mock RC server is in-repo Node; the honest M4-G2 gate status 'protocol-contracts-verified' that STILL refuses completion: a mock can never pass M4-G2, the real-editor leg is WP-6 on the maintainer-provided UE5 environment) and the m2-e2e unreal suite group; the domain shipped-package validator loops enumerate the fifth plugin (425 -> 426).",
+      "regression_tests": [
+        "pnpm --filter @zcode/unreal-engine-plugin exec vitest run test (40/40 — the mock RC contract suite: loopback-only construction, attach lifecycle with server-reported listener verification, typed ops, the five-part write chain, the EMPTY reviewed mutation allowlists with injected REVIEW-CLASS protocol rows, HTTP/WS lifecycle + teardown with the editor never terminated, 401 single-attempt, schema drift, timeouts, no auto-reconnect, honest discovery)",
+        "pnpm --filter @zcode/unreal-engine-plugin exec tsc --noEmit && pnpm --filter @zcode/unreal-engine-plugin build (dist/mcp/server.js builds and starts clean)",
+        "pnpm exec vitest run --project gamos-domain (426/426 — the shipped-package validator, capability-resolution and mcpServers-identity loops now enumerate unreal-engine-plugin; the manifest/domain provenance-drift loops cover it via ENGINE_PLUGIN_METAS)",
+        "node scripts/gamos/m2-capability-cli.ts journey-exact bundle run (exit 0; verdict ok; registryRecords 23; FIVE shipped manifests read with provenanceCommitIsSourceOfRecord=true incl. unreal-engine; unresolved = exactly the unity/scene.modify honest negative path)",
+        "node scripts/gamos/governance-check.mjs --pin <rotated baseline pin>",
+        "node scripts/gamos/governance-self-test.mjs (14/14)",
+        "node scripts/gamos/roadmap-self-test.mjs (17/17)",
+        "node scripts/gamos/roadmap-check.mjs",
+        "pnpm run docs:stale-phrases:check",
+        "pnpm run architecture:check (0 violations)"
+      ],
+      "evidence": {
+        "summary": "WP-5 delivered as a strict TDD slice: RED 77e7ea34 (25 failing | 15 passing, every failure the not-implemented marker or the missing constructor throw — the missing-behavior signature; the pure input-contract layers — object-path grammar, frozen zod schemas, empty reviewed allowlists — shipped real per the WP-2 committed-bridges precedent) then GREEN (40/40 against the in-repo mock RC server implementing the pinned wire contract; one esbuild lesson — the ws CJS dependency needs the repo's createRequire banner convention, applied from browser-use-plugin). The WP-4 unreal-engine packageNotYetShipped interim is closed exactly like the WP-2 godot one: the m2 capability CLI manifest-agreement read now engages for the fifth shipped package with provenanceCommitIsSourceOfRecord=true (eebcf6b7, the M4 capability-contracts line pin).",
+        "links": [
+          "apps/zcode-cli/packages/unreal-engine-plugin/.zcode-plugin/plugin.json",
+          "apps/zcode-cli/packages/unreal-engine-plugin/src/connector.ts",
+          "apps/zcode-cli/packages/unreal-engine-plugin/src/engine.ts",
+          "apps/zcode-cli/packages/unreal-engine-plugin/test/connector.test.ts",
+          "apps/zcode-cli/packages/unreal-engine-plugin/test/engine-harden.test.ts",
+          "apps/zcode-cli/packages/unreal-engine-plugin/test/mock-rc-server.ts",
+          "packages/gamos-domain/test/engine-plugin-security.test.ts",
+          "scripts/gamos/m2-capability-cli.ts",
+          ".github/workflows/gamos-m4-unreal-e2e.yml",
+          ".github/workflows/gamos-m2-e2e.yml",
+          "docs/gamos/M4-DELIVERY-PLAN.md",
+          "docs/gamos/M4-ZERO-COST-DELIVERY.md"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "scripts/build-desktop-agent-cli.mjs",
+          "content_sha256": "1f229a22c6bffbc015fb3867da90df92ce79e1efabb19d442a78c6413af8a39b"
+        },
+        {
+          "action": "modify",
+          "path": "pnpm-lock.yaml",
+          "content_sha256": "8bf729d850cecc31893eb60a6681fb084a23ec25895a31f1932c56abd33f0e77"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-10T08:15:00Z",
+        "decision_ref": "M4 delivery plan §3 order 5 + §4 TDD slice discipline (maintainer-activated M4); TL review of the WP-5 lifecycle registration (the AUTH-0014 precedent class applied to the unreal line)"
+      }
     }
   ]
 }

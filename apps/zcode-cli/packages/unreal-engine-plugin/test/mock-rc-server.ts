@@ -185,7 +185,9 @@ export async function startMockRcServer(options: MockRcOptions = {}): Promise<Mo
 
   async function handleHttp(req: IncomingMessage, res: import("node:http").ServerResponse, route: string): Promise<void> {
     try {
-      if (delayMs > 0) await sleep(delayMs);
+      // The wedge delay targets OP requests; the /remote/info attach probe
+      // stays responsive so tests can attach before wedging the editor.
+      if (delayMs > 0 && route !== "/remote/info") await sleep(delayMs);
       // The documented per-route inconsistency: the mutation routes may
       // require the Passphrase header even when /remote/info does not
       // (unreal-rc README:56; readiness §2.2 U-T2). gateInfoRoute models the
