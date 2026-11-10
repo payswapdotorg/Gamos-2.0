@@ -1,3 +1,20 @@
+/**
+ * Cross-engine asset plan builder (M3.3 - `gamos/cross-engine-plan@1`).
+ *
+ * buildCrossEngineAssetPlan turns a fail-closed-validated request into an
+ * engine-aware GamePlan: the Blender export leg -> staging manifest validation ->
+ * target-engine integration (babylon integrate / unity import) -> project build
+ * -> (babylon only) runtime verification. The builder is PURE: op inputs are
+ * derived as workspaceRoot-joined absolutes, every declared resource claim is a
+ * canonical workspace-relative POSIX path, and the emitted plan MUST itself
+ * pass parseGamePlan (including the unordered resource-claim conflict gate) -
+ * the invariant that keeps the generator honest.
+ *
+ * The M4 WP-7 godot/unreal target-leg suites live in
+ * cross-engine-plan-m4.test.ts; the shared fixtures in
+ * cross-engine-plan-fixtures.ts.
+ */
+
 import { describe, expect, it } from "vitest";
 import { join } from "node:path";
 
@@ -7,85 +24,30 @@ import {
   M3_CROSS_ENGINE_SOURCE_COMMIT,
   buildCrossEngineAssetPlan,
 } from "../src/domain/cross-engine-plan.js";
-import type { CrossEnginePlanRequest } from "../src/domain/cross-engine-plan.js";
 import { parseGamePlan, hashGamePlan } from "../src/domain/game-plan.js";
 import type { GamePlan, GamePlanStep } from "../src/domain/game-plan.js";
 import { findClaimConflicts } from "../src/domain/resource-claims.js";
-import type { ResourceClaim, StepResourceClaims } from "../src/domain/resource-claims.js";
+import type { ResourceClaim } from "../src/domain/resource-claims.js";
 import { registerCapability, resolveCapability } from "../src/domain/capability-registry.js";
 import type { CapabilityRecord } from "../src/domain/capability-registry.js";
-import { registerEnginePluginCapabilities, ENGINE_PLUGIN_CAPABILITIES } from "../src/domain/engine-plugin.js";
-import { buildMachineDiscoveryRecord, joinEngineState } from "../src/domain/discovery/discovery-record.js";
-import type { DiscoveredEngine } from "../src/domain/discovery/discovery-record.js";
-import { classifyIntent, buildGamingModelContext } from "../src/domain/intent.js";
-import type { GamingModelContext } from "../src/domain/intent.js";
+import { ENGINE_PLUGIN_CAPABILITIES, registerEnginePluginCapabilities } from "../src/domain/engine-plugin.js";
 import { buildGamePlanWorkflowScript } from "../src/domain/plan-workflow.js";
-import type { EngineFamily } from "../src/engine-family.js";
-
-/**
- * Cross-engine asset plan builder (M3.3 — `gamos/cross-engine-plan@1`).
- *
- * buildCrossEngineAssetPlan turns a fail-closed-validated request into an
- * engine-aware GamePlan: the Blender export leg → staging manifest validation →
- * target-engine integration (babylon integrate / unity import) → project build
- * → (babylon only) runtime verification. The builder is PURE: op inputs are
- * derived as workspaceRoot-joined absolutes, every declared resource claim is a
- * canonical workspace-relative POSIX path, and the emitted plan MUST itself
- * pass parseGamePlan (including the unordered resource-claim conflict gate) —
- * the invariant that keeps the generator honest.
- */
-
-const NOW = "2026-11-12T10:00:00Z";
-const WORKSPACE_ROOT = "/workspace/gamos-pipeline";
-
-const BABYLON_STEPS = ["export-asset", "validate-export", "integrate-asset", "build-project", "verify-runtime"] as const;
-const UNITY_STEPS = ["export-asset", "validate-export", "import-asset", "build-project"] as const;
-
-function babylonRequest(overrides: Record<string, unknown> = {}): CrossEnginePlanRequest {
-  return {
-    planId: "cross-engine-babylon-001",
-    conceptRef: { conceptId: "concept-001", conceptSha256: "a".repeat(64) },
-    acceptanceRecord: { recordId: "acc-001", recordSha256: "b".repeat(64) },
-    workspaceRoot: WORKSPACE_ROOT,
-    source: { projectIdentity: "source-blender", blendFile: "source-blender/hero.blend" },
-    target: { engine: "babylon", projectIdentity: "target-babylon", projectRoot: "target-babylon" },
-    format: "glb",
-    interchange: { upAxis: "y" },
-    maxConcurrency: 2,
-    now: NOW,
-    ...overrides,
-  } as CrossEnginePlanRequest;
-}
-
-function unityRequest(format: "fbx" | "glb" = "fbx", overrides: Record<string, unknown> = {}): CrossEnginePlanRequest {
-  return babylonRequest({
-    planId: "cross-engine-unity-001",
-    target: { engine: "unity", projectIdentity: "target-unity", projectRoot: "target-unity" },
-    format,
-    ...overrides,
-  });
-}
-
-/** Deep key-order shuffle: every nested object's keys are reversed. */
-function shuffledKeyOrder<T>(value: T): T {
-  if (Array.isArray(value)) return value.map((entry) => shuffledKeyOrder(entry)) as unknown as T;
-  if (typeof value === "object" && value !== null) {
-    const entries = Object.entries(value as Record<string, unknown>).reverse();
-    const out: Record<string, unknown> = {};
-    for (const [key, val] of entries) out[key] = shuffledKeyOrder(val);
-    return out as unknown as T;
-  }
-  return value;
-}
-
-function claimsOf(step: GamePlanStep): readonly ResourceClaim[] {
-  const claims: StepResourceClaims | undefined = step.resourceClaims;
-  return claims?.claims ?? [];
-}
-
-function claimTuples(step: GamePlanStep): string[] {
-  return claimsOf(step).map((c) => `${c.access} ${c.scope} ${c.path}`);
-}
+import {
+  NOW,
+  WORKSPACE_ROOT,
+  BABYLON_STEPS,
+  UNITY_STEPS,
+  GODOT_STEPS,
+  UNREAL_STEPS,
+  babylonRequest,
+  unityRequest,
+  godotRequest,
+  unrealRequest,
+  shuffledKeyOrder,
+  claimsOf,
+  claimTuples,
+  makePipelineContext,
+} from "./cross-engine-plan-fixtures.js";
 
 describe("buildCrossEngineAssetPlan — the Blender→Babylon pipeline (M3.3)", () => {
   it("emits the five pipeline steps with the exact capability ids + versions and the exact dependency chain", () => {
@@ -441,8 +403,12 @@ describe("buildCrossEngineAssetPlan — fail-closed request validation (M3.3)", 
   });
 
   it("rejects unsupported target engines and interchange formats", () => {
-    expect(() => buildCrossEngineAssetPlan(babylonRequest({ target: { engine: "godot", projectIdentity: "target-godot", projectRoot: "target-godot" } }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN:.*unity\|babylon/);
-    expect(() => buildCrossEngineAssetPlan(babylonRequest({ target: { engine: "unreal", projectIdentity: "target-unreal", projectRoot: "target-unreal" } }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN:/);
+    // M4 WP-7: godot and unreal are NOW first-class target legs — the
+    // unknown-engine fail-closed class is exercised with genuinely unknown
+    // engines and the honest four-leg message (the reworded error per
+    // readiness Deliverable 8: "ships exactly these two target legs" → four).
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ target: { engine: "cryengine", projectIdentity: "t", projectRoot: "t" } }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN:.*unity\|babylon\|godot\|unreal/);
+    expect(() => buildCrossEngineAssetPlan(babylonRequest({ target: { engine: "source-2", projectIdentity: "t", projectRoot: "t" } }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN:.*four target legs/);
     expect(() => buildCrossEngineAssetPlan(babylonRequest({ format: "obj" }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN:.*fbx\|glb/);
   });
 
@@ -454,8 +420,8 @@ describe("buildCrossEngineAssetPlan — fail-closed request validation (M3.3)", 
     expect(() => buildCrossEngineAssetPlan(babylonRequest({ interchange: { upAxis: "y", globalScale: -2 } }))).toThrow(/GAMOS\/CROSS-ENGINE-PLAN:/);
   });
 
-  it("the builder-emitted plan ALWAYS parses for both targets (the generator-honesty invariant)", () => {
-    for (const request of [babylonRequest(), unityRequest("fbx"), unityRequest("glb")]) {
+  it("the builder-emitted plan ALWAYS parses for every target (the generator-honesty invariant — four legs after M4 WP-7)", () => {
+    for (const request of [babylonRequest(), unityRequest("fbx"), unityRequest("glb"), godotRequest(), unrealRequest(), unrealRequest({ format: "glb" })]) {
       const plan: GamePlan = buildCrossEngineAssetPlan(request);
       const roundTripped = JSON.parse(JSON.stringify(plan));
       expect(() => parseGamePlan(roundTripped)).not.toThrow();
@@ -521,6 +487,8 @@ describe("buildCrossEngineAssetPlan — adversarial hardening (M3.3 HARDEN)", ()
 
   const BABYLON_PIPELINE_IDS = ["blender/asset.export", "core/asset.manifest-validate", "babylon/asset.integrate", "babylon/project.build", "babylon/project.run"];
   const UNITY_PIPELINE_IDS = ["blender/asset.export", "core/asset.manifest-validate", "unity/asset.import", "unity/project.build"];
+  const GODOT_PIPELINE_IDS = ["blender/asset.export", "core/asset.manifest-validate", "godot/asset.import", "godot/project.build", "godot/project.run"];
+  const UNREAL_PIPELINE_IDS = ["blender/asset.export", "core/asset.manifest-validate", "unreal/connection.inspect", "unreal/object.inspect", "unreal/property.read"];
 
   /** The records' permission union in pipeline order, deduplicated by kind|scope (first occurrence). */
   function permissionUnion(registry: ReadonlyMap<string, CapabilityRecord>, ids: readonly string[]) {
@@ -546,11 +514,19 @@ describe("buildCrossEngineAssetPlan — adversarial hardening (M3.3 HARDEN)", ()
 
     const unity = buildCrossEngineAssetPlan(unityRequest("fbx"));
     expect(unity.permissions).toEqual(permissionUnion(registry, UNITY_PIPELINE_IDS));
+
+    // M4 WP-7: the godot/unreal pipeline unions mirror their REAL records
+    // exactly (the drift guard covers all four target legs).
+    const godot = buildCrossEngineAssetPlan(godotRequest());
+    expect(godot.permissions).toEqual(permissionUnion(registry, GODOT_PIPELINE_IDS));
+
+    const unreal = buildCrossEngineAssetPlan(unrealRequest());
+    expect(unreal.permissions).toEqual(permissionUnion(registry, UNREAL_PIPELINE_IDS));
   });
 
   it("every emitted step input validates against the REAL capability record's input schema (fail-closed required-field check)", () => {
     const registry = pipelineRegistry();
-    for (const request of [babylonRequest(), unityRequest("fbx"), unityRequest("glb")]) {
+    for (const request of [babylonRequest(), unityRequest("fbx"), unityRequest("glb"), godotRequest(), unrealRequest(), unrealRequest({ format: "glb" })]) {
       const plan = buildCrossEngineAssetPlan(request);
       for (const step of plan.steps) {
         const record = [...registry.values()].find((r) => r.id === step.capability.capabilityId);
@@ -571,7 +547,7 @@ describe("buildCrossEngineAssetPlan — adversarial hardening (M3.3 HARDEN)", ()
 
   it("pins exactly the shipped capability versions — every emitted id@version resolves in the real registry", () => {
     const registry = pipelineRegistry();
-    for (const request of [babylonRequest(), unityRequest("fbx")]) {
+    for (const request of [babylonRequest(), unityRequest("fbx"), godotRequest(), unrealRequest()]) {
       const plan = buildCrossEngineAssetPlan(request);
       for (const step of plan.steps) {
         const record = [...registry.values()].find((r) => r.id === step.capability.capabilityId);
@@ -580,18 +556,19 @@ describe("buildCrossEngineAssetPlan — adversarial hardening (M3.3 HARDEN)", ()
     }
     // the shipped records themselves are the append-only source of truth
     // (23 engine records: 4 unity + 4 blender + 4 babylon + 6 godot + 5 unreal —
-    // the M4 WP-1/WP-4 registrations; the godot/unreal records are NOT pipeline
-    // members here, the Blender→Babylon/Unity pipelines are unchanged)
+    // the M4 WP-1/WP-4 registrations; the godot/unreal records became pipeline
+    // members through the M4 WP-7 target legs, append-only, the M2/M3 records
+    // byte-identical)
     expect(ENGINE_PLUGIN_CAPABILITIES.length).toBe(23);
   });
 
-  it("the generated script instructs the manifest handoff for BOTH targets (derived manifest path + expectedIntegrity)", () => {
-    for (const target of ["babylon", "unity"] as const) {
-      const context = makePipelineContext(true, target, target === "babylon" ? ["blender", "babylon"] : ["blender", "unity"]);
-      const request = target === "babylon" ? babylonRequest() : unityRequest("fbx");
+  it("the generated script instructs the manifest handoff for the manifest-CONSUMING targets (babylon/unity/godot; unreal is not a consumer — never a fabricated reference)", () => {
+    for (const target of ["babylon", "unity", "godot"] as const) {
+      const context = makePipelineContext(true, target, target === "babylon" ? ["blender", "babylon"] : target === "unity" ? ["blender", "unity"] : ["blender", "godot"]);
+      const request = target === "babylon" ? babylonRequest() : target === "unity" ? unityRequest("fbx") : godotRequest();
       const plan = buildCrossEngineAssetPlan(request);
       const artifact = buildGamePlanWorkflowScript(plan, context);
-      expect(artifact.scriptText).toContain(join(WORKSPACE_ROOT, "staging", `gamos-asset.${target === "babylon" ? "glb" : "fbx"}.manifest.json`));
+      expect(artifact.scriptText).toContain(join(WORKSPACE_ROOT, "staging", `gamos-asset.${target === "babylon" || target === "godot" ? "glb" : "fbx"}.manifest.json`));
       expect(artifact.scriptText).toContain("expectedIntegrity");
       expect(artifact.scriptText).toContain("byteLength");
       expect(artifact.scriptText).toContain("sha256");
@@ -639,61 +616,3 @@ describe("buildCrossEngineAssetPlan — adversarial hardening (M3.3 HARDEN)", ()
   });
 });
 
-// ---------------------------------------------------------------------------
-// Fixture: a pipeline model context (real registry records + machine discovery)
-// ---------------------------------------------------------------------------
-
-function makePipelineContext(installed: boolean, _target: "babylon" | "unity", families: readonly EngineFamily[]): GamingModelContext {
-  const engines: DiscoveredEngine[] = families.map((family) =>
-    installed
-      ? {
-          engineFamily: family,
-          installed: true,
-          rawVersion: family === "blender" ? "blender 4.1.1" : family === "babylon" ? "24.14.0" : "6000.0.23f1",
-          headlessCapable: true,
-          displayServerRequired: false,
-        }
-      : {
-          engineFamily: family,
-          installed: false,
-          notes: `${family} toolchain not found on this machine`,
-          headlessCapable: false,
-          displayServerRequired: false,
-        },
-  );
-  const machineDiscovery = buildMachineDiscoveryRecord(WORKSPACE_ROOT, engines, { platform: "linux", arch: "x64" }, NOW);
-  const engineStates = joinEngineState(
-    { schemaVersion: 2, workspacePath: WORKSPACE_ROOT, engineBindings: families.map((family) => ({ engineFamily: family })) },
-    machineDiscovery,
-  );
-
-  const registry = registerEnginePluginCapabilities();
-  for (const coreRecord of CROSS_ENGINE_CORE_CAPABILITIES) {
-    const registered = registerCapability(coreRecord);
-    registry.set(`${registered.id}@${registered.version}`, registered);
-  }
-  // The engine records are CONDITIONAL (runtime prerequisites guarded by the
-  // engine-state JOIN, contract 07); the script-generation context carries the
-  // registered records as resolved DATA so the generator can derive the
-  // required engine families — the fail-closed authority stays with the
-  // embedded engine-state guards.
-  const capabilityResults = [...registry.values()].map((record) => ({
-    request: { id: record.id, version: record.version },
-    ok: true as const,
-    record,
-  }));
-
-  return buildGamingModelContext({
-    now: NOW,
-    workspaceRoot: WORKSPACE_ROOT,
-    classification: classifyIntent("Plan the cross-engine game asset pipeline from Blender into Babylon."),
-    projectDetection: {
-      root: WORKSPACE_ROOT,
-      isProject: true,
-      detected: [{ engineFamily: "babylon", isProject: true, evidence: ["package.json"], projectName: "gamos-target" }],
-    },
-    machineDiscovery,
-    engineStates,
-    capabilityResults,
-  });
-}

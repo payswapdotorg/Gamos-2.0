@@ -47,46 +47,10 @@ import type { ResourceClaim, ResourceClaimAccess, ResourceClaimScope } from "./r
 import type { CapabilityRecord } from "./capability-registry.js";
 import { isAbsoluteHostPath, joinHostPath, relativeHostPath, resolveHostPath } from "../adapters/workspace-paths.js";
 
-/** The request contract shipped by this module (final-closure handoff §7). */
-export const CROSS_ENGINE_PLAN_SCHEMA_ID = "gamos/cross-engine-plan@1";
+export { CROSS_ENGINE_PLAN_SCHEMA_ID } from "./cross-engine-plan-request.js";
+export type { CrossEngineTarget, CrossEngineInterchangeFormat, CrossEnginePlanRequest, ValidatedRequest } from "./cross-engine-plan-request.js";
+import { fail, validateCrossEnginePlanRequest } from "./cross-engine-plan-request.js";
 
-/** The supported target engines for the cross-engine asset pipeline. */
-export type CrossEngineTarget = "unity" | "babylon";
-
-/** The interchange artifact formats the pipeline moves between engines. */
-export type CrossEngineInterchangeFormat = "fbx" | "glb";
-
-/** The fail-closed-validated request for `buildCrossEngineAssetPlan`. */
-export interface CrossEnginePlanRequest {
-  /** ^[a-z0-9][a-z0-9-]{0,63}$ — the plan identity. */
-  readonly planId: string;
-  readonly conceptRef: { readonly conceptId: string; readonly conceptSha256: string };
-  readonly acceptanceRecord: { readonly recordId: string; readonly recordSha256: string };
-  /** Absolute POSIX workspace root — op inputs are derived as workspaceRoot-joined absolutes. */
-  readonly workspaceRoot: string;
-  readonly source: {
-    /** Canonical workspace-relative dir of the Blender project. */
-    readonly projectIdentity: string;
-    /** Canonical workspace-relative path of the source .blend file. */
-    readonly blendFile: string;
-  };
-  readonly target: {
-    readonly engine: CrossEngineTarget;
-    /** Canonical workspace-relative dir of the target project. */
-    readonly projectIdentity: string;
-    /** Canonical workspace-relative path of the target project root. */
-    readonly projectRoot: string;
-  };
-  /** babylon requires glb; unity accepts fbx|glb. */
-  readonly format: CrossEngineInterchangeFormat;
-  /** ^[a-z0-9][a-z0-9-]{0,63}$; defaults to "gamos-asset". */
-  readonly assetName?: string;
-  readonly interchange?: { readonly upAxis: "y" | "z"; readonly globalScale?: number };
-  /** Positive integer; defaults to 2. */
-  readonly maxConcurrency?: number;
-  /** ISO-8601 UTC — the caller supplies it so the plan hash is deterministic. */
-  readonly now: string;
-}
 
 // ---------------------------------------------------------------------------
 // The shipped core capability record (append-only once published)
@@ -179,218 +143,6 @@ const manifestValidateCapability: CapabilityRecord = {
 /** The shipped core capability records for the cross-engine pipeline (append-only). */
 export const CROSS_ENGINE_CORE_CAPABILITIES: readonly CapabilityRecord[] = [manifestValidateCapability];
 
-// ---------------------------------------------------------------------------
-// Request validation (fail closed)
-// ---------------------------------------------------------------------------
-
-const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
-const SHA256_PATTERN = /^[0-9a-f]{64}$/;
-const ISO_UTC_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/;
-
-const DEFAULT_ASSET_NAME = "gamos-asset";
-const DEFAULT_MAX_CONCURRENCY = 2;
-
-const REQUEST_FIELDS = ["planId", "conceptRef", "acceptanceRecord", "workspaceRoot", "source", "target", "format", "assetName", "interchange", "maxConcurrency", "now"] as const;
-const CONCEPT_REF_FIELDS = ["conceptId", "conceptSha256"] as const;
-const ACCEPTANCE_REF_FIELDS = ["recordId", "recordSha256"] as const;
-const SOURCE_FIELDS = ["projectIdentity", "blendFile"] as const;
-const TARGET_FIELDS = ["engine", "projectIdentity", "projectRoot"] as const;
-const INTERCHANGE_FIELDS = ["upAxis", "globalScale"] as const;
-
-function fail(field: string, reason: string): never {
-  throw new Error(`GAMOS/CROSS-ENGINE-PLAN: ${field} — ${reason}`);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** Exact-field-set enforcement: unknown keys fail closed (the request contract is exact). */
-function exactKeys(value: Record<string, unknown>, field: string, allowed: readonly string[]): void {
-  for (const key of Object.keys(value)) {
-    if (!(allowed as readonly string[]).includes(key)) {
-      fail(field, `unknown field "${key}" — the exact field set is ${allowed.join(", ")}`);
-    }
-  }
-}
-
-function requireString(value: unknown, field: string, reason: string): string {
-  if (typeof value !== "string" || value.length === 0) fail(field, reason);
-  return value;
-}
-
-function validateIdPattern(value: unknown, field: string): string {
-  requireString(value, field, `must match ${ID_PATTERN}`);
-  if (!ID_PATTERN.test(value as string)) fail(field, `"${value as string}" must match ${ID_PATTERN}`);
-  return value as string;
-}
-
-function validateSha256(value: unknown, field: string): string {
-  requireString(value, field, "must be a 64-hex sha256 string");
-  if (!SHA256_PATTERN.test(value as string)) fail(field, `"${value as string}" must be a 64-hex sha256`);
-  return value as string;
-}
-
-/** Absolute POSIX workspace root, canonical (no traversal, dot segments or trailing slash). */
-function validateWorkspaceRoot(value: unknown): string {
-  requireString(value, "workspaceRoot", "must be a non-empty absolute POSIX path string");
-  const root = value as string;
-  if (root.includes("\\")) {
-    fail("workspaceRoot", "must be a POSIX absolute path (backslashes fail closed — resource claim paths are canonical workspace-relative POSIX)");
-  }
-  if (!isAbsoluteHostPath(root)) {
-    fail("workspaceRoot", `"${root}" must be an absolute path (the op inputs are derived as workspaceRoot-joined absolutes)`);
-  }
-  const resolved = resolveHostPath(root);
-  if (resolved !== root) {
-    fail("workspaceRoot", `"${root}" must be canonical (no traversal, dot segments or trailing slash — it resolves to "${resolved}")`);
-  }
-  return root;
-}
-
-/** Canonical workspace-relative POSIX path, validated through the claim-path authority. */
-function validateRelativePath(value: unknown, field: string, options?: { readonly blendFile?: boolean }): string {
-  requireString(value, field, "must be a non-empty canonical workspace-relative POSIX path string");
-  const canonical = canonicalizeClaimPath(value as string);
-  if (canonical === null) {
-    fail(
-      field,
-      `"${value as string}" is not a canonical workspace-relative POSIX path (traversal, absolute, backslash, control, Windows-unsafe, non-ASCII, space, leading dot/hyphen, trailing dot, reserved device and oversize inputs all fail closed)`,
-    );
-  }
-  if (options?.blendFile === true && !(value as string).endsWith(".blend")) {
-    fail(field, `"${value as string}" must be the source .blend file (a .blend suffix is required)`);
-  }
-  return canonical;
-}
-
-interface ValidatedRequest {
-  readonly planId: string;
-  readonly conceptId: string;
-  readonly conceptSha256: string;
-  readonly recordId: string;
-  readonly recordSha256: string;
-  readonly workspaceRoot: string;
-  readonly sourceProjectIdentity: string;
-  readonly blendFile: string;
-  readonly targetEngine: CrossEngineTarget;
-  readonly targetProjectIdentity: string;
-  readonly targetProjectRoot: string;
-  readonly format: CrossEngineInterchangeFormat;
-  readonly assetName: string;
-  readonly upAxis?: "y" | "z";
-  readonly globalScale?: number;
-  readonly maxConcurrency: number;
-  readonly now: string;
-}
-
-/** Fail-closed validation of the raw request (exact field set, patterns, cross-field rules). */
-function validateRequest(input: unknown): ValidatedRequest {
-  if (!isRecord(input)) fail("request", `must be a non-null object following ${CROSS_ENGINE_PLAN_SCHEMA_ID}`);
-  exactKeys(input, "request", REQUEST_FIELDS);
-
-  const planId = validateIdPattern(input.planId, "planId");
-
-  if (!isRecord(input.conceptRef)) fail("conceptRef", "must be an object");
-  exactKeys(input.conceptRef, "conceptRef", CONCEPT_REF_FIELDS);
-  const conceptId = validateIdPattern(input.conceptRef.conceptId, "conceptRef.conceptId");
-  const conceptSha256 = validateSha256(input.conceptRef.conceptSha256, "conceptRef.conceptSha256");
-
-  if (!isRecord(input.acceptanceRecord)) fail("acceptanceRecord", "must be an object");
-  exactKeys(input.acceptanceRecord, "acceptanceRecord", ACCEPTANCE_REF_FIELDS);
-  const recordId = validateIdPattern(input.acceptanceRecord.recordId, "acceptanceRecord.recordId");
-  const recordSha256 = validateSha256(input.acceptanceRecord.recordSha256, "acceptanceRecord.recordSha256");
-
-  const workspaceRoot = validateWorkspaceRoot(input.workspaceRoot);
-
-  if (!isRecord(input.source)) fail("source", "must be an object");
-  exactKeys(input.source, "source", SOURCE_FIELDS);
-  const sourceProjectIdentity = validateRelativePath(input.source.projectIdentity, "source.projectIdentity");
-  const blendFile = validateRelativePath(input.source.blendFile, "source.blendFile", { blendFile: true });
-
-  if (!isRecord(input.target)) fail("target", "must be an object");
-  exactKeys(input.target, "target", TARGET_FIELDS);
-  const targetEngineRaw = input.target.engine;
-  if (targetEngineRaw !== "unity" && targetEngineRaw !== "babylon") {
-    fail("target.engine", `"${String(targetEngineRaw)}" must be one of unity|babylon (the cross-engine asset pipeline ships exactly these two target legs)`);
-  }
-  const targetEngine: CrossEngineTarget = targetEngineRaw;
-  const targetProjectIdentity = validateRelativePath(input.target.projectIdentity, "target.projectIdentity");
-  const targetProjectRoot = validateRelativePath(input.target.projectRoot, "target.projectRoot");
-
-  const formatRaw = input.format;
-  if (formatRaw !== "fbx" && formatRaw !== "glb") {
-    fail("format", `"${String(formatRaw)}" must be one of fbx|glb (the interchange formats the pipeline moves between engines)`);
-  }
-  const format: CrossEngineInterchangeFormat = formatRaw;
-  if (targetEngine === "babylon" && format === "fbx") {
-    fail(
-      "format",
-      'target engine "babylon" cannot consume "fbx": the Babylon asset integration consumes GLB only (babylon/asset.integrate stages a hash-verified GLB artifact into public/assets; request format "glb")',
-    );
-  }
-
-  let assetName = DEFAULT_ASSET_NAME;
-  if (input.assetName !== undefined) {
-    assetName = validateIdPattern(input.assetName, "assetName");
-  }
-
-  let upAxis: "y" | "z" | undefined;
-  let globalScale: number | undefined;
-  if (input.interchange !== undefined) {
-    if (!isRecord(input.interchange)) fail("interchange", "must be an object");
-    exactKeys(input.interchange, "interchange", INTERCHANGE_FIELDS);
-    if (input.interchange.upAxis === undefined) fail("interchange.upAxis", "is required when interchange is declared");
-    if (input.interchange.upAxis !== "y" && input.interchange.upAxis !== "z") {
-      fail("interchange.upAxis", `"${String(input.interchange.upAxis)}" must be one of y|z`);
-    }
-    upAxis = input.interchange.upAxis;
-    if (input.interchange.globalScale !== undefined) {
-      const scale = input.interchange.globalScale;
-      if (typeof scale !== "number" || !Number.isFinite(scale) || scale <= 0) {
-        fail("interchange.globalScale", "must be a positive finite number when present");
-      }
-      globalScale = scale;
-    }
-  }
-
-  let maxConcurrency = DEFAULT_MAX_CONCURRENCY;
-  if (input.maxConcurrency !== undefined) {
-    const value = input.maxConcurrency;
-    if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
-      fail("maxConcurrency", "must be a positive integer");
-    }
-    maxConcurrency = value;
-  }
-
-  const now = input.now;
-  if (typeof now !== "string" || !ISO_UTC_PATTERN.test(now) || !Number.isFinite(Date.parse(now))) {
-    fail(
-      "now",
-      `"${String(now)}" is not an ISO-8601 UTC timestamp (YYYY-MM-DDTHH:MM:SS[.sss]Z — the caller supplies it so the plan hash is deterministic)`,
-    );
-  }
-
-  return {
-    planId,
-    conceptId,
-    conceptSha256,
-    recordId,
-    recordSha256,
-    workspaceRoot,
-    sourceProjectIdentity,
-    blendFile,
-    targetEngine,
-    targetProjectIdentity,
-    targetProjectRoot,
-    format,
-    assetName,
-    ...(upAxis !== undefined ? { upAxis } : {}),
-    ...(globalScale !== undefined ? { globalScale } : {}),
-    maxConcurrency,
-    now,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Plan assembly (pure derivation)
@@ -418,6 +170,33 @@ const PIPELINE_PERMISSIONS: readonly PlanPermissionRequirement[] = [
 const BABYLON_PIPELINE_PERMISSIONS: readonly PlanPermissionRequirement[] = PIPELINE_PERMISSIONS;
 /** Unity pipeline permission union: export (engine-headless + filesystem-write) + manifest validation (read-only command). */
 const UNITY_PIPELINE_PERMISSIONS: readonly PlanPermissionRequirement[] = PIPELINE_PERMISSIONS.slice(0, 3);
+/**
+ * Godot pipeline permission union (M4 WP-7): export + import + build + run —
+ * engine-headless + filesystem-write + the manifest read-only command. The
+ * godot/project.run leg is engine-headless ONLY (no network, no build/dev
+ * scripts — the headless run is the terminal verification), so the union is
+ * the same three-entry shape as unity's, mirrored verbatim from the REAL
+ * godot records (engine-plugin-godot.ts permissions).
+ */
+const GODOT_PIPELINE_PERMISSIONS: readonly PlanPermissionRequirement[] = PIPELINE_PERMISSIONS.slice(0, 3);
+/**
+ * Unreal pipeline permission union (M4 WP-7): export + manifest validation +
+ * the three read-only RC legs — the loopback-rc-endpoint network permission
+ * mirrored VERBATIM from the REAL unreal records (engine-plugin-unreal.ts
+ * networkRcEndpointPermission, the WP-4 contracts §3.1 "same spec as 3.1"
+ * clause covering object.inspect/property.read). Mutations are NOT planned:
+ * the reviewed property/function allowlists are EMPTY at 0.1.0 (the WP-5
+ * fail-closed default) — no mutation permission is claimed.
+ */
+const UNREAL_PIPELINE_PERMISSIONS: readonly PlanPermissionRequirement[] = [
+  ...PIPELINE_PERMISSIONS.slice(0, 3),
+  {
+    kind: "network-access",
+    scope: "loopback-rc-endpoint",
+    rationale:
+      "read-only requests against the verified loopback Remote Control listener (GET /remote/info, typed object describe, typed property reads); the Passphrase header is a transport-compatibility token only, never claimed as server-side authentication (readiness §2.2 U-T2)",
+  },
+];
 
 interface ClaimSpec {
   readonly access: ResourceClaimAccess;
@@ -431,15 +210,37 @@ function planStep(
   input: Record<string, unknown>,
   dependsOn: readonly string[],
   claims: readonly ClaimSpec[],
+): GamePlanStep;
+function planStep(
+  stepId: string,
+  capabilityId: string,
+  input: Record<string, unknown>,
+  dependsOn: readonly string[],
+  claims: undefined,
+): GamePlanStep;
+function planStep(
+  stepId: string,
+  capabilityId: string,
+  input: Record<string, unknown>,
+  dependsOn: readonly string[],
+  claims: readonly ClaimSpec[] | undefined,
 ): GamePlanStep {
   return {
     stepId,
     capability: { capabilityId, capabilityVersion: "1.0.0", input },
     dependsOn: [...dependsOn],
-    resourceClaims: {
-      schemaVersion: 1,
-      claims: claims.map((claim) => ({ access: claim.access, scope: claim.scope, path: claim.path })) as readonly ResourceClaim[],
-    },
+    // undefined claims = the step touches NO workspace files (the unreal RC
+    // legs are network-only): the optional resourceClaims field is omitted —
+    // an empty claims array would itself fail the claim contract's
+    // at-least-one rule, and fabricating a path claim would be dishonest.
+    ...(claims !== undefined
+      ? {
+          resourceClaims: {
+            schemaVersion: 1,
+            claims: claims.map((claim) => ({ access: claim.access, scope: claim.scope, path: claim.path })) as readonly ResourceClaim[],
+          },
+        }
+      : {}),
   };
 }
 
@@ -447,12 +248,19 @@ function planStep(
  * Builds the engine-aware cross-engine GamePlan. Babylon target: 5 steps
  * (export → manifest-validate → integrate → build → run). Unity target: 4
  * steps (no runtime step — the StandaloneLinux64 player build is the terminal
- * verification). The returned plan is validated through parseGamePlan (the
+ * verification). Godot target (M4 WP-7): 5 steps — the WP-3 hop chain
+ * (export → manifest-validate → import → build → run; the headless run's
+ * exit-0-and-zero-crash-lines verdict is the terminal verification). Unreal
+ * target (M4 WP-7): 5 steps — the RC verification chain (export →
+ * manifest-validate → attach → describe → property-read; the typed read-back
+ * from the live editor is the terminal verification, and mutations are
+ * deliberately NOT planned while the reviewed allowlists stay empty at 0.1.0).
+ * The returned plan is validated through parseGamePlan (the
  * generator-honesty invariant): a builder bug that would emit an invalid plan
  * fails closed instead of shipping one.
  */
 export function buildCrossEngineAssetPlan(input: unknown): GamePlan {
-  const request = validateRequest(input);
+  const request = validateCrossEnginePlanRequest(input);
 
   const { workspaceRoot, targetEngine, format, assetName } = request;
   const ext = format; // "glb" | "fbx" — the artifact extension
@@ -558,7 +366,7 @@ export function buildCrossEngineAssetPlan(input: unknown): GamePlan {
       ),
     );
     artifactExpectations.push({ artifactKind: "build", verificationMethod: "artifact-hash", expectedPathPattern: distClaim });
-  } else {
+  } else if (targetEngine === "unity") {
     // --- the import leg (staging → Assets/, placed into the scene) ----------
     const importedAssetClaim = claimPath(joinHostPath(targetRootAbs, "Assets", "Gamos", `${assetName}.${ext}`));
     const sceneClaim = claimPath(joinHostPath(targetRootAbs, "Assets", "Scenes", "GamosScene.unity"));
@@ -595,6 +403,87 @@ export function buildCrossEngineAssetPlan(input: unknown): GamePlan {
     );
     artifactExpectations.push({ artifactKind: "build", verificationMethod: "artifact-hash", expectedPathPattern: buildsClaim });
     artifactExpectations.push({ artifactKind: "scene", verificationMethod: "engine-query", expectedPathPattern: sceneClaim });
+  } else if (targetEngine === "godot") {
+    // --- M4 WP-7: the Godot hop-chain legs (the WP-3 runtime-verified recipe) -
+    // The import stages the manifest-described GLB into the project's assets/
+    // dir (absolute targetAssetPath INSIDE the project root, exactly the WP-3
+    // hop usage); the build exports through the LinuxX11 preset into the
+    // pre-created workspace builds dir (outside the project — the exported
+    // binary must not become a project import); the run is the headless
+    // terminal verification (exit 0 AND zero crash lines, the record's
+    // verification spec — neither alone suffices).
+    const importedAssetClaim = claimPath(joinHostPath(targetRootAbs, "assets", `${assetName}.${ext}`));
+    const importStep = planStep(
+      "import-asset",
+      "godot/asset.import",
+      // expectedIntegrity is intentionally NOT here (the manifest is the
+      // integrity authority — the same discipline as the babylon integrate
+      // leg; plan-workflow.ts instructs the actor to read the manifest).
+      { projectRoot: targetRootAbs, sourcePath: stagingArtifactAbs, targetAssetPath: joinHostPath(targetRootAbs, "assets", `${assetName}.${ext}`) },
+      ["validate-export"],
+      [
+        { access: "read", scope: "staging", path: stagingArtifactClaim },
+        { access: "write", scope: "generated-output", path: importedAssetClaim },
+      ],
+    );
+    steps.push(importStep);
+
+    const buildsClaim = claimPath(joinHostPath(workspaceRoot, "builds"));
+    steps.push(
+      planStep(
+        "build-project",
+        "godot/project.build",
+        { projectRoot: targetRootAbs, preset: "LinuxX11", outPath: joinHostPath(workspaceRoot, "builds") },
+        ["import-asset"],
+        [
+          { access: "read", scope: "project", path: targetRootClaim },
+          { access: "write", scope: "generated-output", path: buildsClaim },
+        ],
+      ),
+    );
+    steps.push(
+      planStep(
+        "verify-runtime",
+        "godot/project.run",
+        { projectRoot: targetRootAbs, quitAfterFrames: 3 },
+        ["build-project"],
+        [{ access: "read", scope: "project", path: targetRootClaim }],
+      ),
+    );
+    artifactExpectations.push({ artifactKind: "build", verificationMethod: "artifact-hash", expectedPathPattern: buildsClaim });
+  } else {
+    // --- M4 WP-7: the Unreal RC verification-chain legs (read-only) ---------
+    // The attach leg connects to the DISCOVERED loopback endpoint (no
+    // endpoint override — machine-local discovery is the authority; the
+    // record's server-reported listener verification is the op's own
+    // verification spec). The describe leg typed-describes the exact target
+    // object; the verify leg is the engine-query read-back of the typed
+    // properties. Mutations are deliberately NOT planned: the reviewed
+    // property/function allowlists are EMPTY at 0.1.0 — planning a mutation
+    // against unreviewed entries would violate the never-plan-unregistered
+    // discipline (the real-editor mutation journey is WP-6, maintainer-side).
+    // NONE of the RC legs touch workspace files — no resource claims (the
+    // network permission is declared in the plan's permission union).
+    const objectPath = request.targetObjectPath;
+    const propertyNames = request.targetPropertyNames;
+    if (objectPath === undefined || propertyNames === undefined) {
+      fail("target", "the unreal leg requires objectPath + propertyNames (fail closed — the request validation invariant was violated; this is a builder bug)");
+    }
+    steps.push(
+      planStep("attach-editor", "unreal/connection.inspect", {}, ["validate-export"], undefined),
+    );
+    steps.push(
+      planStep("describe-target", "unreal/object.inspect", { objectPath }, ["attach-editor"], undefined),
+    );
+    steps.push(
+      planStep(
+        "verify-target",
+        "unreal/property.read",
+        { objectPath, propertyNames: [...propertyNames] },
+        ["describe-target"],
+        undefined,
+      ),
+    );
   }
 
   const rawPlan = {
@@ -605,7 +494,14 @@ export function buildCrossEngineAssetPlan(input: unknown): GamePlan {
       bindingReason: `cross-engine asset pipeline: Blender source project "${request.sourceProjectIdentity}" exported through staging into the ${targetEngine} target project "${request.targetProjectIdentity}" (user-selected target engine)`,
     },
     steps,
-    permissions: targetEngine === "babylon" ? BABYLON_PIPELINE_PERMISSIONS : UNITY_PIPELINE_PERMISSIONS,
+    permissions:
+      targetEngine === "babylon"
+        ? BABYLON_PIPELINE_PERMISSIONS
+        : targetEngine === "unity"
+          ? UNITY_PIPELINE_PERMISSIONS
+          : targetEngine === "godot"
+            ? GODOT_PIPELINE_PERMISSIONS
+            : UNREAL_PIPELINE_PERMISSIONS,
     acceptanceRecord: { recordId: request.recordId, recordSha256: request.recordSha256 },
     artifactExpectations,
     executionConstraints: { maxConcurrency: request.maxConcurrency, requiresApproval: true },
@@ -627,3 +523,4 @@ export function buildCrossEngineAssetPlan(input: unknown): GamePlan {
     );
   }
 }
+
