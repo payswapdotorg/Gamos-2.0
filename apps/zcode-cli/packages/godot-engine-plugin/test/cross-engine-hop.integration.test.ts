@@ -255,7 +255,12 @@ describe.skipIf(!hopAvailable)("Blender→Godot real cross-engine hop (M4 WP-3)"
           ingestedSourceSha256: importOutcome.sourceSha256,
           importedPath: rel(targetAssetPath),
           importedSha256: sha256Of(targetAssetPath),
-          evidence: [rel(importOutcome.importMetadataPath), ...importOutcome.importedFiles.map(rel)],
+          // Durable evidence only: the .import metadata + the staged asset.
+          // Godot's .godot/imported cache dir is not manifest-canonicalizable
+          // (dotfile segments fail the shared claim-path grammar); the probe
+          // verdict over those artifacts stays the capability's verification
+          // (importedFiles asserted above).
+          evidence: [rel(importOutcome.importMetadataPath), rel(targetAssetPath)],
         },
         build: {
           buildArtifact: {

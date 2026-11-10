@@ -75,7 +75,11 @@ const validHopInput = (): BlenderToGodotHopInput => ({
     ingestedSourceSha256: sha("b"),
     importedPath: "proj/assets/hop-cube.glb",
     importedSha256: sha("b"),
-    evidence: ["proj/assets/hop-cube.glb.import", "proj/.godot/imported/hop-cube.glb-abc.scn"],
+    // Durable evidence paths only: the .import metadata + the staged asset.
+    // Godot's .godot/imported cache dir is NOT manifest-canonicalizable
+    // (dotfile segments fail the shared claim-path grammar) — the probe
+    // verdict over those artifacts stays the capability's own verification.
+    evidence: ["proj/assets/hop-cube.glb.import", "proj/assets/hop-cube.glb"],
   },
   build: {
     buildArtifact: {
@@ -262,5 +266,65 @@ describe("Blender→Godot hop builder (target-side M4 WP-3 facility, fail closed
     expect(() =>
       buildBlenderToGodotHop({ ...input, import: { ...input.import, importedPath: "../escape.glb" } }),
     ).toThrow(/importedPath/);
+  });
+
+  it("fails closed when the exported manifest already carries a target record (the export side owns none)", () => {
+    const input = validHopInput();
+    const tainted = exportedManifest();
+    (tainted as { target?: unknown }).target = {
+      engine: "godot",
+      engineVersion: "4.2.2.stable.official.15073afe3",
+      projectIdentity: "proj",
+      importer: { capabilityId: "godot/asset.import", capabilityVersion: "1.0.0" },
+    };
+    expect(() => buildBlenderToGodotHop({ ...input, manifest: tainted })).toThrow(
+      /GAMOS\/ASSET-INTERCHANGE-HOP: manifest\.target/,
+    );
+  });
+
+  it("fails closed on unknown or missing input fields (exact field set)", () => {
+    const input = validHopInput();
+    expect(() => buildBlenderToGodotHop({ ...input, extra: true })).toThrow(
+      /GAMOS\/ASSET-INTERCHANGE-HOP: input.*unknown field "extra"/,
+    );
+    const { run: _run, ...missingRun } = input as unknown as Record<string, unknown>;
+    expect(() => buildBlenderToGodotHop(missingRun)).toThrow(/GAMOS\/ASSET-INTERCHANGE-HOP: input.*missing field "run"/);
+  });
+
+  it("fails closed on a non-canonical target project identity (the import-pending stage's parser rule)", () => {
+    const input = validHopInput();
+    expect(() =>
+      buildBlenderToGodotHop({ ...input, target: { ...input.target, projectIdentity: "/abs/proj" } }),
+    ).toThrow(/manifest\.target\.projectIdentity/);
+  });
+
+  it("fails closed on a malformed importer capability version (the parser's semver rule)", () => {
+    const input = validHopInput();
+    expect(() =>
+      buildBlenderToGodotHop({
+        ...input,
+        importer: { capabilityId: "godot/asset.import", capabilityVersion: "not-semver" },
+      }),
+    ).toThrow(/manifest\.target\.importer/);
+  });
+
+  it("fails closed on an unsafe build-artifact path (the built stage's parser rule)", () => {
+    const input = validHopInput();
+    expect(() =>
+      buildBlenderToGodotHop({
+        ...input,
+        build: {
+          ...input.build,
+          buildArtifact: { ...input.build.buildArtifact, path: "../escape.x86_64" },
+        },
+      }),
+    ).toThrow(/manifest\.target\.buildArtifact/);
+  });
+
+  it("fails closed on an unsafe evidence path (the import-validated stage's parser rule)", () => {
+    const input = validHopInput();
+    expect(() =>
+      buildBlenderToGodotHop({ ...input, import: { ...input.import, evidence: ["../escape.import"] } }),
+    ).toThrow(/manifest\.target\.evidence/);
   });
 });
