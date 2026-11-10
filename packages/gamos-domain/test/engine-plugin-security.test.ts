@@ -48,8 +48,8 @@ const honestDisclosures = {
   environment: "full spawn environment inheritance minus ZCode runtime sanitized secrets (official-class regime)",
 };
 
-describe("Worker C — the four SHIPPED engine plugins pass the package validator (M2.5 INTEGRATE; M4 WP-2 adds godot)", () => {
-  for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin", "godot-engine-plugin"]) {
+describe("Worker C — the five SHIPPED engine plugins pass the package validator (M2.5 INTEGRATE; M4 WP-2 adds godot, WP-5 adds unreal)", () => {
+  for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin", "godot-engine-plugin", "unreal-engine-plugin"]) {
     it(`${pluginDir}: manifest, capabilities, provenance, versions and provider identity all validate`, () => {
       const { manifest, packageJson } = readShippedPlugin(pluginDir);
       const result = validateEnginePluginPackage(manifest, packageJson, shippedRegistry);
@@ -66,7 +66,7 @@ describe("Worker C — the four SHIPPED engine plugins pass the package validato
   }
 
   it("every manifest-declared capability resolves to a complete registry record (contract 03 rule 1)", () => {
-    for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin", "godot-engine-plugin"]) {
+    for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin", "godot-engine-plugin", "unreal-engine-plugin"]) {
       const { manifest } = readShippedPlugin(pluginDir);
       const capabilities = manifest.capabilities as string[];
       expect(capabilities.length).toBeGreaterThan(0);
@@ -80,7 +80,7 @@ describe("Worker C — the four SHIPPED engine plugins pass the package validato
   });
 
   it("the manifest mcpServers key matches the registry provider identity", () => {
-    for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin", "godot-engine-plugin"]) {
+    for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin", "godot-engine-plugin", "unreal-engine-plugin"]) {
       const { manifest } = readShippedPlugin(pluginDir);
       const serverKeys = Object.keys(manifest.mcpServers as Record<string, unknown>);
       expect(serverKeys).toEqual(["engine"]);

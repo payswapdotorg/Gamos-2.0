@@ -56,6 +56,7 @@ on:
       - "apps/zcode-cli/packages/blender-engine-plugin/**"
       - "apps/zcode-cli/packages/babylon-engine-plugin/**"
       - "apps/zcode-cli/packages/godot-engine-plugin/**"
+      - "apps/zcode-cli/packages/unreal-engine-plugin/**"
       - "scripts/gamos/m2-ui-journey.mjs"
       - "scripts/gamos/m2-local-model-server.mjs"
       - "scripts/gamos/m2-capability-cli.ts"
@@ -94,13 +95,14 @@ jobs:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - name: Focused gamos-domain tests (provenance, engine-plugin, Worker C security)
         run: pnpm exec vitest run --project gamos-domain
-      - name: Verify shipped provenance commitSha values are REAL git objects (M2 audit; M4 godot line included since WP-2)
+      - name: Verify shipped provenance commitSha values are REAL git objects (M2 audit; M4 godot line since WP-2, unreal line since WP-5)
         run: |
           set -e
           for f in apps/zcode-cli/packages/unity-engine-plugin/.zcode-plugin/plugin.json \
                    apps/zcode-cli/packages/blender-engine-plugin/.zcode-plugin/plugin.json \
                    apps/zcode-cli/packages/babylon-engine-plugin/.zcode-plugin/plugin.json \
-                   apps/zcode-cli/packages/godot-engine-plugin/.zcode-plugin/plugin.json; do
+                   apps/zcode-cli/packages/godot-engine-plugin/.zcode-plugin/plugin.json \
+                   apps/zcode-cli/packages/unreal-engine-plugin/.zcode-plugin/plugin.json; do
             sha=$(python3 -c "import json;print(json.load(open('$f'))['provenance']['source']['commitSha'])")
             echo "$f -> $sha"
             t=$(git cat-file -t "$sha" 2>/dev/null || true)
@@ -110,9 +112,9 @@ jobs:
             fi
           done
           echo "shipped provenance commitSha values verified against real git objects"
-      - name: Typecheck the four engine plugins
+      - name: Typecheck the five engine plugins
         run: |
-          for pkg in unity-engine-plugin blender-engine-plugin babylon-engine-plugin godot-engine-plugin; do
+          for pkg in unity-engine-plugin blender-engine-plugin babylon-engine-plugin godot-engine-plugin unreal-engine-plugin; do
             echo "::group::typecheck $pkg"
             pnpm --filter "@zcode/${pkg}" exec tsc --noEmit
             echo "::endgroup::"
@@ -134,6 +136,9 @@ jobs:
           echo "::endgroup::"
           echo "::group::godot-engine-plugin unit suites (M4 WP-2; real-engine suite is the m4 workflow's gate)"
           pnpm --filter @zcode/godot-engine-plugin exec vitest run test/typed-ops.test.ts test/discovery.test.ts test/engine-harden.test.ts
+          echo "::endgroup::"
+          echo "::group::unreal-engine-plugin full suite (M4 WP-5 — mock RC contract suite, Node-only, deterministic; the m4-unreal workflow records the gate status)"
+          pnpm --filter @zcode/unreal-engine-plugin exec vitest run test
           echo "::endgroup::"
 
   blender-real-engine:

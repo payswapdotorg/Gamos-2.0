@@ -1,0 +1,48 @@
+{
+  "name": "unreal-engine",
+  "version": "0.1.0",
+  "description": "Typed, safety-reviewed Unreal Editor operations through the running editor's Remote Control (connection inspect with server-reported listener verification, typed object describe, typed property reads, allowlisted property writes with the mandatory five-part reversibility chain, individually allowlisted function invocation) — a loopback-only HTTP/WS connector that attaches to an externally owned editor and never spawns or terminates anything.",
+  "author": { "name": "Z.ai" },
+  "license": "MIT",
+  "mcpServers": {
+    "engine": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/mcp/server.js"],
+      "cwd": "${ZCODE_PROJECT_DIR}"
+    }
+  },
+  "userConfig": {
+    "rcEndpoint": {
+      "type": "string",
+      "description": "Loopback Remote Control endpoint override as host:httpPort:wsPort (loopback literal hosts only; discovered defaults 127.0.0.1:30010/30020 when unset)"
+    },
+    "rcPassphrase": {
+      "type": "string",
+      "description": "Remote Control transport-compatibility token (route compatibility only — never authentication; the documented public default is used when unset)"
+    }
+  },
+  "engineFamily": "unreal",
+  "engineVersions": ">=5.3",
+  "capabilities": [
+    "unreal/connection.inspect",
+    "unreal/object.inspect",
+    "unreal/property.read",
+    "unreal/property.write",
+    "unreal/function.invoke"
+  ],
+  "headlessSupport": "none",
+  "requiresDisplayServer": true,
+  "provenance": {
+    "publisher": "gamos-tl",
+    "source": {
+      "type": "repository",
+      "repo": "payswapdotorg/Gamos-2.0",
+      "commitSha": "eebcf6b788a9ad5b2f510f20ad260232443fc01d",
+      "path": "apps/zcode-cli/packages/unreal-engine-plugin"
+    },
+    "surfaces": ["mcp"],
+    "reviewedBy": "gamos-tl",
+    "reviewRef": "M4 capability contracts (TL-authored, maintainer-accepted; WP-5 connector integration TL-reviewed under strict TDD)"
+  }
+}

@@ -1,0 +1,101 @@
+name: gamos-m4-unreal-e2e
+
+# Gamos M4 WP-5 — Unreal Remote Control protocol-contract gate (delivery plan
+# §3 order 5; regression matrix row "Unreal journeys added by WP-5").
+#
+#   Job "unreal-rc-contracts": runs the unreal-engine-plugin FULL suite
+#     against the in-repo mock RC server (test/mock-rc-server.ts — an EDITOR
+#     STAND-IN implementing the pinned wire contract of src/rc-protocol.ts):
+#     loopback-only construction enforcement, the attach lifecycle with
+#     server-REPORTED listener verification, typed object inspect / property
+#     reads / property writes with the mandatory five-part chain, the EMPTY
+#     reviewed mutation allowlists (every write property and every
+#     functionName fails closed client-side at 0.1.0), injected REVIEW-CLASS
+#     allowlist entries exercising the call protocol, HTTP/WS lifecycle and
+#     teardown contracts (journal restores, in-flight aborts surfaced, the
+#     externally owned editor never terminated — structural pin), 401 ⇒
+#     rc-auth-required single-attempt, schema drift ⇒ rc-schema-mismatch,
+#     wedged editor ⇒ rc-timeout, no auto-reconnect, and endpoint discovery's
+#     honest availability reasons.
+#
+#   ZERO external fetches: no engine binaries are provisioned (the connector
+#     attaches; the mock is in-repo Node) — the zero-spend mandate holds.
+#
+#   M4-G2 honesty: this job verifies PROTOCOL CONTRACTS ONLY. M4-G2 ("real
+#     authenticated-or-documented same-user trust-boundary connection …")
+#     stays UNPASSED — a mock can NEVER pass it (delivery plan §3 order 5 /
+#     §9); the real-editor acceptance leg is WP-6 on the maintainer-provided
+#     UE5 environment (§10). The recorded gate status says exactly this and
+#     the roadmap completion check refuses M4 completion without real gate
+#     evidence — this workflow never claims it.
+#
+# Honest-evidence rules (inherited): the gate status is derived from the
+# suite's own exit code; evidence artifacts are uploaded; no key material is
+# ever committed.
+
+on:
+  push:
+    branches: ["gamos/**"]
+    paths:
+      - "packages/gamos-domain/**"
+      - "apps/zcode-cli/packages/unreal-engine-plugin/**"
+      - ".github/workflows/gamos-m4-unreal-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unreal-rc-contracts:
+    name: Unreal RC protocol contracts (M4 WP-5; M4-G2 stays open)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.14.0"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+      - name: Install workspace (frozen lockfile)
+        run: pnpm install --frozen-lockfile || (echo "::warning::retrying install" && pnpm install --frozen-lockfile)
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+      - name: Build the unreal-engine-plugin (the manifest-declared dist artifact)
+        run: pnpm --filter @zcode/unreal-engine-plugin build
+      - name: Run the unreal-engine-plugin FULL suite (mock RC server — protocol contracts ONLY)
+        run: |
+          set -o pipefail
+          mkdir -p evidence/phase-m4
+          pnpm --filter @zcode/unreal-engine-plugin exec vitest run test 2>&1 | tee evidence/phase-m4/unreal-suite-output.txt
+      - name: Journey-exact M2 capability CLI (the fifth shipped manifest read; honest negative path intact)
+        run: |
+          set -o pipefail
+          pnpm exec esbuild scripts/gamos/m2-capability-cli.ts --bundle --platform=node --format=esm --outfile=/tmp/m2-capability-cli.mjs
+          node /tmp/m2-capability-cli.mjs | tee evidence/phase-m4/unreal-m2-cli-output.json
+      - name: "Write the M4-G2 gate status (honest: protocol contracts verified against the mock; the gate stays open)"
+        if: always()
+        run: |
+          mkdir -p evidence/phase-m4
+          cat > evidence/phase-m4/unreal-gate-status.json <<'JSON'
+          {
+            "gate_id": "M4-G2",
+            "job": "unreal-rc-contracts",
+            "engine": {
+              "family": "unreal",
+              "real_editor": "absent — the maintainer-provided UE5 environment is the WP-6 acceptance leg (delivery plan §10)",
+              "mock_rc_server": "in-repo Node stand-in (test/mock-rc-server.ts) implementing the pinned wire contract of src/rc-protocol.ts"
+            },
+            "status": "protocol-contracts-verified",
+            "scope_note": "M4 WP-5 connector protocol contracts ONLY: loopback-only construction, attach lifecycle with server-reported listener verification, typed ops, the five-part write chain, the EMPTY reviewed mutation allowlists, HTTP/WS lifecycle + teardown (the editor is never terminated), and the honest failure taxonomy — all against the mock RC server. A mock can NEVER pass M4-G2; the real-editor acceptance leg (same-user trust boundary, server-side listener inspection, LAN unreachability, real reversible operation, teardown with the editor alive) is WP-6 and stays blocked on the maintainer-provided UE5 environment. This status never claims gate completion.",
+            "recorded_at": "${{ github.run_id }}-${{ github.run_attempt }}"
+          }
+          JSON
+      - name: Upload M4 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-unreal-${{ github.sha }}
+          path: evidence/phase-m4/
+          if-no-files-found: warn

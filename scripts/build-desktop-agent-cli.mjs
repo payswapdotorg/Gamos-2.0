@@ -90,6 +90,12 @@ const requiredDevPluginRuntimeBuilds = [
     packageName: "@zcode/godot-engine-plugin",
     artifactPath: "godot-engine-plugin/dist/mcp/server.js",
   },
+  // Gamos M4 WP-5 Unreal 引擎插件（同规则：plugin.json 声明 mcpServers，必须构建并校验；
+  // 连接器 attach 到运行中的编辑器，不 spawn 任何进程 —— dist 仅是 MCP 服务器入口）。
+  {
+    packageName: "@zcode/unreal-engine-plugin",
+    artifactPath: "unreal-engine-plugin/dist/mcp/server.js",
+  },
   {
     // browser-use 自己的 runtime 只剩 browser-client；宿主不再由它携带。
     packageName: "@zcode/browser-use-plugin",
