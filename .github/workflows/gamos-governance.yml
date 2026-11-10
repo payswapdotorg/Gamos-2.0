@@ -27,7 +27,7 @@ on:
   workflow_dispatch:
 
 env:
-  GAMOS_BASELINE_SHA256: "631f3383f78dc922de241fce264ae0aec874abb7ec39b8070e4b5388a0972446"
+  GAMOS_BASELINE_SHA256: "328b3c88bedb8729eaec45ee3a45f5b1181fc855ede4dbc3895a25a2e18578f2"
 
 permissions:
   contents: read

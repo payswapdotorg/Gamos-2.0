@@ -48,8 +48,8 @@ const honestDisclosures = {
   environment: "full spawn environment inheritance minus ZCode runtime sanitized secrets (official-class regime)",
 };
 
-describe("Worker C — the three SHIPPED engine plugins pass the package validator (M2.5 INTEGRATE)", () => {
-  for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin"]) {
+describe("Worker C — the four SHIPPED engine plugins pass the package validator (M2.5 INTEGRATE; M4 WP-2 adds godot)", () => {
+  for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin", "godot-engine-plugin"]) {
     it(`${pluginDir}: manifest, capabilities, provenance, versions and provider identity all validate`, () => {
       const { manifest, packageJson } = readShippedPlugin(pluginDir);
       const result = validateEnginePluginPackage(manifest, packageJson, shippedRegistry);
@@ -66,7 +66,7 @@ describe("Worker C — the three SHIPPED engine plugins pass the package validat
   }
 
   it("every manifest-declared capability resolves to a complete registry record (contract 03 rule 1)", () => {
-    for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin"]) {
+    for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin", "godot-engine-plugin"]) {
       const { manifest } = readShippedPlugin(pluginDir);
       const capabilities = manifest.capabilities as string[];
       expect(capabilities.length).toBeGreaterThan(0);
@@ -80,7 +80,7 @@ describe("Worker C — the three SHIPPED engine plugins pass the package validat
   });
 
   it("the manifest mcpServers key matches the registry provider identity", () => {
-    for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin"]) {
+    for (const pluginDir of ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin", "godot-engine-plugin"]) {
       const { manifest } = readShippedPlugin(pluginDir);
       const serverKeys = Object.keys(manifest.mcpServers as Record<string, unknown>);
       expect(serverKeys).toEqual(["engine"]);
@@ -265,18 +265,19 @@ describe("Worker C — no engine plugin bypasses the registry or lifecycle (M2.5
   it("the shipped metas are exactly the manifests' inline gamos fields (single source of truth)", () => {
     for (const meta of ENGINE_PLUGIN_METAS as EnginePluginMeta[]) {
       const dir = `${meta.pluginId}-plugin`;
-      // M4 WP-1 interim (honest scope): the godot-engine plugin PACKAGE ships in
-      // WP-2 (delivery plan §3 order 2 — the domain records + meta land first in
-      // order 1); for a meta whose package is not yet shipped, the manifest
-      // agreement leg does not exist yet, so this test asserts the INTERIM
-      // invariant instead: the meta itself must still validate fail-closed
-      // against the shipped registry (every declared id resolves). When WP-2
-      // ships the package directory, the full manifest-agreement assertions
-      // engage for it automatically (existsSync self-heals — no silent skip:
-      // a shipped package can never dodge the agreement check).
+      // M4 sequencing closure: WP-1 registered the godot-engine records+meta
+      // BEFORE the package existed (delivery plan §3 order 1), and this test's
+      // existsSync branch honestly asserted the INTERIM invariant then (meta
+      // validates fail-closed against the shipped registry; WP-1 repair
+      // 4976483a). As of WP-2 (order 2) the godot-engine-plugin package IS
+      // shipped with .zcode-plugin/plugin.json, so the full manifest-agreement
+      // assertions engage for it automatically — the self-heal closed. The
+      // existsSync branch is retained for future sequencing (records-first is
+      // the standing pattern; a not-yet-shipped meta still validates honestly
+      // instead of crashing, and a shipped package can never dodge the check).
       if (!existsSync(`${packagesRoot()}${dir}/.zcode-plugin/plugin.json`)) {
         const result = validateEnginePluginMeta(meta, shippedRegistry);
-        expect(result.ok, `${dir} (package not yet shipped — WP-2): meta must validate against the shipped registry — ${result.ok ? "" : result.reason}`).toBe(true);
+        expect(result.ok, `${dir} (package not yet shipped): meta must validate against the shipped registry — ${result.ok ? "" : result.reason}`).toBe(true);
         continue;
       }
       const { manifest } = readShippedPlugin(dir);
@@ -350,7 +351,10 @@ describe("M2 audit — shipped provenance identifies the REAL integration commit
     return false;
   }
 
-  const pluginDirs = ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin"];
+  // M4 WP-2: the godot-engine package ships — the manifest-side loops grow
+  // with it (enumerative growth only; the per-family source-of-record pin
+  // already governs the domain side above).
+  const pluginDirs = ["unity-engine-plugin", "blender-engine-plugin", "babylon-engine-plugin", "godot-engine-plugin"];
 
   it("no shipped manifest carries a synthetic/placeholder provenance commitSha", () => {
     for (const pluginDir of pluginDirs) {
@@ -364,12 +368,25 @@ describe("M2 audit — shipped provenance identifies the REAL integration commit
     }
   });
 
-  it("every shipped manifest identifies the exact real integration commit of its line (PR #5 merge for the M2 plugins)", () => {
+  it("every shipped manifest identifies the exact real source-of-record commit of its line (PR #5 merge for the M2 plugins; M4 contracts commit for the godot line)", () => {
     for (const pluginDir of pluginDirs) {
       const { manifest } = readShippedPlugin(pluginDir);
       const provenance = manifest.provenance as { source?: { commitSha?: string; repo?: string; path?: string } };
-      expect(provenance?.source?.commitSha, `${pluginDir} must carry the real integration commit`).toBe(REAL_INTEGRATION_COMMIT);
+      const family = typeof manifest.engineFamily === "string" ? manifest.engineFamily : "";
+      expect(provenance?.source?.commitSha, `${pluginDir} must carry its line's real source-of-record commit`).toBe(expectedSourceCommit(family));
       expect(provenance?.source?.repo).toBe("payswapdotorg/Gamos-2.0");
+    }
+  });
+
+  it("no manifest/domain provenance drift: every shipped manifest carries the SAME commit its domain meta pins", () => {
+    for (const meta of ENGINE_PLUGIN_METAS as EnginePluginMeta[]) {
+      const dir = `${meta.pluginId}-plugin`;
+      if (!existsSync(`${packagesRoot()}${dir}/.zcode-plugin/plugin.json`)) continue;
+      const { manifest } = readShippedPlugin(dir);
+      const provenance = manifest.provenance as { source?: { commitSha?: string } };
+      expect(provenance?.source?.commitSha, `${dir} manifest must agree with its domain meta's source-of-record commit`).toBe(
+        meta.provenance.source.type === "repository" ? meta.provenance.source.commitSha : "",
+      );
     }
   });
 
