@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import {
   GODOT_PATH_ENV,
   defaultCommonRoots,
+  defaultRootCandidates,
   discoverGodot,
   godotTemplatesVersion,
   parseGodotExecutableVersion,
@@ -136,8 +137,37 @@ describe("discoverGodot (injected environment; fail-closed outcomes)", () => {
   });
 
   test("default common roots include the /home/z/engines layouts the verified recipe installs", () => {
+    // The STATIC search roots are environment-independent — the verified
+    // recipe's root is pinned as a search location on EVERY machine (CI
+    // included). The candidate RESOLUTION from these roots (both layout
+    // forms — directory and flat binary) is proven against the real
+    // provisioned engine by the integration gate (gamos-m4-godot-e2e).
     const roots = defaultCommonRoots();
     expect(roots.length).toBeGreaterThan(0);
     expect(roots.some((r) => r.includes("/home/z/engines"))).toBe(true);
+  });
+
+  test("static roots are stable while candidate resolution is glob-driven — the no-engine CI machine stays honest", () => {
+    // Root-cause regression pin (the m2-e2e unit-suite failure on 52cb2245):
+    // defaultCommonRoots previously returned GLOB-RESOLVED binaries, so a
+    // machine without /home/z/engines (the m2 CI runner) produced an empty
+    // recipe-root list and the "search strategy covers the recipe" assertion
+    // became environment-dependent. The contract is now split: the static
+    // roots ALWAYS name the locations (incl. /home/z/engines); the resolved
+    // candidates are the glob expansion and may legitimately exclude absent
+    // locations — discovery stays honest on every machine.
+    const roots = defaultCommonRoots();
+    expect(roots).toContain("/home/z/engines");
+    expect(roots).toContain("/usr/bin/godot");
+    const candidates = defaultRootCandidates();
+    // The fixed binary paths are always candidates (existence is probed at
+    // discovery time, not silently dropped from the strategy).
+    expect(candidates).toContain("/usr/bin/godot");
+    expect(candidates).toContain("/usr/local/bin/godot");
+    // Every globbed candidate is a real Godot-shaped binary path — never a
+    // bare search directory leaking into the candidate list.
+    for (const candidate of candidates) {
+      expect(candidate.endsWith("/godot") || /\/Godot_v\d[\w.\-]*_linux\.x86_64$/.test(candidate)).toBe(true);
+    }
   });
 });

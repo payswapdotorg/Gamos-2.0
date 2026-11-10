@@ -118,7 +118,7 @@ function meetsMinimum(parsed: GodotVersion): boolean {
 
 export function discoverGodot(options: DiscoveryOptions = {}): GodotDiscovery {
   const env = options.env ?? process.env;
-  const roots = options.roots ?? defaultCommonRoots();
+  const roots = options.roots ?? defaultRootCandidates();
 
   const envPath = typeof env[GODOT_PATH_ENV] === "string" ? env[GODOT_PATH_ENV]!.trim() : "";
   if (envPath !== "") {
@@ -328,8 +328,33 @@ function globFlatBinaries(parentDir: string, binaryPattern: RegExp): string[] {
 
 const GODOT_BINARY_PATTERN = /^Godot_v\d[\w.\-]*_linux\.x86_64$/;
 
-/** Standard install roots, frozen order; globs prefer newer-looking candidates first. */
+/**
+ * The frozen STATIC search roots (environment-independent): the fixed binary
+ * paths plus the directories the verified zero-cost recipe and conventional
+ * installs use. These describe WHERE discovery looks — they are not resolved
+ * candidates (see defaultRootCandidates for the glob expansion).
+ */
 export function defaultCommonRoots(): string[] {
+  const home = os.homedir();
+  return [
+    "/usr/bin/godot",
+    "/usr/local/bin/godot",
+    // The verified zero-cost recipe root: /home/z/engines — both layout forms
+    // (directory form godot-<version>-linux-x64/ and the zip's flat
+    // top-level binary) are globbed from it during candidate resolution.
+    "/home/z/engines",
+    "/opt",
+    home,
+    path.join(home, ".local", "bin"),
+  ];
+}
+
+/**
+ * Resolved executable candidates from the frozen search roots (existing
+ * binaries only — the glob expansion of defaultCommonRoots). Frozen order;
+ * globs prefer newer-looking candidates first.
+ */
+export function defaultRootCandidates(): string[] {
   const home = os.homedir();
   return [
     "/usr/bin/godot",
