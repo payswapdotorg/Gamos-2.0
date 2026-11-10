@@ -88,8 +88,8 @@ describe("M4 WP-8 — the godot-engine MCP server declares the honest permission
     for (const name of ["project_inspect", "script_check"]) {
       const tool = tools.get(name);
       expect(tool, `${name} must be listed`).toBeDefined();
-      expect(tool?.annotations?.readOnlyHint, `${name} readOnlyHint`).toBe(true);
-      expect(tool?.annotations?.destructiveHint, `${name} must not claim destructive`).toBe(false);
+      expect(tool?.annotations?.readOnlyHint ?? false, `${name} readOnlyHint`).toBe(true);
+      expect(tool?.annotations?.destructiveHint ?? false, `${name} must not claim destructive`).toBe(false);
     }
   });
 
@@ -98,8 +98,8 @@ describe("M4 WP-8 — the godot-engine MCP server declares the honest permission
     for (const name of ["scene_modify", "asset_import", "project_build", "project_run"]) {
       const tool = tools.get(name);
       expect(tool, `${name} must be listed`).toBeDefined();
-      expect(tool?.annotations?.destructiveHint, `${name} destructiveHint`).toBe(true);
-      expect(tool?.annotations?.readOnlyHint, `${name} must not claim read-only`).toBe(false);
+      expect(tool?.annotations?.destructiveHint ?? false, `${name} destructiveHint`).toBe(true);
+      expect(tool?.annotations?.readOnlyHint ?? false, `${name} must not claim read-only`).toBe(false);
     }
   });
 

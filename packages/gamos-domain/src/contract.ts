@@ -238,6 +238,17 @@ export {
   resolveRepositoryModificationAuthorization,
 } from "./domain/permission-gate.js";
 
+// MCP permission mapping (M4 WP-8, delivery plan §3 order 8) — the
+// host-surface classification derived from the capability records' declared
+// permissions (contract 06 mapping table; no second permission system).
+export type {
+  McpPermissionMapping,
+  McpRiskLevel,
+  McpSideEffectScope,
+  McpToolPermissionProfile,
+} from "./domain/mcp-permission-mapping.js";
+export { resolveMcpToolPermissionProfile } from "./domain/mcp-permission-mapping.js";
+
 // 插件信任与 MCP 进程权力（M1.6，directive §13 / contract 09 rev 2）——进程级
 // 权力如实披露、fail closed 校验；MCP 进程禁用 "sandboxed" 措辞。
 export type {

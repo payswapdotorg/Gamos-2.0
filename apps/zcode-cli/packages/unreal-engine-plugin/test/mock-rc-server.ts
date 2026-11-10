@@ -83,6 +83,13 @@ export interface MockRcHandle {
   emitEvent(eventName: string, payload: unknown): void;
   /** Abruptly terminate every WebSocket (the dropped-connection row). */
   terminateAllWs(): void;
+  /**
+   * Wedge the WebSocket close handshake: every live connection stops reading
+   * its socket, so a client's close frame is never acked (the §7 U8 row — a
+   * wedged editor that never completes the close handshake). The HTTP
+   * listener stays alive.
+   */
+  wedgeWsCloseHandshake(): void;
   /** True while the "editor" is still alive and listening (teardown proof). */
   isAlive(): Promise<boolean>;
   close(): Promise<void>;
@@ -347,6 +354,20 @@ export async function startMockRcServer(options: MockRcOptions = {}): Promise<Mo
     },
     terminateAllWs(): void {
       for (const ws of perConnectionSubs.keys()) ws.terminate();
+    },
+    wedgeWsCloseHandshake(): void {
+      // Pause the underlying TCP socket of every live connection: the ws
+      // library stops parsing inbound frames, so a client close frame never
+      // gets its server ack (the close handshake wedges). The sockets still
+      // emit close when the peer destroys the connection, so the server
+      // cleans up afterwards.
+      for (const ws of perConnectionSubs.keys()) {
+        try {
+          (ws as unknown as { _socket?: { pause(): void } })._socket?.pause();
+        } catch {
+          // socket already gone
+        }
+      }
     },
     async isAlive(): Promise<boolean> {
       const probeUrl = `http://${httpBind === "0.0.0.0" ? "127.0.0.1" : httpBind}:${typeof httpServer!.address() === "object" && httpServer!.address() ? (httpServer!.address() as import("node:net").AddressInfo).port : 0}/remote/info`;

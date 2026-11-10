@@ -200,6 +200,27 @@ export const officialSeaPlugins = [
     rootPath: join("packages", "babylon-engine-plugin"),
     version: "0.1.0",
   },
+  // Gamos M4 first-party engine integrations (WP-8 host-catalog registration —
+  // the blender M2 precedent class; runtime MCP servers dist/mcp/server.js,
+  // built by requiredDevPluginRuntimeBuilds per AUTH-0014/0015).
+  {
+    marketplace: "zcode-plugins-official",
+    name: "godot-engine",
+    packageName: "@zcode/godot-engine-plugin",
+    requiresRuntime: true,
+    requiredRuntimePaths: ["dist/mcp/server.js"],
+    rootPath: join("packages", "godot-engine-plugin"),
+    version: "0.1.0",
+  },
+  {
+    marketplace: "zcode-plugins-official",
+    name: "unreal-engine",
+    packageName: "@zcode/unreal-engine-plugin",
+    requiresRuntime: true,
+    requiredRuntimePaths: ["dist/mcp/server.js"],
+    rootPath: join("packages", "unreal-engine-plugin"),
+    version: "0.1.0",
+  },
   {
     marketplace: "zcode-plugins-official",
     name: "restore-legacy-sessions",

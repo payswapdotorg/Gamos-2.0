@@ -88,8 +88,8 @@ describe("M4 WP-8 — the unreal-engine MCP server declares the honest permissio
     for (const name of ["connection_inspect", "object_inspect", "property_read"]) {
       const tool = tools.get(name);
       expect(tool, `${name} must be listed`).toBeDefined();
-      expect(tool?.annotations?.readOnlyHint, `${name} readOnlyHint`).toBe(true);
-      expect(tool?.annotations?.destructiveHint, `${name} must not claim destructive`).toBe(false);
+      expect(tool?.annotations?.readOnlyHint ?? false, `${name} readOnlyHint`).toBe(true);
+      expect(tool?.annotations?.destructiveHint ?? false, `${name} must not claim destructive`).toBe(false);
     }
   });
 
@@ -98,8 +98,8 @@ describe("M4 WP-8 — the unreal-engine MCP server declares the honest permissio
     for (const name of ["property_write", "function_invoke", "rollback_to_snapshot"]) {
       const tool = tools.get(name);
       expect(tool, `${name} must be listed`).toBeDefined();
-      expect(tool?.annotations?.destructiveHint, `${name} destructiveHint`).toBe(true);
-      expect(tool?.annotations?.readOnlyHint, `${name} must not claim read-only`).toBe(false);
+      expect(tool?.annotations?.destructiveHint ?? false, `${name} destructiveHint`).toBe(true);
+      expect(tool?.annotations?.readOnlyHint ?? false, `${name} must not claim read-only`).toBe(false);
     }
   });
 
