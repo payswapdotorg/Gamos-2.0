@@ -684,6 +684,63 @@
         "date": "2026-11-08T16:35:00Z",
         "decision_ref": "Final-closure directive §12 (regression discipline: fix at the root, never retry away) + the AUTH-0012 precedent (same race class, same authorized inherited-test-repair class). TL-reviewed: test-only change; the delayMs generalization is additive and behavior-identical for undelayed actions; this entry's later binding supersedes AUTH-0012's auto-driver.ts content hash per the ledger's last-entry-wins map semantics."
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0014",
+      "phase": "M4",
+      "date": "2026-11-10T01:20:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "M4 WP-2 lifecycle registration (delivery plan §3 order 2, executed under the maintainer-activated M4 milestone — directive 'Active M4' + the 'raise the active limit to 3' policy, ADR-0008/0009): the godot-engine plugin package ships (apps/zcode-cli/packages/godot-engine-plugin with .zcode-plugin/plugin.json declaring mcpServers, the six godot/* capabilities, the M4 line's per-family source-of-record provenance), so two baseline-tracked files require minimal additive modification, exactly the GAMOS-AUTH-0006 precedent class for registering an engine plugin into the EXISTING ZCode plugin lifecycle: (1) scripts/build-desktop-agent-cli.mjs — one requiredDevPluginRuntimeBuilds entry for @zcode/godot-engine-plugin (dist/mcp/server.js), enforcing the file's own declared rule 'every official plugin whose plugin.json declares mcpServers must be registered here', so the agent CLI chain builds the Godot MCP server and verifies the real entry file before the agent bundle starts; (2) pnpm-lock.yaml — the +22-line godot workspace node added by the WP-2 RED commit (feb8828a, local-only until now) so the frozen-lockfile CI install resolves the new workspace package (GAMOS-AUTH-0005/0006 precedent for registering a new workspace package in the lockfile). No governance control file, frozen contract or protected upstream behavior is altered; the godot-engine-plugin package itself is new files (additive allowed); the app-catalog surfaces (official-plugin-definitions.ts / sea-official-plugin-assets.mjs) are NOT touched in this slice — the shipped-package validators, the m2 capability CLI's manifest-agreement read and the new gamos-m4-godot-e2e real-engine workflow carry the WP-2 evidence.",
+      "risk": "low",
+      "affected_functionality": "Build-chain registration only: the desktop agent CLI chain additionally builds and entry-verifies godot-engine-plugin/dist/mcp/server.js; the lockfile gains one workspace node. No M2/M3 surface changes; the m2-e2e workflow (extended with the godot path filter + the shipped-manifest git-object loop + the godot unit suites) re-proves the M2 journeys with the fourth package shipped — the m2 capability CLI's existsSync manifest read engages for godot automatically (per-family source-of-record pin), verified locally exactly as the journey runs it (exit 0, verdict ok, 18 records, godot srcOfRecord=true).",
+      "new_functionality": "The godot-engine plugin package ships as a real workspace package whose MCP dist is built and verified by the agent CLI chain; CI gains the gamos-m4-godot-e2e workflow (pinned zero-cost Godot recipe: sha256-pinned editor zip, version-string assertion, byte-exact export templates) running the full plugin suite including the real-engine integration gate.",
+      "regression_tests": [
+        "pnpm --filter @zcode/godot-engine-plugin exec vitest run test (57/57 incl. the real-Godot integration gate: project_inspect read-back, scene_modify fresh-process verification + atomic failure, script_check +/-, asset_import filesystem probe, project_build artifact hashing, project_run crash-line discipline, runaway/abort process-group kills)",
+        "pnpm --filter @zcode/godot-engine-plugin exec tsc --noEmit && pnpm --filter @zcode/godot-engine-plugin build (dist/mcp/server.js + staged bridges)",
+        "pnpm exec vitest run --project gamos-domain (394/394 — the shipped-package validator, manifest-agreement and per-family provenance-drift loops now cover godot-engine-plugin)",
+        "node scripts/gamos/m2-capability-cli.ts journey-exact bundle run (exit 0; verdict ok; registryRecords 18; godot manifest read with provenanceCommitIsSourceOfRecord=true; unresolved = exactly [unity/scene.modify])",
+        "node scripts/gamos/governance-check.mjs --pin <rotated baseline pin>",
+        "node scripts/gamos/governance-self-test.mjs (14/14)",
+        "node scripts/gamos/roadmap-self-test.mjs (17/17)",
+        "node scripts/gamos/roadmap-check.mjs",
+        "pnpm run docs:stale-phrases:check",
+        "pnpm run architecture:check (0 violations)"
+      ],
+      "evidence": {
+        "summary": "WP-2 delivered as a strict TDD slice: RED feb8828a (41 failing | 6 passing, every failure the not-implemented marker) then GREEN (57/57 against the real pinned Godot 4.2.2.stable.official.15073afe3 with the pinned export templates) — see the WP-2 GREEN commit message for the five root-caused fixes (the ProjectSettings API path in project_inspect.gd, the spawn-independent templates-root prerequisite, the import-pass crash-gate scoping with the filesystem probe staying the verdict, the engine-verdict scene handling in project.run, two test authoring bugs aligned to the verified engine truth). The lint-forced module split mirrors WP-1's precedent (engine-shared/engine-run/bridge-report/engine-build, moved verbatim, re-exported from engine.ts — public API unchanged). The m2-e2e shipped-manifest git-object loop now proves the godot manifest's commitSha is a real repository object (eebcf6b7…, the M4 capability-contracts line pin, merged at e9bb715f).",
+        "links": [
+          "apps/zcode-cli/packages/godot-engine-plugin/.zcode-plugin/plugin.json",
+          "apps/zcode-cli/packages/godot-engine-plugin/src/engine.ts",
+          "apps/zcode-cli/packages/godot-engine-plugin/test/engine-real-godot.integration.test.ts",
+          "packages/gamos-domain/test/engine-plugin-security.test.ts",
+          "scripts/gamos/m2-capability-cli.ts",
+          ".github/workflows/gamos-m4-godot-e2e.yml",
+          ".github/workflows/gamos-m2-e2e.yml",
+          "docs/gamos/M4-DELIVERY-PLAN.md",
+          "docs/gamos/M4-ZERO-COST-DELIVERY.md"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "scripts/build-desktop-agent-cli.mjs",
+          "content_sha256": "e7a4e353c71236c94ffd50d6f70120bda868972696b1e304d1651f129a9432eb"
+        },
+        {
+          "action": "modify",
+          "path": "pnpm-lock.yaml",
+          "content_sha256": "41a2e6bc089ff55c55c2d28c33452d66fc1b56c1f71889f8905e5571c0d8b910"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-10T01:20:00Z",
+        "decision_ref": "M4 delivery plan §3 order 2 + §4 TDD slice discipline (maintainer-activated M4); TL review of the WP-2 lifecycle registration (the AUTH-0006 precedent class applied to the godot line)"
+      }
     }
   ]
 }

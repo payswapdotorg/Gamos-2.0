@@ -170,7 +170,7 @@ describe.skipIf(!realGodotFound)("godot-engine plugin real-Godot integration", (
       if (broken.ok) {
         expect(broken.checkOk).toBe(false);
         expect(broken.parseErrors.length).toBeGreaterThanOrEqual(1);
-        expect(broken.parseErrors[0]?.line).toBe(3);
+        expect(broken.parseErrors[0]?.line).toBe(4);
         expect(broken.parseErrors[0]?.message).toContain("Expected expression");
       }
     },
@@ -206,7 +206,7 @@ describe.skipIf(!realGodotFound)("godot-engine plugin real-Godot integration", (
     async () => {
       const outDir = path.join(workspace, "builds");
       await mkdir(outDir, { recursive: true });
-      const outcome = await projectBuild(exe as string, { projectRoot, preset: "LinuxX11", outPath }, workspace, { timeoutMs: 300_000 });
+      const outcome = await projectBuild(exe as string, { projectRoot, preset: "LinuxX11", outPath: outDir }, workspace, { timeoutMs: 300_000 });
       expect(outcome.ok, outcome.ok ? undefined : JSON.stringify(outcome)).toBe(true);
       if (outcome.ok) {
         expect(existsSync(outcome.artifactPath)).toBe(true);

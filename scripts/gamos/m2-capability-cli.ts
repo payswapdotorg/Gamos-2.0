@@ -19,8 +19,19 @@ import {
   ENGINE_PLUGIN_CAPABILITIES,
   ENGINE_PLUGIN_METAS,
   M2_ENGINE_PLUGIN_SOURCE_COMMIT,
+  M4_ENGINE_PLUGIN_SOURCE_COMMIT,
   resolveCapability,
 } from "../../packages/gamos-domain/src/contract.js";
+
+/**
+ * Per-family source-of-record pin (mirrors the domain security test's
+ * expectedSourceCommit): the M2 0.1.0 line (unity/blender/babylon) names the
+ * PR #5 integration merge; the M4 godot 1.0.0 line names the capability-
+ * contracts commit where its field-level records were authored. A shipped
+ * manifest carrying its OWN line's commit is the source-of-record truth.
+ */
+const expectedSourceCommit = (engineFamily: string): string =>
+  engineFamily === "godot" ? M4_ENGINE_PLUGIN_SOURCE_COMMIT : M2_ENGINE_PLUGIN_SOURCE_COMMIT;
 
 const REQUESTED = [
   // Blender leg (§9 + M2-G2): typed modify + render through the real engine.
@@ -76,16 +87,14 @@ const resolved = REQUESTED.map((request) => {
 });
 
 // The shipped plugin metas + manifests must agree (the INTEGRATE seam).
-// M4 WP-1 interim (honest scope): a meta whose plugin PACKAGE is not yet
-// shipped reads no manifest — it is REPORTED as package-not-yet-shipped
-// instead of crashing. The godot-engine meta was registered in M4 WP-1
-// (order 1: the domain records + meta land first); its plugin package ships
-// in WP-2 (order 2) per delivery plan §3. When that package directory ships,
-// the manifest read engages for it automatically (existsSync self-heals — a
-// shipped package can never dodge the agreement record). The m2-e2e CI run
-// 42720962126 on 8f3d0068 failed exactly here (M2J3: ENOENT
-// apps/zcode-cli/packages/godot-engine-plugin/.zcode-plugin/plugin.json) —
-// the honest fix is scoping, not fabricating a package ahead of its slice.
+// M4 sequencing note (delivery plan §3): records+meta landed in WP-1 (order 1)
+// BEFORE the package existed — the existsSync read then reported godot-engine
+// honestly as package-not-yet-shipped. As of M4 WP-2 (order 2) the
+// godot-engine-plugin package IS shipped with its .zcode-plugin/plugin.json,
+// so the manifest-agreement read engages for all four shipped plugins (the
+// existsSync self-heal closed; a shipped package can never dodge the
+// agreement record). provenanceCommitIsSourceOfRecord is the PER-FAMILY pin:
+// godot's line names the M4 capability-contracts commit, not the M2 merge.
 const pluginsRoot = "apps/zcode-cli/packages/";
 const shipped = ENGINE_PLUGIN_METAS.map((meta) => {
   const manifestPath = `${pluginsRoot}${meta.pluginId}-plugin/.zcode-plugin/plugin.json`;
@@ -105,6 +114,7 @@ const shipped = ENGINE_PLUGIN_METAS.map((meta) => {
     };
   }
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const lineCommit = expectedSourceCommit(meta.engineFamily);
   return {
     pluginId: meta.pluginId,
     engineFamily: meta.engineFamily,
@@ -113,7 +123,7 @@ const shipped = ENGINE_PLUGIN_METAS.map((meta) => {
     manifestVersion: manifest.version,
     declaredCapabilities: manifest.capabilities,
     provenanceCommit: manifest.provenance?.source?.commitSha ?? null,
-    provenanceCommitIsSourceOfRecord: manifest.provenance?.source?.commitSha === M2_ENGINE_PLUGIN_SOURCE_COMMIT,
+    provenanceCommitIsSourceOfRecord: manifest.provenance?.source?.commitSha === lineCommit,
     mcpServerEntry: manifest.mcpServers?.engine ? `${manifest.mcpServers.engine.command} ${manifest.mcpServers.engine.args.join(" ")}` : null,
   };
 });

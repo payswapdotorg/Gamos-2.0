@@ -85,6 +85,11 @@ const requiredDevPluginRuntimeBuilds = [
     packageName: "@zcode/babylon-engine-plugin",
     artifactPath: "babylon-engine-plugin/dist/mcp/server.js",
   },
+  // Gamos M4 WP-2 Godot 引擎插件（同规则：plugin.json 声明 mcpServers，必须构建并校验）。
+  {
+    packageName: "@zcode/godot-engine-plugin",
+    artifactPath: "godot-engine-plugin/dist/mcp/server.js",
+  },
   {
     // browser-use 自己的 runtime 只剩 browser-client；宿主不再由它携带。
     packageName: "@zcode/browser-use-plugin",

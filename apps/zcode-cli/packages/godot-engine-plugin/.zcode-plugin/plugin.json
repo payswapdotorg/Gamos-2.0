@@ -1,0 +1,50 @@
+{
+  "name": "godot-engine",
+  "version": "0.1.0",
+  "description": "Typed, safety-reviewed Godot engine operations (project inspect, scene modify with fresh-process verification, script check, asset import with filesystem probe, headless export with artifact hashing, headless run with crash-line discipline) through the committed data-only GDScript bridge, exposed as MCP tools for ZCode.",
+  "author": { "name": "Z.ai" },
+  "license": "MIT",
+  "mcpServers": {
+    "engine": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["${ZCODE_PLUGIN_ROOT}/dist/mcp/server.js"],
+      "cwd": "${ZCODE_PROJECT_DIR}"
+    }
+  },
+  "userConfig": {
+    "godotPath": {
+      "type": "string",
+      "description": "Absolute path to the Godot executable (discovered automatically when unset)"
+    }
+  },
+  "engineFamily": "godot",
+  "engineVersions": ">=4.2",
+  "executable": {
+    "kind": "cli",
+    "command": "godot",
+    "args": ["--headless"]
+  },
+  "capabilities": [
+    "godot/project.inspect",
+    "godot/scene.modify",
+    "godot/script.check",
+    "godot/asset.import",
+    "godot/project.build",
+    "godot/project.run"
+  ],
+  "headlessSupport": "full",
+  "requiresDisplayServer": false,
+  "provenance": {
+    "publisher": "gamos-tl",
+    "source": {
+      "type": "repository",
+      "repo": "payswapdotorg/Gamos-2.0",
+      "commitSha": "eebcf6b788a9ad5b2f510f20ad260232443fc01d",
+      "path": "apps/zcode-cli/packages/godot-engine-plugin"
+    },
+    "surfaces": ["mcp"],
+    "reviewedBy": "gamos-tl",
+    "reviewRef": "M4 capability contracts (TL-authored, maintainer-accepted; WP-2 plugin integration TL-reviewed under strict TDD)"
+  }
+}
