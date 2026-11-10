@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Box" type="Node3D" parent="."]
+position = Vector3(1, 2, 3)
+
+[node name="Marker" type="Node3D" parent="."]
+position = Vector3(10, 0, 0)
+visible = false
