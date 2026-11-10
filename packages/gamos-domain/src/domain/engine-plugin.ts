@@ -186,6 +186,9 @@ import { enginePluginProvenance, m4EnginePluginProvenance, mcpProvider, readOnly
 // The M4 godot capability records (M4 WP-1, Worker B) — registration data in
 // its own module since the max-lines split; spread into ENGINE_PLUGIN_CAPABILITIES below.
 import { godotCapabilities } from "./engine-plugin-godot.js";
+// The M4 unreal capability records (M4 WP-4, Worker B) — its own module per
+// the WP-1 max-lines precedent; spread into ENGINE_PLUGIN_CAPABILITIES below.
+import { unrealCapabilities } from "./engine-plugin-unreal.js";
 
 /** Unity capabilities (M2.1, Worker A). */
 const unityCapabilities: readonly CapabilityRecord[] = [
@@ -693,6 +696,7 @@ export const ENGINE_PLUGIN_CAPABILITIES: readonly CapabilityRecord[] = [
   ...blenderCapabilities,
   ...godotCapabilities,
   ...babylonCapabilities,
+  ...unrealCapabilities,
 ];
 
 /** Registers every shipped engine capability and returns the registry map. */
@@ -761,5 +765,27 @@ export const ENGINE_PLUGIN_METAS: readonly EnginePluginMeta[] = [
     headlessSupport: "full",
     requiresDisplayServer: false,
     provenance: m4EnginePluginProvenance("apps/zcode-cli/packages/godot-engine-plugin"),
+  },
+  // M4 WP-4 (Worker B): the unreal-engine meta per M4-CAPABILITY-CONTRACTS §4.2 —
+  // the connector ATTACHES to a running editor, so NO executable is declared
+  // (omission is legal and honest: the plugin spawns nothing; kind "server"
+  // would be wrong). Live-editor mutations are NEVER described as headless
+  // execution (headlessSupport "none"); the externally owned editor is a GUI
+  // application, so a display server is an honest G3 prerequisite (true).
+  // Registers together with the five §3 unreal records.
+  {
+    pluginId: "unreal-engine",
+    engineFamily: "unreal",
+    engineVersions: ">=5.3",
+    capabilities: [
+      "unreal/connection.inspect",
+      "unreal/object.inspect",
+      "unreal/property.read",
+      "unreal/property.write",
+      "unreal/function.invoke",
+    ],
+    headlessSupport: "none",
+    requiresDisplayServer: true,
+    provenance: m4EnginePluginProvenance("apps/zcode-cli/packages/unreal-engine-plugin", "WP-4"),
   },
 ];

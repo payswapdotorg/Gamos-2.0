@@ -26,12 +26,13 @@ import {
 /**
  * Per-family source-of-record pin (mirrors the domain security test's
  * expectedSourceCommit): the M2 0.1.0 line (unity/blender/babylon) names the
- * PR #5 integration merge; the M4 godot 1.0.0 line names the capability-
- * contracts commit where its field-level records were authored. A shipped
- * manifest carrying its OWN line's commit is the source-of-record truth.
+ * PR #5 integration merge; the M4 godot 1.0.0 line (WP-1) and the M4 unreal
+ * 1.0.0 line (WP-4) name the capability-contracts commit where their
+ * field-level records were authored. A shipped manifest carrying its OWN
+ * line's commit is the source-of-record truth.
  */
 const expectedSourceCommit = (engineFamily: string): string =>
-  engineFamily === "godot" ? M4_ENGINE_PLUGIN_SOURCE_COMMIT : M2_ENGINE_PLUGIN_SOURCE_COMMIT;
+  engineFamily === "godot" || engineFamily === "unreal" ? M4_ENGINE_PLUGIN_SOURCE_COMMIT : M2_ENGINE_PLUGIN_SOURCE_COMMIT;
 
 const REQUESTED = [
   // Blender leg (§9 + M2-G2): typed modify + render through the real engine.
@@ -95,6 +96,9 @@ const resolved = REQUESTED.map((request) => {
 // existsSync self-heal closed; a shipped package can never dodge the
 // agreement record). provenanceCommitIsSourceOfRecord is the PER-FAMILY pin:
 // godot's line names the M4 capability-contracts commit, not the M2 merge.
+// M4 WP-4 (order 4) registers the unreal-engine records+meta the same
+// records-first way — the existsSync read reports unreal-engine honestly as
+// package-not-yet-shipped until the connector package ships in WP-5.
 const pluginsRoot = "apps/zcode-cli/packages/";
 const shipped = ENGINE_PLUGIN_METAS.map((meta) => {
   const manifestPath = `${pluginsRoot}${meta.pluginId}-plugin/.zcode-plugin/plugin.json`;
