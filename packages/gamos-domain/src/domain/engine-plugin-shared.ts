@@ -2,7 +2,7 @@
  * Shared engine-plugin record helpers — the permission constants, provider
  * identity helper and canonical provenance helpers used by EVERY engine
  * family's capability records (M2 unity/blender/babylon in engine-plugin.ts,
- * M4 godot in engine-plugin-godot.ts, M4 unreal in its future WP-4 module).
+ * M4 godot in engine-plugin-godot.ts, M4 unreal in engine-plugin-unreal.ts).
  *
  * Extracted from engine-plugin.ts when the M4 WP-1 godot registration would
  * otherwise have pushed that file past the repository max-lines lint bound:
@@ -54,8 +54,14 @@ export const enginePluginProvenance = (path: string): ProvenanceRef => ({
   reviewRef: "M2 engine plugin integration (TL-reviewed)",
 });
 
-/** M4 provenance: identical canonical shape, source-of-record commit and review ref per the M4 line. */
-export const m4EnginePluginProvenance = (path: string): ProvenanceRef => ({
+/**
+ * M4 provenance: identical canonical shape, source-of-record commit and review
+ * ref per the M4 line. The registration parameter names the work package that
+ * registered the line's records (WP-1 godot / WP-4 unreal) — the godot call
+ * sites stay on the WP-1 default so their registered provenance is
+ * byte-identical to the WP-1 registration (append-only semantics).
+ */
+export const m4EnginePluginProvenance = (path: string, registration: "WP-1" | "WP-4" = "WP-1"): ProvenanceRef => ({
   publisher: "gamos-tl",
   source: {
     type: "repository",
@@ -65,7 +71,7 @@ export const m4EnginePluginProvenance = (path: string): ProvenanceRef => ({
   },
   surfaces: ["mcp"],
   reviewedBy: "gamos-tl",
-  reviewRef: "M4 capability contracts (TL-authored, maintainer-accepted; WP-1 registration TL-reviewed)",
+  reviewRef: `M4 capability contracts (TL-authored, maintainer-accepted; ${registration} registration TL-reviewed)`,
 });
 
 export const mcpProvider = (pluginId: string) => ({
@@ -96,4 +102,34 @@ export const networkLocalPermission: import("./capability-registry.js").Permissi
   kind: "network-access",
   scope: "loopback",
   rationale: "the runtime bridge starts a local dev server on a loopback port",
+};
+
+/**
+ * M4 unreal reads (connection/object/property.inspect-read) — the loopback
+ * Remote Control endpoint permission of the capability contracts §3.1
+ * ("same spec as 3.1" for §3.2/§3.3): every binding honesty clause is kept
+ * VERBATIM (read-only surface, VERIFIED loopback listener, the Passphrase
+ * transport-compatibility disclosure, readiness §2.2 U-T2); the route list
+ * names the three read routes of the records that share this spec so
+ * object.inspect/property.read never carry a wrong-route claim.
+ */
+export const networkRcEndpointPermission: import("./capability-registry.js").PermissionSpec = {
+  kind: "network-access",
+  scope: "loopback-rc-endpoint",
+  rationale:
+    "read-only requests against the verified loopback Remote Control listener (GET /remote/info, typed object describe, typed property reads); the Passphrase header is a transport-compatibility token only, never claimed as server-side authentication (readiness §2.2 U-T2)",
+};
+
+/**
+ * M4 unreal live-editor mutations (property.write / function.invoke) — the
+ * engine-gui permission of the capability contracts §3.4, VERBATIM: live-editor
+ * semantics through the running editor's Remote Control, never described as
+ * headless execution, no engine-headless downgrade, gated native-mutation
+ * path with per-mutation permission-broker approval.
+ */
+export const engineGuiPermission: import("./capability-registry.js").PermissionSpec = {
+  kind: "engine-gui",
+  scope: "declared-workspace",
+  rationale:
+    "LIVE-EDITOR mutation through the running editor's Remote Control — never described as headless execution; engine-gui is NOT satisfied by engine-headless (no downgrade); dispatch goes through the gated native-mutation path with per-mutation permission-broker approval",
 };

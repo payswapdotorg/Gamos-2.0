@@ -330,7 +330,10 @@ describe("M2 audit — shipped provenance identifies the REAL integration commit
    * pinned to M4_ENGINE_PLUGIN_SOURCE_COMMIT — the capability-contracts branch
    * commit where the field-level record contracts those records implement
    * verbatim were authored and CI-verified (run 42703013035), merged onto the
-   * integrated tree at 0afbc650 (CI 42718440007). The CI workflow additionally
+   * integrated tree at 0afbc650 (CI 42718440007); the M4 unreal 1.0.0 line
+   * (WP-4) pins to the SAME contracts commit — its records implement the §3
+   * contracts VERBATIM, and its plugin package ships in WP-5 (the manifest-side
+   * loops grow then). The CI workflow additionally
    * proves object-realness with `git cat-file -t <sha>` (the domain package
    * stays pure — no git subprocess here; format + exact-value + cross-surface
    * agreement is what the domain can and must enforce).
@@ -339,7 +342,7 @@ describe("M2 audit — shipped provenance identifies the REAL integration commit
 
   /** The per-line source-of-record pin: every family's line names its OWN real commit (no cross-line drift, no synthetic values). */
   function expectedSourceCommit(engineFamily: string): string {
-    return engineFamily === "godot" ? M4_ENGINE_PLUGIN_SOURCE_COMMIT : REAL_INTEGRATION_COMMIT;
+    return engineFamily === "godot" || engineFamily === "unreal" ? M4_ENGINE_PLUGIN_SOURCE_COMMIT : REAL_INTEGRATION_COMMIT;
   }
 
   /** Detects synthetic placeholder SHAs: an 8-hex block repeated 5×, all zeros, or all one char. */

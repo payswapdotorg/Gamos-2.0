@@ -179,7 +179,7 @@ describe("Plugin-declared capabilities MUST resolve to complete registry records
 });
 
 describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
-  it("ships records for the shipped engine families with append-only ids (M2 three + M4 godot)", () => {
+  it("ships records for the shipped engine families with append-only ids (M2 three + M4 godot + M4 unreal)", () => {
     const ids = ENGINE_PLUGIN_CAPABILITIES.map((r) => r.id).sort();
     expect(ids).toEqual([
       "babylon/asset.integrate",
@@ -200,6 +200,11 @@ describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
       "unity/project.build",
       "unity/project.inspect",
       "unity/scene.modify",
+      "unreal/connection.inspect",
+      "unreal/function.invoke",
+      "unreal/object.inspect",
+      "unreal/property.read",
+      "unreal/property.write",
     ]);
   });
 
@@ -228,7 +233,7 @@ describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
       expect(record.provenance.publisher).toBe("gamos-tl");
       expect(record.provenance.source.type).toBe("repository");
       expect(record.provider.kind).toBe("mcp-server");
-      expect(record.provider.identity).toMatch(/^plugin:(unity|blender|babylon|godot)-engine:engine$/);
+      expect(record.provider.identity).toMatch(/^plugin:(unity|blender|babylon|godot|unreal)-engine:engine$/);
     }
   });
 
@@ -265,10 +270,10 @@ describe("Canonical M2 engine capability records (M2.4, Worker B)", () => {
   });
 });
 
-describe("Shipped engine-plugin metas (gamos/engine-plugin@2 for the M2 plugins + M4 godot)", () => {
-  it("ships metas for unity-engine, blender-engine, babylon-engine and godot-engine plugins", () => {
+describe("Shipped engine-plugin metas (gamos/engine-plugin@2 for the M2 plugins + M4 godot + M4 unreal)", () => {
+  it("ships metas for unity-engine, blender-engine, babylon-engine, godot-engine and unreal-engine plugins", () => {
     const ids = ENGINE_PLUGIN_METAS.map((m) => m.pluginId).sort();
-    expect(ids).toEqual(["babylon-engine", "blender-engine", "godot-engine", "unity-engine"]);
+    expect(ids).toEqual(["babylon-engine", "blender-engine", "godot-engine", "unity-engine", "unreal-engine"]);
   });
 
   it("every meta validates and its capabilities resolve against the shipped records", () => {

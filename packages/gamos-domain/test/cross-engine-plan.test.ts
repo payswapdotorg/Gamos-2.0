@@ -579,10 +579,10 @@ describe("buildCrossEngineAssetPlan — adversarial hardening (M3.3 HARDEN)", ()
       }
     }
     // the shipped records themselves are the append-only source of truth
-    // (18 engine records: 4 unity + 4 blender + 4 babylon + 6 godot — the M4
-    // WP-1 registration; the godot records are NOT pipeline members here, the
-    // Blender→Babylon/Unity pipelines are unchanged)
-    expect(ENGINE_PLUGIN_CAPABILITIES.length).toBe(18);
+    // (23 engine records: 4 unity + 4 blender + 4 babylon + 6 godot + 5 unreal —
+    // the M4 WP-1/WP-4 registrations; the godot/unreal records are NOT pipeline
+    // members here, the Blender→Babylon/Unity pipelines are unchanged)
+    expect(ENGINE_PLUGIN_CAPABILITIES.length).toBe(23);
   });
 
   it("the generated script instructs the manifest handoff for BOTH targets (derived manifest path + expectedIntegrity)", () => {
