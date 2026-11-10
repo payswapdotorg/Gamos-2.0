@@ -1,0 +1,180 @@
+{
+  "purpose": "M4 WP-9 (delivery plan order 9) regression evidence: the full section-8 matrix run on the exact M4 merge head c3813c99e838775a6a487da9157b7b922d8a458a (the WP-8 TL integration head), with the four acceptance gates evaluated honestly — M4-G1/G3/G4 with executed evidence, M4-G2 blocked on the maintainer-provided UE5 environment (delivery plan section 10; the zero-spend mandate forbids working around it). This is the CI-equivalent local run record; the GitHub-hosted CI re-run is pending the standing credential-blocked push of 2bb31e7a..c3813c99 (recorded in evidence/roadmap/M4.json notes).",
+  "recorded_at": "2026-11-10T13:30:00Z",
+  "tested_commit": "c3813c99e838775a6a487da9157b7b922d8a458a",
+  "integration_branch": "gamos/development",
+  "environment": {
+    "machine": "Gamos dev sandbox (CI-equivalent local run)",
+    "node": "v24.22.2",
+    "pnpm": "10.33.2 (frozen lockfile)",
+    "godot": "4.2.2.stable.official.15073afe3 — official release channel zip, sha256 69eb9881e1b82ab93924c83106a7c031497f252bc0c08e199e4da6380072d6ef (triple-pinned zero-cost recipe, docs/gamos/M4-ZERO-COST-DELIVERY.md), export templates linux pair byte-exact (release 62204152 B / debug 61544792 B)",
+    "blender": "4.1.1 (download.blender.org release tarball, sha256 ab2ea3fe991601a5e6bd2cda786ecaa919c0b39e0550e59978b5d40270c260d3 verified before extraction)",
+    "unreal": "NOT AVAILABLE — no maintainer-provided UE5 Editor with Remote Control enabled (delivery plan section 10); the sandbox is not a valid Unreal Editor acceptance environment",
+    "unity": "NOT AVAILABLE — no licensed Unity Editor (M2-G1 prerequisite external; docs/gamos/UNITY-M2G1-PROVISIONING.md)"
+  },
+  "gate_evaluation": {
+    "M4-G1": {
+      "status": "passed",
+      "basis": "Section 9 evidence closed on the merge head: a real Godot project (the fixture staged at proj/) completes discovery (rawVersion 4.2.2.stable.official.15073afe3 asserted against the real binary), modification (typed scene modify with fresh-process engine read-back), headless execution (run leg: exit 0 AND zero crash lines), build/export (builds/probe.x86_64, 62204152 B, sha256 49db0d5082faa83283d140c90da109b3407a5d72c17ab97742b132ba7e615316), test/verification (the asset-interchange manifest advanced to runtime-verified, integrity link re-verified, tampered-ingest negative refused) and evidence collection (logs/godot-plugin-full.log). Real cross-engine hop end-to-end: blender 4.1.1 exported staging/hop-cube.glb (1984 B, sha256 6456ce83ddf267f0e5c47ad5c2de8227900d944171bc7b8bc9d608ca03a7ed44) -> real Godot import (filesystem-probe verdict, source sha unchanged) -> typed modify with read-back -> headless build -> headless run -> runtime-verified manifest (hash 420c1cbf010e4e95bbbd69b90f385683c20851e06ccb5e52698fc2fda42d8a4f)."
+    },
+    "M4-G2": {
+      "status": "blocked",
+      "basis": "Requires the maintainer-provided UE5 Editor environment with Remote Control enabled (delivery plan section 10). WP-6's real-editor integration slice is blocked; the zero-spend mandate (docs/gamos/M4-ZERO-COST-DELIVERY.md) forbids working around it. The protocol layer is contract-proven against a mock RC server (WP-5, 48/48 — a mock can never pass M4-G2); the five unreal capability records register honest availability; the reviewed mutation allowlists are EMPTY at 0.1.0 (every property write and functionName fails closed client-side); rollback verification is fail-closed (rc-rollback-not-verified on unverified restores). M4-G2 stays unpassed and unclaimed until the real editor lands."
+    },
+    "M4-G3": {
+      "status": "passed",
+      "basis": "Engine compatibility and honest conditional/unavailable outcomes proven: per-family version grammar (godot 4.x, unreal >=5.3), unknown/missing version formats rejected, missing executables -> explicit unavailable with reasons, missing RC endpoints/authentication and invalid listener binding -> honest unavailable (loopback-only enforced client-side, server-reported listener verified), display requirements declared (unreal requiresDisplayServer), permission denial rows through the mapped permission classes, and no silent engine substitution (cross-engine plan recognition of both engines as explicit targets; fail-closed unknown/missing outcomes). Domain 474/474 + plan acceptance 12/12 + the m2 capability CLI's honest unity/scene.modify negative path."
+    },
+    "M4-G4": {
+      "status": "passed",
+      "basis": "Five engine suites green in their honest states on the merge head: unity 98 passed | 4 skipped (the real-editor integrations honestly non-passing: unavailable-license — never silently counted); blender real (runtime suite 119+1 with the real Blender regression legs at 280 s, plus the hop's real export legs); babylon 69/69 (real npm/vite build, dev-server health check, byte-identical asset serving); godot 75/75 against the real pinned engine; unreal 48/48 contract-level (mock RC only). Inherited ZCode surfaces operational: bootstrap catalog 7/7 + plugins 47/47, core engine-plugin mutation authorization 5/5, the m2 capability CLI journey-exact (exit 0, verdict ok, registryRecords 23, five shipped manifests provenanceCommitIsSourceOfRecord=true, unresolved exactly unity/scene.modify). The Electron UI journey suites (m1/m2/m3 e2e) are CI-bound: CI-green at the last pushed head 2bb31e7a; the CI re-run on c3813c99+ is pending the credential-blocked push (honest standing state, not a local gap)."
+    }
+  },
+  "section8_matrix": [
+    {
+      "row": "Baseline-pinned governance check",
+      "command": "node scripts/gamos/governance-check.mjs --pin bbed73715eab8125f06e558409f86f5e91dc6299b1b632568a6ca477ec8b2a13",
+      "result": "compliant — trust anchor verified; 15 hash-verified governance files; 16 authorization entries (26 authorized paths); deleted 0, modified 12, added 470 (additive allowed)",
+      "exit_code": 0,
+      "log": "logs/governance-legs.log"
+    },
+    {
+      "row": "Governance self-test",
+      "command": "node scripts/gamos/governance-self-test.mjs",
+      "result": "14 scenarios: 14 ok, 0 failed",
+      "exit_code": 0,
+      "log": "logs/governance-legs.log"
+    },
+    {
+      "row": "Roadmap self-test",
+      "command": "node scripts/gamos/roadmap-self-test.mjs",
+      "result": "17 passed, 0 failed",
+      "exit_code": 0,
+      "log": "logs/governance-legs.log"
+    },
+    {
+      "row": "Roadmap validator",
+      "command": "node scripts/gamos/roadmap-check.mjs",
+      "result": "milestones valid; active M2, M3, M4; blocked M5, M6, M7; completion evidence valid",
+      "exit_code": 0,
+      "log": "logs/governance-legs.log"
+    },
+    {
+      "row": "Stale phrases",
+      "command": "pnpm run docs:stale-phrases:check",
+      "result": "no stale doc phrases in 2287 files",
+      "exit_code": 0,
+      "log": "logs/governance-legs.log"
+    },
+    {
+      "row": "Architecture checks",
+      "command": "pnpm run architecture:check",
+      "result": "violations: 0; baseline: 0; new: 0",
+      "exit_code": 0,
+      "log": "logs/governance-legs.log"
+    },
+    {
+      "row": "Gamos domain suite (version grammar, registry/plugin-meta validation, engine-selection/unavailable, permission mapping, cross-engine contracts)",
+      "command": "pnpm exec vitest run --project gamos-domain",
+      "result": "474 passed (474) — 27 files, 5.22 s",
+      "exit_code": 0,
+      "log": "logs/gamos-domain.log"
+    },
+    {
+      "row": "Cross-engine plan acceptance",
+      "command": "pnpm --filter @zcode/dynamic-workflow exec vitest run tests/gamos-plan-acceptance.test.ts",
+      "result": "12 passed (12)",
+      "exit_code": 0,
+      "log": "logs/plan-acceptance.log"
+    },
+    {
+      "row": "Dynamic Workflow runtime suite, production journal/service, resume/cancel/failure recovery, real Blender regression",
+      "command": "BLENDER_PATH=/home/z/engines/blender-4.1.1-linux-x64/blender pnpm --filter @zcode/dynamic-workflow-runtime exec vitest run tests --no-file-parallelism",
+      "result": "119 passed | 1 skipped (120) — 280.34 s with the real Blender regression legs",
+      "exit_code": 0,
+      "log": "logs/runtime-blender.log"
+    },
+    {
+      "row": "Godot engine plugin (real pinned engine): discovery, typed ops, harden, WP-8 challenge rows, MCP annotations, real-engine gate, real Blender-to-Godot cross-engine hop",
+      "command": "GODOT_BIN=/home/z/engines/godot-4.2.2-stable-linux-x64/Godot_v4.2.2-stable_linux.x86_64 pnpm --filter @zcode/godot-engine-plugin exec vitest run test",
+      "result": "75 passed (75) — 7 files, 31.99 s, real engine; the hop chain evidence line: blender 4.1.1 -> glb 6456ce83ddf2… -> godot 4.2.2.stable.official.15073afe3 -> build 49db0d5082fa…; full per-leg evidence lines in the log",
+      "exit_code": 0,
+      "log": "logs/godot-plugin-full.log"
+    },
+    {
+      "row": "Unreal engine plugin (protocol contracts against the mock RC server; no real editor available)",
+      "command": "pnpm --filter @zcode/unreal-engine-plugin exec vitest run test",
+      "result": "48 passed (48) — connector, engine-harden (incl. the wedged close-handshake and teardown-abort rows), WP-8 challenge rows, MCP annotations",
+      "exit_code": 0,
+      "log": "logs/unreal-plugin.log"
+    },
+    {
+      "row": "Bootstrap engine-plugin catalog (the five first-party engine plugins registered in OFFICIAL_PLUGIN_DEFINITIONS / officialSeaPlugins)",
+      "command": "pnpm --filter @zcode/bootstrap exec vitest run tests/m4-engine-plugin-catalog.test.ts",
+      "result": "7 passed (7)",
+      "exit_code": 0,
+      "log": "logs/bootstrap-catalog.log"
+    },
+    {
+      "row": "Bootstrap plugins suite (inherited official-marketplace projection incl. the 20-plugin enumerative pin)",
+      "command": "pnpm --filter @zcode/bootstrap exec vitest run tests/plugins.test.ts",
+      "result": "47 passed (47)",
+      "exit_code": 0,
+      "log": "logs/bootstrap-plugins.log"
+    },
+    {
+      "row": "Core engine-plugin mutation authorization (the host permission gate over the broker path)",
+      "command": "pnpm --filter @zcode/core exec vitest run tests/engine-plugin-mutation-authorization.test.ts",
+      "result": "5 passed (5)",
+      "exit_code": 0,
+      "log": "logs/core-authorization.log"
+    },
+    {
+      "row": "M2 capability CLI journey-exact (the M2J3 journey shape: esbuild bundle + node)",
+      "command": "pnpm exec esbuild scripts/gamos/m2-capability-cli.ts --bundle --platform=node --format=esm --outfile=/tmp/m2-capability-cli.mjs && node /tmp/m2-capability-cli.mjs",
+      "result": "exit 0; verdict ok; registryRecords 23; five shipped plugin manifests read with provenanceCommitIsSourceOfRecord=true (blender, babylon, godot, unreal + document-family manifest set); unity/scene.modify resolves as the honest missing-prerequisite negative path",
+      "exit_code": 0,
+      "log": "logs/m2-capability-cli.json"
+    },
+    {
+      "row": "Unity engine plugin (honest unavailable-license state; the three+ real-editor integrations skipped and counted non-passing)",
+      "command": "pnpm --filter @zcode/unity-engine-plugin exec vitest run test",
+      "result": "98 passed | 4 skipped (102) — the real-editor integration tests are SKIPPED (no licensed Unity Editor); a skipped Unity integration suite is a non-passing Unity integration result (final-closure directive M2-E); the suite stays green in its honest form",
+      "exit_code": 0,
+      "log": "logs/unity-plugin.log"
+    },
+    {
+      "row": "Babylon engine plugin (real Node/npm toolchain: build script, dev-server health check, strictPort fail-closed, byte-identical asset serving)",
+      "command": "pnpm --filter @zcode/babylon-engine-plugin exec vitest run test",
+      "result": "69 passed (69) — incl. the real integration file (7 tests, 34.4 s: project_build 12.8 s, dev-server run/health/stop, port-conflict fail-closed, asset integrate + byte-identical serving 13.4 s)",
+      "exit_code": 0,
+      "log": "logs/babylon-plugin.log"
+    },
+    {
+      "row": "Blender engine plugin unit suites (typed ops + discovery)",
+      "command": "pnpm --filter @zcode/blender-engine-plugin exec vitest run test/typed-ops.test.ts test/discovery.test.ts",
+      "result": "20 passed (20); the real Blender integration legs ran within the runtime suite (119+1, 280 s) and the Godot hop's export legs (twice)",
+      "exit_code": 0,
+      "log": "logs/blender-unit.log"
+    },
+    {
+      "row": "Application journeys (inherited ZCode parity, M1, M2, M3; Godot + Unreal journeys)",
+      "command": "the m2 capability CLI journey-exact (above) + the engine plugin suites above (the Godot/Unreal journeys added by WP-2/WP-5); the Electron UI journey suites (gamos-m1/m2/m3-e2e workflows) are CI-bound",
+      "result": "locally: the journey-exact CLI exit 0 verdict ok and every engine suite green in its honest state; CI: green at the last pushed head 2bb31e7a (gamos-governance 42720962130, gamos-m1-e2e 42720961931, gamos-m3-e2e 42720961992 on the WP-1 head 8f3d0068); the CI re-run on the WP-3..WP-9 heads is pending the standing credential-blocked push",
+      "exit_code": 0,
+      "log": "logs/m2-capability-cli.json"
+    },
+    {
+      "row": "Determinism tests",
+      "command": "retained as-is in the suites above",
+      "result": "retained — covered by the domain, plan-acceptance, runtime and engine plugin suites above",
+      "exit_code": 0,
+      "log": "logs/gamos-domain.log"
+    }
+  ],
+  "notes": [
+    "This record is the WP-9 non-UE5 closure: every section-8 row executed on the merge head with real outputs captured in logs/. The UE5-dependent rows (WP-6's real-editor legs and M4-G2) are blocked on the maintainer environment and honestly recorded as such — never mocked, never claimed.",
+    "The tested tree c3813c99 is the WP-8 TL integration head (the M4 merge head); this evidence file and evidence/roadmap/M4.json land in the immediately following evidence commit (the M1 completion precedent: tested cae5a9a6, evidence committed in 00d68d4d).",
+    "M4 remains active in ROADMAP.json — no completion_evidence is recorded; the completion record is written only when all four gates pass (delivery plan section 9). evidence/roadmap/M4.json is the interim blocked-status record."
+  ]
+}

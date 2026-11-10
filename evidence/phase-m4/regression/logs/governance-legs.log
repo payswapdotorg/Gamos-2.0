@@ -1,0 +1,37 @@
+=== governance-check --pin bbed73715eab8125f06e558409f86f5e91dc6299b1b632568a6ca477ec8b2a13 ===
+  baseline     : a9fe401eede6e6e5e01be9048679c206fe6f02d9 (v3.17.2)
+  ancestor-ok  : true
+  trust anchor : verified
+  controls     : 15 hash-verified governance files
+  ledger       : 16 authorization entries (26 authorized paths)
+  vs baseline  : deleted 0, modified 12, added 470 (additive allowed)
+
+✓ compliant — governance controls intact; zero unauthorized changes to protected surfaces.
+
+=== governance-self-test ===
+1..14
+# 14 scenarios: 14 ok, 0 failed
+# tamper-rejection suite passed — governance controls refuse unauthorized changes.
+
+=== roadmap-self-test ===
+ok 17 - the activation waiver is scoped to the authorized milestone only
+1..17
+# roadmap self-test: 17 passed, 0 failed
+
+=== roadmap-check ===
+Gamos roadmap gate — ROADMAP.json is normative
+  active : M2, M3, M4
+  ready  : (none)
+  blocked: M5, M6, M7
+
+✓ roadmap structure, source anchors, dependencies and completion evidence are valid.
+
+=== docs:stale-phrases:check ===
+
+No stale doc phrases in 2287 files.
+
+=== architecture:check ===
+architecture: OK
+violations: 0
+baseline: 0
+new: 0

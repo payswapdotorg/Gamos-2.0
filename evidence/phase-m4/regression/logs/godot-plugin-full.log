@@ -1,0 +1,47 @@
+
+ RUN  v4.1.7 /home/z/gamos/apps/zcode-cli/packages/godot-engine-plugin
+
+stdout | test/engine-real-godot.integration.test.ts
+[gamos-evidence] real Godot executable: /home/z/engines/godot-4.2.2-stable-linux-x64/Godot_v4.2.2-stable_linux.x86_64
+[gamos-evidence] raw version: 4.2.2.stable.official.15073afe3
+
+stdout | test/engine-real-godot.integration.test.ts > godot-engine plugin real-Godot integration
+[gamos-evidence] fixture project staged at: /tmp/gamos-godot-ws-FsNOlM/proj
+
+ ✓ test/engine-real-godot.integration.test.ts (10 tests) 16824ms
+     ✓ scene_modify: typed ops apply, the saved scene is re-loaded in a FRESH process and verified  323ms
+     ✓ script_check: positive verdict requires a clean engine check; the broken script fails with parsed errors  365ms
+     ✓ asset_import: a real asset imports through the engine pass with a filesystem-probe verdict  3755ms
+     ✓ project_build: headless export produces a hash-verified artifact with the templates version  3957ms
+     ✓ project_run: the main scene runs headless with exit 0 AND zero crash lines; an explicit scene works too  343ms
+     ✓ runaway process: bounded time kills the whole process group and leaves NO orphan  6013ms
+     ✓ abort signal: cancellation kills the process tree and leaves NO orphan  1508ms
+stdout | test/cross-engine-hop.integration.test.ts
+[gamos-evidence] real Blender executable: /home/z/engines/blender-4.1.1-linux-x64/blender
+[gamos-evidence] real Godot executable: /home/z/engines/godot-4.2.2-stable-linux-x64/Godot_v4.2.2-stable_linux.x86_64
+
+stdout | test/cross-engine-hop.integration.test.ts > Blender→Godot real cross-engine hop (M4 WP-3)
+[gamos-evidence] hop workspace: /tmp/gamos-hop-ws-6jd5OZ
+
+stdout | test/cross-engine-hop.integration.test.ts > Blender→Godot real cross-engine hop (M4 WP-3) > the full hop: real Blender export → real Godot import → scene read-back → headless build → headless run → runtime-verified manifest
+[gamos-evidence] blender leg: 4.1.1 exported staging/hop-cube.glb (1984 B, sha256=6456ce83ddf267f0e5c47ad5c2de8227900d944171bc7b8bc9d608ca03a7ed44)
+
+stdout | test/cross-engine-hop.integration.test.ts > Blender→Godot real cross-engine hop (M4 WP-3) > the full hop: real Blender export → real Godot import → scene read-back → headless build → headless run → runtime-verified manifest
+[gamos-evidence] godot import leg: 1 imported artifacts, metadata proj/assets/hop-cube.glb.import, source sha unchanged
+
+stdout | test/cross-engine-hop.integration.test.ts > Blender→Godot real cross-engine hop (M4 WP-3) > the full hop: real Blender export → real Godot import → scene read-back → headless build → headless run → runtime-verified manifest
+[gamos-evidence] godot build leg: builds/probe.x86_64 (62204152 B, sha256=49db0d5082faa83283d140c90da109b3407a5d72c17ab97742b132ba7e615316)
+
+stdout | test/cross-engine-hop.integration.test.ts > Blender→Godot real cross-engine hop (M4 WP-3) > the full hop: real Blender export → real Godot import → scene read-back → headless build → headless run → runtime-verified manifest
+[gamos-evidence] godot run leg: exit 0, zero crash lines
+[gamos-evidence] hop manifest runtime-verified: hash=420c1cbf010e4e95bbbd69b90f385683c20851e06ccb5e52698fc2fda42d8a4f
+[gamos-evidence] hop chain: blender 4.1.1 → glb 6456ce83ddf2… → godot 4.2.2.stable.official.15073afe3 → build 49db0d5082fa…
+
+ ✓ test/cross-engine-hop.integration.test.ts (2 tests) 12783ms
+     ✓ the full hop: real Blender export → real Godot import → scene read-back → headless build → headless run → runtime-verified manifest  11840ms
+
+ Test Files  2 passed (2)
+      Tests  12 passed (12)
+   Start at  13:18:17
+   Duration  30.54s (transform 305ms, setup 0ms, import 681ms, tests 29.61s, environment 0ms)
+

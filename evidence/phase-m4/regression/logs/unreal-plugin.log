@@ -1,0 +1,12 @@
+ ✓ test/wp8-challenge.test.ts (5 tests) 5087ms
+     ✓ a wedged close handshake surfaces wsClosed:false + the close-handshake failure while the editor stays LISTENING  5013ms
+ ✓ test/engine-harden.test.ts (18 tests) 4757ms
+     ✓ disconnect stops in-flight requests, reports the aborts, and leaves the externally owned editor alive  4158ms
+ ✓ test/connector.test.ts (22 tests) 200ms
+ ✓ test/mcp-annotations.test.ts (3 tests) 25ms
+
+ Test Files  4 passed (4)
+      Tests  48 passed (48)
+   Start at  13:13:24
+   Duration  11.17s (transform 180ms, setup 0ms, import 621ms, tests 10.07s, environment 0ms)
+

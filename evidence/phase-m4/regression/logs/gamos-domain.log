@@ -1,0 +1,12 @@
+ ✓ |gamos-domain| test/plugin-trust.test.ts (16 tests) 8ms
+ ✓ |gamos-domain| test/m4-permission-integration.test.ts (17 tests) 7ms
+ ✓ |gamos-domain| test/permission-gate.test.ts (12 tests) 6ms
+ ✓ |gamos-domain| test/game-artifact.test.ts (7 tests) 6ms
+ ✓ |gamos-domain| test/discovery-record.test.ts (5 tests) 7ms
+ ✓ |gamos-domain| test/vendor-integrity.test.ts (4 tests) 6ms
+
+ Test Files  27 passed (27)
+      Tests  474 passed (474)
+   Start at  13:07:38
+   Duration  5.22s (transform 688ms, setup 0ms, import 1.49s, tests 436ms, environment 2ms)
+

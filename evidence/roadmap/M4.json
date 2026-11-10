@@ -1,0 +1,84 @@
+{
+  "phase_id": "M4",
+  "status": "blocked",
+  "tested_commit": "c3813c99e838775a6a487da9157b7b922d8a458a",
+  "workflow_run_id": 0,
+  "workflow_run_url": "",
+  "workflow_run_head_sha": "",
+  "workflow_run_conclusion": "",
+  "completed_at": "",
+  "environment": {
+    "runner": "Gamos dev sandbox (CI-equivalent local run; the GitHub-hosted CI re-run is pending the standing credential-blocked push of 2bb31e7a..c3813c99 — see notes)",
+    "os": "Linux x64 sandbox (the Gamos dev environment)",
+    "runtime": "Node v24.22.2 / pnpm 10.33.2 frozen lockfile; Godot 4.2.2.stable.official.15073afe3 (official release zip sha256 69eb9881e1b82ab93924c83106a7c031497f252bc0c08e199e4da6380072d6ef, triple-pinned zero-cost recipe; export templates linux pair byte-exact 62204152 B / 61544792 B); Blender 4.1.1 (release tarball sha256 ab2ea3fe991601a5e6bd2cda786ecaa919c0b39e0550e59978b5d40270c260d3); no UE5 Editor (blocked gate); no licensed Unity Editor (honest unavailable)"
+  },
+  "gate_results": [
+    {
+      "gate_id": "M4-G1",
+      "status": "passed",
+      "command": "GODOT_BIN=/home/z/engines/godot-4.2.2-stable-linux-x64/Godot_v4.2.2-stable_linux.x86_64 pnpm --filter @zcode/godot-engine-plugin exec vitest run test — 75/75 on the merge head, including the real-engine integration gate and the real Blender-to-Godot cross-engine hop (the WP-2/WP-3 legs; full per-leg evidence lines captured in the log)",
+      "result_summary": "A real Godot project completes discovery, modification, headless execution, build/export, test/verification and evidence collection against the real pinned engine: raw version 4.2.2.stable.official.15073afe3 asserted against the real binary; typed scene modification verified by fresh-process engine read-back; headless run leg exit 0 AND zero crash lines; headless export builds/probe.x86_64 (62204152 B, sha256 49db0d5082faa83283d140c90da109b3407a5d72c17ab97742b132ba7e615316); the cross-engine hop advances the asset-interchange manifest to runtime-verified (manifest hash 420c1cbf010e4e95bbbd69b90f385683c20851e06ccb5e52698fc2fda42d8a4f) with the integrity link re-verified and the tampered-ingest negative refused; the real Blender leg exported staging/hop-cube.glb (1984 B, sha256 6456ce83ddf267f0e5c47ad5c2de8227900d944171bc7b8bc9d608ca03a7ed44) and the real Godot import verified the source sha unchanged. This is the section-9 evidence collection closing on the merge head (delivery plan order 9).",
+      "evidence_paths": [
+        "evidence/phase-m4/regression/m4-regression-evidence.json",
+        "evidence/phase-m4/regression/logs/godot-plugin-full.log"
+      ],
+      "artifact_sha256": [
+        "ae2d9f697ba4fbeb14f2aa04e70b6b740917cf14f9cc94122c9f1ca6bf41b3eb",
+        "11724956c7084448aac9a3ac22d40186c24e69c2efecb6cc378f141d3c80f357"
+      ]
+    },
+    {
+      "gate_id": "M4-G2",
+      "status": "blocked",
+      "command": "n/a — requires the maintainer-provided UE5 Editor environment with Remote Control enabled (delivery plan section 10); the protocol layer is exercised by pnpm --filter @zcode/unreal-engine-plugin exec vitest run test (48/48, contract tests against the mock RC server only)",
+      "result_summary": "No maintainer-provided UE5 Editor with Remote Control is available in this environment; the sandbox is not a valid Unreal Editor acceptance environment (delivery plan section 10) and the zero-spend mandate (docs/gamos/M4-ZERO-COST-DELIVERY.md) forbids working around it — no purchase, no paid dependency, no free-tier assumption. WP-6's real-editor integration slice stays blocked; a mock Remote Control server can test protocol contracts but can never pass this gate. The honest delivered state: the five unreal capability records with honest availability; loopback-only client binding enforced client-side with server-reported listener verification; the reviewed mutation allowlists EMPTY at 0.1.0 (every property write and functionName fails closed client-side); snapshot rollback fail-closed (rc-rollback-not-verified on unverified restores); teardown aborts in-flight requests while the externally owned editor stays alive; the permission mapping wired through the existing Zcode permission broker (GAMOS-AUTH-0016). M4-G2 stays unpassed and unclaimed until the real editor lands; this record never substitutes a mock for the gate.",
+      "evidence_paths": [
+        "evidence/phase-m4/regression/m4-regression-evidence.json",
+        "evidence/phase-m4/regression/logs/unreal-plugin.log"
+      ],
+      "artifact_sha256": [
+        "ae2d9f697ba4fbeb14f2aa04e70b6b740917cf14f9cc94122c9f1ca6bf41b3eb",
+        "4b84fff4ab9b60f4389217c6b2126cbf220d584718e5d7258aaa87eb53456faa"
+      ]
+    },
+    {
+      "gate_id": "M4-G3",
+      "status": "passed",
+      "command": "pnpm exec vitest run --project gamos-domain (474/474) + pnpm --filter @zcode/dynamic-workflow exec vitest run tests/gamos-plan-acceptance.test.ts (12/12) + the m2 capability CLI journey-exact (exit 0; the honest unity/scene.modify negative path)",
+      "result_summary": "Engine compatibility and honest conditional/unavailable outcomes are proven on the merge head: per-family version grammar (godot 4.x grammar, unreal >=5.3) with unknown/missing version formats rejected; missing executables produce explicit unavailable states with reasons; missing Remote Control endpoints, missing authentication and invalid listener binding fail closed (loopback-only construction — a resolvable name proves nothing; the server-REPORTED listener is verified, 0.0.0.0-bound endpoints refused); display requirements declared (unreal requiresDisplayServer true); permission denial covered through the semantic permission mapping (read-class whitelist: command-execution/read-only + network-access/loopback-rc-endpoint; everything else destructive; empty permissions refused classification); and no silent engine substitution — cross-engine plan recognition treats both engines as explicit targets with fail-closed unknown/missing outcomes. The unity-gate-status classifier keeps the licensed-editor prerequisite honest (unity/scene.modify resolves as missing-prerequisite with the real reasons, never fabricated).",
+      "evidence_paths": [
+        "evidence/phase-m4/regression/m4-regression-evidence.json",
+        "evidence/phase-m4/regression/logs/gamos-domain.log",
+        "evidence/phase-m4/regression/logs/plan-acceptance.log"
+      ],
+      "artifact_sha256": [
+        "ae2d9f697ba4fbeb14f2aa04e70b6b740917cf14f9cc94122c9f1ca6bf41b3eb",
+        "c710c8ed92838dd2f3c1bf63acc82a40a1355cf2cf3ba6f2a45c8d0d06397183",
+        "53fd0d430aa74c204449b713920655e661a6de59276477cf599f4aec6fce4491"
+      ]
+    },
+    {
+      "gate_id": "M4-G4",
+      "status": "passed",
+      "command": "the five engine plugin suites + the inherited surfaces, all on the merge head: unity (98+4 skipped honest), blender (runtime suite 119+1 with the real Blender regression at 280 s + hop export legs + unit 20/20), babylon (69/69 incl. the real npm/vite build and dev-server legs), godot (75/75 real engine), unreal (48/48 contract), bootstrap catalog 7/7 + plugins 47/47, core mutation authorization 5/5, m2 capability CLI journey-exact",
+      "result_summary": "All five engine suites are green in their honest states on the merge head: Unity 98 passed | 4 skipped — the real-editor integrations are honestly non-passing (unavailable-license; a skipped Unity integration suite is a non-passing result, never silently counted); Blender exercised real through the runtime suite (119+1, real regression legs, 280 s) and the hop's real export legs; Babylon 69/69 with the real Node/npm toolchain (build script run, dev-server health check, strictPort fail-closed, byte-identical asset serving); Godot 75/75 against the real pinned engine; Unreal 48/48 at the contract level (mock RC only, honest). The inherited Zcode surfaces remain operational: the bootstrap catalog enumerates the five first-party engine plugins through OFFICIAL_PLUGIN_DEFINITIONS/officialSeaPlugins (7/7) and the official-marketplace projection holds the 20-plugin pin (47/47); the host permission gate authorizes engine mutations through the broker path (5/5); the M2J3 journey shape resolves 23 registry records with verdict ok and exactly one honest negative (unity/scene.modify). The Electron UI journey suites are CI-bound: CI-green at the last pushed head (gamos-m1/m2/m3-e2e workflows; runs 42720962130/42720961931/42720961992 on the WP-1 head 8f3d0068); the CI re-run on the WP-3..WP-9 heads is pending the standing credential-blocked push — an honestly recorded environment constraint, not a local regression.",
+      "evidence_paths": [
+        "evidence/phase-m4/regression/m4-regression-evidence.json",
+        "evidence/phase-m4/regression/logs/unity-plugin.log",
+        "evidence/phase-m4/regression/logs/babylon-plugin.log"
+      ],
+      "artifact_sha256": [
+        "ae2d9f697ba4fbeb14f2aa04e70b6b740917cf14f9cc94122c9f1ca6bf41b3eb",
+        "22c5af8a07c6999cd47665d309fa775ab9fa98a40d4d7d88f713eb62d7b99e77",
+        "39ae84f728ada8daab83301ace2081f0dde717b5b922df4c8c1c308e1bb9da5d"
+      ]
+    }
+  ],
+  "notes": [
+    "INTERIM RECORD — NOT A COMPLETION RECORD. M4-G2 is blocked on the maintainer-provided UE5 Editor environment (delivery plan section 10); M4 remains active in ROADMAP.json with no completion_evidence; the completion record is written only when all four required gates pass (delivery plan section 9: the TL does not create the completion record until all four gates have passed). When M4-G2 unblocks, this file is rewritten into the completion form and the workflow_run_* fields bind to the actual CI run per the evidence contract.",
+    "The tested_commit c3813c99e838775a6a487da9157b7b922d8a458a is the WP-8 TL integration head (the M4 merge head, tree clean); this evidence file lands in the immediately following evidence commit that adds only evidence files (the M1 completion precedent: tested cae5a9a6, evidence committed in 00d68d4d — no code delta between the tested tree and the evidence commit's code surfaces).",
+    "workflow_run_id 0 and the empty workflow_run_* fields are placeholders, honestly: the push of 2bb31e7a..c3813c99 (the WP-3..WP-8 development range) plus this evidence commit is credential-blocked — the GitHub PAT was lost to the 12th environment reset and the maintainer's standing direction is to never re-issue on request and never ask; the reset-proof bundles in the persistent area preserve the exact range. The CI re-run lands when the push unblocks and the completion-form rewrite binds these fields.",
+    "The local run is CI-equivalent (same frozen lockfile, same pinned engines, same commands as the CI workflows — the gamos-m4-godot-e2e provisioning recipe is byte-identical to the local triple-pinned Godot installation) and every section-8 row was executed with outputs captured under evidence/phase-m4/regression/logs/.",
+    "Unity is never silently counted as successful (its real licensed integration is unavailable; the 4 skipped real-editor tests are counted non-passing per the final-closure directive M2-E). A mock Remote Control server never passes M4-G2. No fixture, mock or unit-only result stands in for any gate's real evidence."
+  ]
+}

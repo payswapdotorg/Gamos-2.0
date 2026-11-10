@@ -1,0 +1,8 @@
+
+ ✓ tests/gamos-plan-acceptance.test.ts (12 tests) 1645ms
+
+ Test Files  1 passed (1)
+      Tests  12 passed (12)
+   Start at  13:07:47
+   Duration  3.49s (transform 1.20s, setup 0ms, import 1.71s, tests 1.64s, environment 0ms)
+
