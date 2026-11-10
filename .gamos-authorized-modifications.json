@@ -801,6 +801,60 @@
         "date": "2026-11-10T08:15:00Z",
         "decision_ref": "M4 delivery plan §3 order 5 + §4 TDD slice discipline (maintainer-activated M4); TL review of the WP-5 lifecycle registration (the AUTH-0014 precedent class applied to the unreal line)"
       }
+    },
+    {
+      "id": "GAMOS-AUTH-0016",
+      "phase": "M4",
+      "date": "2026-11-10T12:15:00Z",
+      "requester": {
+        "login": "payswapdotorg",
+        "role": "tech-lead"
+      },
+      "rationale": "M4 WP-8 host-catalog registration (delivery plan §3 order 8, executed under the maintainer-activated M4 milestone — directive 'Active M4' + the 'raise the active limit to 3' policy, ADR-0008/0009): the order-8 exit condition 'permission mapping wired through the existing ZCode permission broker' resolves through the blender M2 precedent (GAMOS-AUTH-0006 class) — an engine plugin rides the EXISTING permission-gated MCP tool path (createMcpToolEntry → ToolExecutor.execute → resolveToolPermission → broker → user) by being registered as an official plugin definition (heavy-engine default-disabled class) plus a SEA runtime asset entry; without the registration the broker path is unreachable for the godot/unreal tools and every approval claim about them is description text only. Three baseline-tracked files require minimal additive modification: (1) bootstrap/src/app/official-plugin-definitions.ts — two additive entries (godot-engine, unreal-engine; version 0.1.0 aligned with package.json/plugin.json; no defaultEnabled — the android-emulator/ios-simulator heavy-plugin class; the generic alignment/seed/UI-type loops in plugins.test.ts then validate the entries automatically); (2) cli/scripts/sea-official-plugin-assets.mjs — two additive entries (requiresRuntime true, requiredRuntimePaths dist/mcp/server.js — the runtime MCP dist already built and entry-verified by requiredDevPluginRuntimeBuilds per GAMOS-AUTH-0014/0015); (3) bootstrap/tests/plugins.test.ts — the two marketplace pluginCount pins 18→20 (enumerative growth only, exactly the M2 '+3' precedent comment on the same lines; zero invariants weakened — the merged-marketplace/projection assertions are unchanged apart from the count). No governance control file beyond this ledger, no frozen contract and no protected upstream behavior is altered; the plugin packages themselves are fork-added files (additive allowed); no new permission system is created (contract 06 rev 2 — the host's generic per-tool-call gate IS the approval surface; the plugins' MCP tools now additionally declare the honest readOnlyHint/destructiveHint annotations that drive the host's low/high risk classification, pinned at the wire level by the new mcp-annotations tests).",
+      "risk": "low",
+      "affected_functionality": "Host plugin-catalog registration only: the godot-engine and unreal-engine plugins seed into the official marketplace catalog (default-disabled, user must explicitly enable — no behavior change unless enabled), the SEA asset collector gains the two runtime MCP dist entries, and the marketplace count pins grow 18→20. The M2 engine trio and all other official plugins are untouched; the m2 capability CLI journey-exact re-proves the five-plugin manifest agreement (exit 0, verdict ok, 23 records, five shipped manifests with provenanceCommitIsSourceOfRecord=true, the unity/scene.modify honest negative path unchanged).",
+      "new_functionality": "The two M4 engine plugins become first-class official plugins whose MCP tools surface as mcp__plugin_godot-engine_engine__*/mcp__plugin_unreal-engine_engine__* and pass the existing permission-gated tool-call path (the WP-8 security-review slice's wiring: every mutation tool call asks the broker before any engine code runs; plan mode hard-denies the destructive-annotated tools; the core-side authorization is pinned by tests/core engine-plugin-mutation-authorization.test.ts with ZERO callTool invocations on denial).",
+      "regression_tests": [
+        "node scripts/gamos/governance-check.mjs --pin $GAMOS_BASELINE_SHA256",
+        "node scripts/gamos/governance-self-test.mjs",
+        "pnpm run architecture:check",
+        "pnpm exec vitest run --project gamos-domain (474/474 — 457 + the 17 WP-8 permission-integration tests)",
+        "pnpm --filter @zcode/godot-engine-plugin exec vitest run test (75 tests: 63 pass + 12 honest real-engine skips without a provisioned Godot; 60/60 + 15 with the engine present)",
+        "pnpm --filter @zcode/unreal-engine-plugin exec vitest run test (48/48 — 40 + the 8 WP-8 rows)",
+        "apps/zcode-cli/packages/bootstrap/tests/m4-engine-plugin-catalog.test.ts (7/7 — the two catalog rows pinned explicitly) + plugins.test.ts (54/54 incl. the alignment loops over the new entries)",
+        "apps/zcode-cli/packages/core/tests/engine-plugin-mutation-authorization.test.ts (5/5 — §7 U4 at the host gate)",
+        "esbuild bundle + node from repo root: m2 capability CLI journey-exact (exit 0, verdict ok, registryRecords 23, five shipped plugins srcOfRecord=true)"
+      ],
+      "evidence": {
+        "summary": "TL-reviewed WP-8 slice on worker branch gamos/m4-wp8-security-review (RED c5c246a6 → GREEN): every §7 challenge row resolved to executed evidence or a reasoned N/A per the security-review matrix; the permission mapping wired through the existing broker path with the two-sided pin discipline (domain mcp-permission-mapping.ts + wire-level tools/list annotations); docs/gamos/M4-SECURITY-REVIEW.md records the full matrix.",
+        "links": [
+          "docs/gamos/M4-SECURITY-REVIEW.md",
+          "docs/gamos/M4-DELIVERY-PLAN.md §3 order 8 / §7"
+        ]
+      },
+      "changes": [
+        {
+          "action": "modify",
+          "path": "apps/zcode-cli/packages/bootstrap/src/app/official-plugin-definitions.ts",
+          "content_sha256": "b27b618de56e0ef4e4317ece61788e3d2ed4a884b5b168270bbd45937f2bc164"
+        },
+        {
+          "action": "modify",
+          "path": "apps/zcode-cli/packages/cli/scripts/sea-official-plugin-assets.mjs",
+          "content_sha256": "106d4107be8ffff2ef0c23c971921e85b967bc2adfa20ef5350620b3dadff3fd"
+        },
+        {
+          "action": "modify",
+          "path": "apps/zcode-cli/packages/bootstrap/tests/plugins.test.ts",
+          "content_sha256": "5b02ea574247f500e3540d33513d58f3e943c9bab988c0243d431a0176b5feeb"
+        }
+      ],
+      "tl_approval": {
+        "approved": true,
+        "approver": "payswapdotorg",
+        "date": "2026-11-10T12:15:00Z",
+        "decision_ref": "M4 activation directive 'Active M4' + ADR-0008/0009 + delivery plan §3 order 8 (TL integration review of the WP-8 security-review slice; two additive catalog entries, two additive SEA entries, two enumerative count-pin updates — the GAMOS-AUTH-0006 precedent class)"
+      }
     }
   ]
 }

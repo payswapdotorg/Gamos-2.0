@@ -530,6 +530,49 @@ export const OFFICIAL_PLUGIN_DEFINITIONS: readonly OfficialPluginDefinition[] = 
     ],
     version: "0.1.0",
   },
+  // Gamos M4 first-party engine integrations (gamos/engine-plugin@2, contract 03
+  // §2; WP-8 host-catalog registration — the blender M2 precedent class: the
+  // plugin rides the EXISTING permission-gated MCP tool path). 重负载引擎插件
+  // 与 android-emulator/ios-simulator 同类：默认关闭，用户显式启用。MCP server
+  // 产物在构建后生成（dist/mcp/server.js），requiredSeedPaths 不钉 dist。
+  {
+    listing: {
+      author: ZAI_AUTHOR,
+      category: "utilities",
+      displayName: "Godot Engine",
+      displayName_i18n: { "zh-CN": "Godot 引擎" },
+      description_i18n: {
+        "zh-CN": "Godot 项目的类型化检视、场景修改、资产导入与无头构建（受审数据桥，无动态 GDScript）。",
+      },
+    },
+    name: "godot-engine",
+    rootCandidates: [
+      "packages/godot-engine-plugin",
+      "../godot-engine-plugin",
+      "../../godot-engine-plugin",
+      "../../../godot-engine-plugin",
+    ],
+    version: "0.1.0",
+  },
+  {
+    listing: {
+      author: ZAI_AUTHOR,
+      category: "utilities",
+      displayName: "Unreal Engine",
+      displayName_i18n: { "zh-CN": "Unreal 引擎" },
+      description_i18n: {
+        "zh-CN": "Unreal Editor 的环回 Remote Control 连接器：类型化检视/读写与逐项受审调用（附加运行中的编辑器，绝不生成或终止它）。",
+      },
+    },
+    name: "unreal-engine",
+    rootCandidates: [
+      "packages/unreal-engine-plugin",
+      "../unreal-engine-plugin",
+      "../../unreal-engine-plugin",
+      "../../../unreal-engine-plugin",
+    ],
+    version: "0.1.0",
+  },
 ];
 
 // 在 official plugin 定义里标了 defaultEnabled: true 的, 拼成 `<name>@<marketplace>` 形式,

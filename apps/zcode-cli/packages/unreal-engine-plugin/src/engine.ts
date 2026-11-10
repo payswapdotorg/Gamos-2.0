@@ -462,13 +462,26 @@ export async function rollbackToSnapshot(
     if (!verify.ok) return fromRc(verify);
     const verified = jsonDeepEqual(verify.value, parsed.data.preSnapshot);
     connector.settleJournal(parsed.data.objectPath, parsed.data.property);
+    if (!verified) {
+      // The rollback is NOT verified — the restore may have been silently
+      // refused by the editor (e.g. a locked property). Fail closed: never
+      // report a successful rollback on an API ack alone (WP-8, §7 U7 —
+      // the rollback is verified against the pre-snapshot, not assumed).
+      return {
+        ok: false,
+        code: "rc-rollback-not-verified",
+        message:
+          "the post-rollback re-read does not match the snapshot — the rollback is NOT verified (the restore may have been refused); the live state is reported honestly",
+        details: { postRollbackState: verify.value, preSnapshot: parsed.data.preSnapshot },
+      };
+    }
     return {
       ok: true as const,
       objectPath: parsed.data.objectPath,
       property: parsed.data.property,
       restoredTo: parsed.data.preSnapshot,
       postRollbackState: verify.value,
-      verifiedAgainstSnapshot: verified,
+      verifiedAgainstSnapshot: true,
     };
   });
   if (!outcome.ok) return outcome;
