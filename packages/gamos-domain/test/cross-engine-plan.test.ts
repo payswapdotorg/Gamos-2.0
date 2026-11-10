@@ -722,16 +722,30 @@ describe("buildCrossEngineAssetPlan — engine-family version grammar checks (M4
     expect(states[0]!.reason).toContain("fail closed");
   });
 
-  it("an unavailable godot engine yields a fail-closed guard in the generated script (the M4-G3 discipline: compilation throws before any step)", () => {
+  it("an unavailable godot engine yields a fail-closed guard in the generated script (the M4-G3 discipline: the guard throws before any step)", () => {
     const context = makePipelineContext(false, "godot", ["blender", "godot"]);
     const plan = buildCrossEngineAssetPlan(godotRequest());
-    expect(() => buildGamePlanWorkflowScript(plan, context)).toThrow(/Gamos engine guard/);
+    const artifact = buildGamePlanWorkflowScript(plan, context);
+    expect(artifact.guards.some((g) => g.family === "godot" && g.state === "unavailable")).toBe(true);
+    expect(artifact.scriptText).toContain("Gamos engine guard: godot is unavailable");
+    // the embedded guard throws BEFORE any step agent (never mock success)
+    const guardPos = artifact.scriptText.indexOf("Gamos engine guard");
+    const firstAgent = artifact.scriptText.indexOf("agent(");
+    expect(guardPos).toBeGreaterThanOrEqual(0);
+    expect(guardPos).toBeLessThan(firstAgent);
   });
 
   it("an unavailable unreal engine (rc-endpoint-absent) yields a fail-closed guard in the generated script", () => {
     const context = makePipelineContext(false, "unreal", ["blender", "unreal"]);
     const plan = buildCrossEngineAssetPlan(unrealRequest());
-    expect(() => buildGamePlanWorkflowScript(plan, context)).toThrow(/Gamos engine guard/);
+    const artifact = buildGamePlanWorkflowScript(plan, context);
+    expect(artifact.guards.some((g) => g.family === "unreal" && g.state === "unavailable")).toBe(true);
+    expect(artifact.scriptText).toContain("Gamos engine guard: unreal is unavailable");
+    // the embedded guard throws BEFORE any step agent (never mock success)
+    const guardPos = artifact.scriptText.indexOf("Gamos engine guard");
+    const firstAgent = artifact.scriptText.indexOf("agent(");
+    expect(guardPos).toBeGreaterThanOrEqual(0);
+    expect(guardPos).toBeLessThan(firstAgent);
   });
 });
 
@@ -776,11 +790,27 @@ describe("buildCrossEngineAssetPlan — no silent engine substitution (M4 WP-7)"
       "/Game/Gamos/My Asset", // whitespace
       "/Game/Gamos/" + "a".repeat(600), // oversize
       "/\\Game/Gamos/Asset", // backslash separator
+      "/Game/Gamos.My/Asset", // dotted non-final segment (grammar violation)
+      "/Game/Gamos/Asset.Object:A:B:C:D", // sub-object component count outside 1..3
+      "/Game/Gamos/Asset.Object.Object2", // more than one dotted object-name component
+      "/Game/Gamos/Asset:", // trailing colon — empty sub-object component
     ];
     for (const objectPath of malformed) {
       expect(() => buildCrossEngineAssetPlan(unrealRequest({ target: { engine: "unreal", projectIdentity: "t", projectRoot: "t", objectPath, propertyNames: ["Name"] } }))).toThrow(
         /target\.objectPath/,
       );
+    }
+  });
+
+  it("accepts the documented Unreal object-path shapes (the plugin grammar's own examples flow through the planning floor)", () => {
+    for (const objectPath of [
+      "/Game/FirstPerson/Maps/FirstPersonMap.FirstPersonMap:PersistentLevel.Light_1",
+      "/Script/Engine.PointLight",
+      "/Game/UI/MyWidget.MyWidget_C:WidgetTree:Panel:Opacity",
+    ]) {
+      const plan = buildCrossEngineAssetPlan(unrealRequest({ target: { engine: "unreal", projectIdentity: "t", projectRoot: "t", objectPath, propertyNames: ["Name"] } }));
+      expect(plan.steps[3]!.capability.input).toEqual({ objectPath });
+      expect(plan.steps[4]!.capability.input).toEqual({ objectPath, propertyNames: ["Name"] });
     }
   });
 
@@ -807,7 +837,7 @@ describe("buildCrossEngineAssetPlan — no silent engine substitution (M4 WP-7)"
 
   it("rejects the Godot target with the fbx format — the verified Blender→Godot interchange is GLB (the WP-3 runtime-verified hop recipe)", () => {
     expect(() => buildCrossEngineAssetPlan(godotRequest({ format: "fbx" }))).toThrow(
-      /target engine "godot" cannot consume "fbx".*the WP-3 runtime-verified Blender→Godot hop is GLB.*request format "glb"/,
+      /target engine "godot" cannot consume "fbx".*WP-3 runtime-verified.*request format "glb"/,
     );
   });
 });

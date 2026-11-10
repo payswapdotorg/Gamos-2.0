@@ -100,8 +100,12 @@ const READ_ONLY_MARKER = /read[- ]only/i;
 // actor to READ the manifest and pass its artifact record. This is generator
 // logic derived purely from the plan structure: no wire-format change, and
 // plans without these capabilities generate byte-identical scripts.
+// M4 WP-7 additive: godot/asset.import joined the consumer set (the Godot
+// import consumes the manifest-described staging artifact — the same
+// integrity discipline; the unreal RC legs are NOT consumers and never get a
+// fabricated reference).
 const MANIFEST_VALIDATOR_CAPABILITY_ID = "core/asset.manifest-validate";
-const MANIFEST_CONSUMER_CAPABILITY_IDS: ReadonlySet<string> = new Set(["babylon/asset.integrate", "unity/asset.import"]);
+const MANIFEST_CONSUMER_CAPABILITY_IDS: ReadonlySet<string> = new Set(["babylon/asset.integrate", "unity/asset.import", "godot/asset.import"]);
 
 /** The manifest path a manifest-validate step's input declares (undefined when the step is not one / declares none). */
 function manifestPathOfStep(step: GamePlanStep): string | undefined {
@@ -114,10 +118,11 @@ function manifestPathOfStep(step: GamePlanStep): string | undefined {
 
 /**
  * Per-step manifest-integrity instruction: a manifest-CONSUMING step
- * (babylon/asset.integrate | unity/asset.import) that appears AFTER an earlier
- * manifest-validate step in the plan's step order is instructed to read that
- * manifest and pass its artifact record as expectedIntegrity. A consumer with
- * no earlier manifest step gets NO instruction (never fabricate a reference).
+ * (babylon/asset.integrate | unity/asset.import | godot/asset.import) that
+ * appears AFTER an earlier manifest-validate step in the plan's step order is
+ * instructed to read that manifest and pass its artifact record as
+ * expectedIntegrity. A consumer with no earlier manifest step gets NO
+ * instruction (never fabricate a reference).
  */
 function manifestIntegrityInstructions(steps: readonly GamePlanStep[]): Map<string, string> {
   const instructions = new Map<string, string>();

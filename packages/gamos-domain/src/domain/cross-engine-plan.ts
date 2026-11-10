@@ -50,8 +50,8 @@ import { isAbsoluteHostPath, joinHostPath, relativeHostPath, resolveHostPath } f
 /** The request contract shipped by this module (final-closure handoff §7). */
 export const CROSS_ENGINE_PLAN_SCHEMA_ID = "gamos/cross-engine-plan@1";
 
-/** The supported target engines for the cross-engine asset pipeline. */
-export type CrossEngineTarget = "unity" | "babylon";
+/** The supported target engines for the cross-engine asset pipeline (M4 WP-7: godot + unreal joined the union). */
+export type CrossEngineTarget = "unity" | "babylon" | "godot" | "unreal";
 
 /** The interchange artifact formats the pipeline moves between engines. */
 export type CrossEngineInterchangeFormat = "fbx" | "glb";
@@ -76,6 +76,18 @@ export interface CrossEnginePlanRequest {
     readonly projectIdentity: string;
     /** Canonical workspace-relative path of the target project root. */
     readonly projectRoot: string;
+    /**
+     * Unreal-only (M4 WP-7): the exact validated object path the RC
+     * verification chain describes and reads back. REQUIRED for the unreal
+     * target leg; rejected on every other engine (never silently ignored).
+     */
+    readonly objectPath?: string;
+    /**
+     * Unreal-only (M4 WP-7): the allowlisted-grammar property names the
+     * verify-target leg reads from the live editor. REQUIRED for the unreal
+     * target leg; rejected on every other engine.
+     */
+    readonly propertyNames?: readonly string[];
   };
   /** babylon requires glb; unity accepts fbx|glb. */
   readonly format: CrossEngineInterchangeFormat;
@@ -194,7 +206,7 @@ const REQUEST_FIELDS = ["planId", "conceptRef", "acceptanceRecord", "workspaceRo
 const CONCEPT_REF_FIELDS = ["conceptId", "conceptSha256"] as const;
 const ACCEPTANCE_REF_FIELDS = ["recordId", "recordSha256"] as const;
 const SOURCE_FIELDS = ["projectIdentity", "blendFile"] as const;
-const TARGET_FIELDS = ["engine", "projectIdentity", "projectRoot"] as const;
+const TARGET_FIELDS = ["engine", "projectIdentity", "projectRoot", "objectPath", "propertyNames"] as const;
 const INTERCHANGE_FIELDS = ["upAxis", "globalScale"] as const;
 
 function fail(field: string, reason: string): never {
@@ -264,6 +276,130 @@ function validateRelativePath(value: unknown, field: string, options?: { readonl
   return canonical;
 }
 
+// ---------------------------------------------------------------------------
+// M4 WP-7: the unreal object-path / property-name planning floor
+// ---------------------------------------------------------------------------
+
+/**
+ * The domain-level fail-closed floor for the unreal target's objectPath — a
+ * faithful mirror of the WP-5 connector's `parseUnrealObjectPath` grammar
+ * (apps/zcode-cli/packages/unreal-engine-plugin/src/object-paths.ts). The
+ * plugin gate stays the EXECUTION authority (it re-validates client-side
+ * BEFORE any request is built, zero network round-trips); this planning floor
+ * keeps malformed paths out of plans at the earliest domain boundary. Drift
+ * between the two grammars can only ever fail MORE closed here (the safe
+ * direction): a plan-time rejection never opens an execution-time hole.
+ */
+const UNREAL_OBJECT_PATH_MAX_LENGTH = 512;
+const UNREAL_SEGMENT_PATTERN = /^[A-Za-z0-9_-]+$/;
+const UNREAL_SUBOBJECT_PATTERN = /^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/;
+
+function validateUnrealObjectPath(value: unknown): string {
+  requireString(value, "target.objectPath", "must be a non-empty Unreal object path string (/Game/… package-path grammar)");
+  const objectPath = value as string;
+  if (objectPath.length > UNREAL_OBJECT_PATH_MAX_LENGTH) {
+    fail("target.objectPath", `exceeds the ${UNREAL_OBJECT_PATH_MAX_LENGTH}-character bound (bounded input, no runaway parses)`);
+  }
+  if (!/^[\x20-\x7E]*$/.test(objectPath)) {
+    fail("target.objectPath", "contains non-printable-ASCII characters");
+  }
+  if (/\s/.test(objectPath)) {
+    fail("target.objectPath", "contains whitespace");
+  }
+  if (!objectPath.startsWith("/")) {
+    fail("target.objectPath", `"${objectPath}" must be absolute (start with "/" — the Unreal package-path grammar)`);
+  }
+  if (objectPath.startsWith("//")) {
+    fail("target.objectPath", "contains an empty segment ('//')");
+  }
+  if (objectPath.includes("?") || objectPath.includes("&") || objectPath.includes("=") || objectPath.includes("%")) {
+    fail("target.objectPath", "contains query-string/URL-encoding characters (credential smuggling refused)");
+  }
+  if (objectPath.includes("@") || objectPath.includes("://")) {
+    fail("target.objectPath", "contains URI/credential syntax (refused)");
+  }
+  if (objectPath.includes("\\")) {
+    fail("target.objectPath", "contains a backslash separator (refused)");
+  }
+
+  const colonIndex = objectPath.indexOf(":");
+  const pathPart = colonIndex === -1 ? objectPath : objectPath.slice(0, colonIndex);
+  const subobjectPart = colonIndex === -1 ? "" : objectPath.slice(colonIndex + 1);
+  if (pathPart.endsWith("/") || pathPart === "/") {
+    fail("target.objectPath", "must not end or consist of a bare separator");
+  }
+
+  const segments = pathPart.slice(1).split("/");
+  for (const segment of segments) {
+    if (segment.length === 0) {
+      fail("target.objectPath", "contains an empty segment");
+    }
+    if (segment === "." || segment === "..") {
+      fail("target.objectPath", "contains a traversal segment (refused)");
+    }
+    if (segment.includes(".") && segment !== segments[segments.length - 1]) {
+      fail("target.objectPath", "contains a dotted non-final segment (grammar violation)");
+    }
+    if (!UNREAL_SEGMENT_PATTERN.test(segment.replace(/\./g, ""))) {
+      fail("target.objectPath", "segment contains characters outside the identifier grammar");
+    }
+  }
+
+  const lastSegment = segments[segments.length - 1] ?? "";
+  const nameComponents = lastSegment.split(".");
+  if (nameComponents.length > 2) {
+    fail("target.objectPath", "final segment carries more than one dotted object-name component");
+  }
+  for (const component of nameComponents) {
+    if (component.length === 0 || !UNREAL_SEGMENT_PATTERN.test(component)) {
+      fail("target.objectPath", "object-name component violates the identifier grammar");
+    }
+  }
+
+  if (colonIndex !== -1) {
+    const subobjects = subobjectPart.split(":");
+    if (subobjects.length < 1 || subobjects.length > 3) {
+      fail("target.objectPath", "sub-object component count outside 1..3 (the deepest documented shape)");
+    }
+    for (const sub of subobjects) {
+      if (sub.length === 0 || !UNREAL_SUBOBJECT_PATTERN.test(sub)) {
+        fail("target.objectPath", "sub-object component violates the identifier grammar");
+      }
+    }
+  }
+
+  return objectPath;
+}
+
+/**
+ * The domain-level fail-closed floor for the unreal target's propertyNames —
+ * the identifier grammar mirrored from the WP-5 connector's
+ * `isValidPropertyName` (object-paths.ts), with the exact-set discipline on
+ * top: duplicates fail closed (the read set is exact, never a stutter).
+ */
+const UNREAL_PROPERTY_NAME_MAX_LENGTH = 128;
+const UNREAL_PROPERTY_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+function validateUnrealPropertyNames(value: unknown): readonly string[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    fail("target.propertyNames", "must be a non-empty array of property names (the verify-target step reads at least one typed property)");
+  }
+  const seen = new Set<string>();
+  for (const entry of value) {
+    if (typeof entry !== "string") {
+      fail("target.propertyNames", "each property name must be a string (the identifier grammar)");
+    }
+    if (entry.length === 0 || entry.length > UNREAL_PROPERTY_NAME_MAX_LENGTH || !UNREAL_PROPERTY_NAME_PATTERN.test(entry)) {
+      fail("target.propertyNames", `"${entry}" violates the identifier grammar (^[A-Za-z_][A-Za-z0-9_]*$, bounded 128 — the WP-5 plugin grammar mirrored fail-closed)`);
+    }
+    if (seen.has(entry)) {
+      fail("target.propertyNames", `"${entry}" is duplicated — the read set is exact (never a stutter)`);
+    }
+    seen.add(entry);
+  }
+  return value as readonly string[];
+}
+
 interface ValidatedRequest {
   readonly planId: string;
   readonly conceptId: string;
@@ -276,6 +412,8 @@ interface ValidatedRequest {
   readonly targetEngine: CrossEngineTarget;
   readonly targetProjectIdentity: string;
   readonly targetProjectRoot: string;
+  readonly targetObjectPath?: string;
+  readonly targetPropertyNames?: readonly string[];
   readonly format: CrossEngineInterchangeFormat;
   readonly assetName: string;
   readonly upAxis?: "y" | "z";
@@ -311,12 +449,38 @@ function validateRequest(input: unknown): ValidatedRequest {
   if (!isRecord(input.target)) fail("target", "must be an object");
   exactKeys(input.target, "target", TARGET_FIELDS);
   const targetEngineRaw = input.target.engine;
-  if (targetEngineRaw !== "unity" && targetEngineRaw !== "babylon") {
-    fail("target.engine", `"${String(targetEngineRaw)}" must be one of unity|babylon (the cross-engine asset pipeline ships exactly these two target legs)`);
+  if (targetEngineRaw !== "unity" && targetEngineRaw !== "babylon" && targetEngineRaw !== "godot" && targetEngineRaw !== "unreal") {
+    fail("target.engine", `"${String(targetEngineRaw)}" must be one of unity|babylon|godot|unreal (the cross-engine asset pipeline ships exactly these four target legs)`);
   }
   const targetEngine: CrossEngineTarget = targetEngineRaw;
   const targetProjectIdentity = validateRelativePath(input.target.projectIdentity, "target.projectIdentity");
   const targetProjectRoot = validateRelativePath(input.target.projectRoot, "target.projectRoot");
+
+  // M4 WP-7: the unreal-only target fields (objectPath + propertyNames) —
+  // REQUIRED for the unreal leg, REJECTED on every other engine (an
+  // unreal-specific field on another engine is a request-authoring error,
+  // never a silently-ignored extra).
+  let targetObjectPath: string | undefined;
+  let targetPropertyNames: readonly string[] | undefined;
+  const hasObjectPath = input.target.objectPath !== undefined;
+  const hasPropertyNames = input.target.propertyNames !== undefined;
+  if (targetEngine === "unreal") {
+    if (!hasObjectPath) {
+      fail("target.objectPath", "is required for the unreal target leg (the RC verification chain describes and reads back this exact object path)");
+    }
+    if (!hasPropertyNames) {
+      fail("target.propertyNames", "is required for the unreal target leg (the verify-target step reads these typed property names from the live editor)");
+    }
+    targetObjectPath = validateUnrealObjectPath(input.target.objectPath);
+    targetPropertyNames = validateUnrealPropertyNames(input.target.propertyNames);
+  } else {
+    if (hasObjectPath) {
+      fail("target.objectPath", `is only accepted for the unreal target leg (engine "${targetEngine}" carries no RC object-path semantics — remove the field)`);
+    }
+    if (hasPropertyNames) {
+      fail("target.propertyNames", `is only accepted for the unreal target leg (engine "${targetEngine}" carries no RC property-read semantics — remove the field)`);
+    }
+  }
 
   const formatRaw = input.format;
   if (formatRaw !== "fbx" && formatRaw !== "glb") {
@@ -327,6 +491,12 @@ function validateRequest(input: unknown): ValidatedRequest {
     fail(
       "format",
       'target engine "babylon" cannot consume "fbx": the Babylon asset integration consumes GLB only (babylon/asset.integrate stages a hash-verified GLB artifact into public/assets; request format "glb")',
+    );
+  }
+  if (targetEngine === "godot" && format === "fbx") {
+    fail(
+      "format",
+      'target engine "godot" cannot consume "fbx": the verified Blender→Godot interchange is GLB — the WP-3 runtime-verified hop recipe (godot/asset.import stages the manifest-described GLB and the engine read-back proves the ingestion); request format "glb"',
     );
   }
 
@@ -383,6 +553,8 @@ function validateRequest(input: unknown): ValidatedRequest {
     targetEngine,
     targetProjectIdentity,
     targetProjectRoot,
+    ...(targetObjectPath !== undefined ? { targetObjectPath } : {}),
+    ...(targetPropertyNames !== undefined ? { targetPropertyNames } : {}),
     format,
     assetName,
     ...(upAxis !== undefined ? { upAxis } : {}),
@@ -418,6 +590,33 @@ const PIPELINE_PERMISSIONS: readonly PlanPermissionRequirement[] = [
 const BABYLON_PIPELINE_PERMISSIONS: readonly PlanPermissionRequirement[] = PIPELINE_PERMISSIONS;
 /** Unity pipeline permission union: export (engine-headless + filesystem-write) + manifest validation (read-only command). */
 const UNITY_PIPELINE_PERMISSIONS: readonly PlanPermissionRequirement[] = PIPELINE_PERMISSIONS.slice(0, 3);
+/**
+ * Godot pipeline permission union (M4 WP-7): export + import + build + run —
+ * engine-headless + filesystem-write + the manifest read-only command. The
+ * godot/project.run leg is engine-headless ONLY (no network, no build/dev
+ * scripts — the headless run is the terminal verification), so the union is
+ * the same three-entry shape as unity's, mirrored verbatim from the REAL
+ * godot records (engine-plugin-godot.ts permissions).
+ */
+const GODOT_PIPELINE_PERMISSIONS: readonly PlanPermissionRequirement[] = PIPELINE_PERMISSIONS.slice(0, 3);
+/**
+ * Unreal pipeline permission union (M4 WP-7): export + manifest validation +
+ * the three read-only RC legs — the loopback-rc-endpoint network permission
+ * mirrored VERBATIM from the REAL unreal records (engine-plugin-unreal.ts
+ * networkRcEndpointPermission, the WP-4 contracts §3.1 "same spec as 3.1"
+ * clause covering object.inspect/property.read). Mutations are NOT planned:
+ * the reviewed property/function allowlists are EMPTY at 0.1.0 (the WP-5
+ * fail-closed default) — no mutation permission is claimed.
+ */
+const UNREAL_PIPELINE_PERMISSIONS: readonly PlanPermissionRequirement[] = [
+  ...PIPELINE_PERMISSIONS.slice(0, 3),
+  {
+    kind: "network-access",
+    scope: "loopback-rc-endpoint",
+    rationale:
+      "read-only requests against the verified loopback Remote Control listener (GET /remote/info, typed object describe, typed property reads); the Passphrase header is a transport-compatibility token only, never claimed as server-side authentication (readiness §2.2 U-T2)",
+  },
+];
 
 interface ClaimSpec {
   readonly access: ResourceClaimAccess;
@@ -431,15 +630,37 @@ function planStep(
   input: Record<string, unknown>,
   dependsOn: readonly string[],
   claims: readonly ClaimSpec[],
+): GamePlanStep;
+function planStep(
+  stepId: string,
+  capabilityId: string,
+  input: Record<string, unknown>,
+  dependsOn: readonly string[],
+  claims: undefined,
+): GamePlanStep;
+function planStep(
+  stepId: string,
+  capabilityId: string,
+  input: Record<string, unknown>,
+  dependsOn: readonly string[],
+  claims: readonly ClaimSpec[] | undefined,
 ): GamePlanStep {
   return {
     stepId,
     capability: { capabilityId, capabilityVersion: "1.0.0", input },
     dependsOn: [...dependsOn],
-    resourceClaims: {
-      schemaVersion: 1,
-      claims: claims.map((claim) => ({ access: claim.access, scope: claim.scope, path: claim.path })) as readonly ResourceClaim[],
-    },
+    // undefined claims = the step touches NO workspace files (the unreal RC
+    // legs are network-only): the optional resourceClaims field is omitted —
+    // an empty claims array would itself fail the claim contract's
+    // at-least-one rule, and fabricating a path claim would be dishonest.
+    ...(claims !== undefined
+      ? {
+          resourceClaims: {
+            schemaVersion: 1,
+            claims: claims.map((claim) => ({ access: claim.access, scope: claim.scope, path: claim.path })) as readonly ResourceClaim[],
+          },
+        }
+      : {}),
   };
 }
 
@@ -447,7 +668,14 @@ function planStep(
  * Builds the engine-aware cross-engine GamePlan. Babylon target: 5 steps
  * (export → manifest-validate → integrate → build → run). Unity target: 4
  * steps (no runtime step — the StandaloneLinux64 player build is the terminal
- * verification). The returned plan is validated through parseGamePlan (the
+ * verification). Godot target (M4 WP-7): 5 steps — the WP-3 hop chain
+ * (export → manifest-validate → import → build → run; the headless run's
+ * exit-0-and-zero-crash-lines verdict is the terminal verification). Unreal
+ * target (M4 WP-7): 5 steps — the RC verification chain (export →
+ * manifest-validate → attach → describe → property-read; the typed read-back
+ * from the live editor is the terminal verification, and mutations are
+ * deliberately NOT planned while the reviewed allowlists stay empty at 0.1.0).
+ * The returned plan is validated through parseGamePlan (the
  * generator-honesty invariant): a builder bug that would emit an invalid plan
  * fails closed instead of shipping one.
  */
@@ -558,7 +786,7 @@ export function buildCrossEngineAssetPlan(input: unknown): GamePlan {
       ),
     );
     artifactExpectations.push({ artifactKind: "build", verificationMethod: "artifact-hash", expectedPathPattern: distClaim });
-  } else {
+  } else if (targetEngine === "unity") {
     // --- the import leg (staging → Assets/, placed into the scene) ----------
     const importedAssetClaim = claimPath(joinHostPath(targetRootAbs, "Assets", "Gamos", `${assetName}.${ext}`));
     const sceneClaim = claimPath(joinHostPath(targetRootAbs, "Assets", "Scenes", "GamosScene.unity"));
@@ -595,6 +823,87 @@ export function buildCrossEngineAssetPlan(input: unknown): GamePlan {
     );
     artifactExpectations.push({ artifactKind: "build", verificationMethod: "artifact-hash", expectedPathPattern: buildsClaim });
     artifactExpectations.push({ artifactKind: "scene", verificationMethod: "engine-query", expectedPathPattern: sceneClaim });
+  } else if (targetEngine === "godot") {
+    // --- M4 WP-7: the Godot hop-chain legs (the WP-3 runtime-verified recipe) -
+    // The import stages the manifest-described GLB into the project's assets/
+    // dir (absolute targetAssetPath INSIDE the project root, exactly the WP-3
+    // hop usage); the build exports through the LinuxX11 preset into the
+    // pre-created workspace builds dir (outside the project — the exported
+    // binary must not become a project import); the run is the headless
+    // terminal verification (exit 0 AND zero crash lines, the record's
+    // verification spec — neither alone suffices).
+    const importedAssetClaim = claimPath(joinHostPath(targetRootAbs, "assets", `${assetName}.${ext}`));
+    const importStep = planStep(
+      "import-asset",
+      "godot/asset.import",
+      // expectedIntegrity is intentionally NOT here (the manifest is the
+      // integrity authority — the same discipline as the babylon integrate
+      // leg; plan-workflow.ts instructs the actor to read the manifest).
+      { projectRoot: targetRootAbs, sourcePath: stagingArtifactAbs, targetAssetPath: joinHostPath(targetRootAbs, "assets", `${assetName}.${ext}`) },
+      ["validate-export"],
+      [
+        { access: "read", scope: "staging", path: stagingArtifactClaim },
+        { access: "write", scope: "generated-output", path: importedAssetClaim },
+      ],
+    );
+    steps.push(importStep);
+
+    const buildsClaim = claimPath(joinHostPath(workspaceRoot, "builds"));
+    steps.push(
+      planStep(
+        "build-project",
+        "godot/project.build",
+        { projectRoot: targetRootAbs, preset: "LinuxX11", outPath: joinHostPath(workspaceRoot, "builds") },
+        ["import-asset"],
+        [
+          { access: "read", scope: "project", path: targetRootClaim },
+          { access: "write", scope: "generated-output", path: buildsClaim },
+        ],
+      ),
+    );
+    steps.push(
+      planStep(
+        "verify-runtime",
+        "godot/project.run",
+        { projectRoot: targetRootAbs, quitAfterFrames: 3 },
+        ["build-project"],
+        [{ access: "read", scope: "project", path: targetRootClaim }],
+      ),
+    );
+    artifactExpectations.push({ artifactKind: "build", verificationMethod: "artifact-hash", expectedPathPattern: buildsClaim });
+  } else {
+    // --- M4 WP-7: the Unreal RC verification-chain legs (read-only) ---------
+    // The attach leg connects to the DISCOVERED loopback endpoint (no
+    // endpoint override — machine-local discovery is the authority; the
+    // record's server-reported listener verification is the op's own
+    // verification spec). The describe leg typed-describes the exact target
+    // object; the verify leg is the engine-query read-back of the typed
+    // properties. Mutations are deliberately NOT planned: the reviewed
+    // property/function allowlists are EMPTY at 0.1.0 — planning a mutation
+    // against unreviewed entries would violate the never-plan-unregistered
+    // discipline (the real-editor mutation journey is WP-6, maintainer-side).
+    // NONE of the RC legs touch workspace files — no resource claims (the
+    // network permission is declared in the plan's permission union).
+    const objectPath = request.targetObjectPath;
+    const propertyNames = request.targetPropertyNames;
+    if (objectPath === undefined || propertyNames === undefined) {
+      fail("target", "the unreal leg requires objectPath + propertyNames (fail closed — the request validation invariant was violated; this is a builder bug)");
+    }
+    steps.push(
+      planStep("attach-editor", "unreal/connection.inspect", {}, ["validate-export"], undefined),
+    );
+    steps.push(
+      planStep("describe-target", "unreal/object.inspect", { objectPath }, ["attach-editor"], undefined),
+    );
+    steps.push(
+      planStep(
+        "verify-target",
+        "unreal/property.read",
+        { objectPath, propertyNames: [...propertyNames] },
+        ["describe-target"],
+        undefined,
+      ),
+    );
   }
 
   const rawPlan = {
@@ -605,7 +914,14 @@ export function buildCrossEngineAssetPlan(input: unknown): GamePlan {
       bindingReason: `cross-engine asset pipeline: Blender source project "${request.sourceProjectIdentity}" exported through staging into the ${targetEngine} target project "${request.targetProjectIdentity}" (user-selected target engine)`,
     },
     steps,
-    permissions: targetEngine === "babylon" ? BABYLON_PIPELINE_PERMISSIONS : UNITY_PIPELINE_PERMISSIONS,
+    permissions:
+      targetEngine === "babylon"
+        ? BABYLON_PIPELINE_PERMISSIONS
+        : targetEngine === "unity"
+          ? UNITY_PIPELINE_PERMISSIONS
+          : targetEngine === "godot"
+            ? GODOT_PIPELINE_PERMISSIONS
+            : UNREAL_PIPELINE_PERMISSIONS,
     acceptanceRecord: { recordId: request.recordId, recordSha256: request.recordSha256 },
     artifactExpectations,
     executionConstraints: { maxConcurrency: request.maxConcurrency, requiresApproval: true },
