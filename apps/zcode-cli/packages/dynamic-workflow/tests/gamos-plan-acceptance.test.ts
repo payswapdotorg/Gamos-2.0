@@ -187,16 +187,19 @@ describe("Gamos GamePlan script acceptance by the real compiler (M1.5)", () => {
 describe("Gamos M3.3 cross-engine plan acceptance", () => {
   const PIPELINE_NOW = "2026-11-12T10:00:00Z";
 
-  const PIPELINE_CAPABILITY_IDS: Record<"babylon" | "unity", string[]> = {
+  const PIPELINE_CAPABILITY_IDS: Record<"babylon" | "unity" | "godot" | "unreal", string[]> = {
     babylon: ["blender/asset.export", "core/asset.manifest-validate", "babylon/asset.integrate", "babylon/project.build", "babylon/project.run"],
     unity: ["blender/asset.export", "core/asset.manifest-validate", "unity/asset.import", "unity/project.build"],
+    // M4 WP-7: the godot hop-chain legs and the unreal RC verification legs.
+    godot: ["blender/asset.export", "core/asset.manifest-validate", "godot/asset.import", "godot/project.build", "godot/project.run"],
+    unreal: ["blender/asset.export", "core/asset.manifest-validate", "unreal/connection.inspect", "unreal/object.inspect", "unreal/property.read"],
   };
 
   async function loadCrossEnginePlanModule() {
     return await import("../../../../../packages/gamos-domain/src/domain/cross-engine-plan.js");
   }
 
-  function makePipelineWorkspace(target: "babylon" | "unity"): string {
+  function makePipelineWorkspace(target: "babylon" | "unity" | "godot" | "unreal"): string {
     const root = mkdtempSync(join(tmpdir(), "gamos-m33-pipeline-"));
     roots.push(root);
     if (target === "babylon") {
@@ -205,14 +208,18 @@ describe("Gamos M3.3 cross-engine plan acceptance", () => {
         join(root, "package.json"),
         JSON.stringify({ name: "gamos-target", dependencies: { "@babylonjs/core": "^8.0.0" } }, null, 2),
       );
-    } else {
+    } else if (target === "unity") {
       mkdirSync(join(root, "ProjectSettings"), { recursive: true });
       writeFileSync(join(root, "ProjectSettings", "ProjectVersion.txt"), "m_EditorVersionWithRevision: 6000.0.23f1 (abcdef123456)\n");
+    } else if (target === "godot") {
+      writeFileSync(join(root, "project.godot"), 'config_version=5\n\n[application]\n\nconfig/name="gamos-target"\n');
+    } else {
+      writeFileSync(join(root, "GamosTarget.uproject"), JSON.stringify({ EngineAssociation: "5.3", Modules: [] }, null, 2));
     }
     return root;
   }
 
-  async function makePipelineFixture(available: boolean, target: "babylon" | "unity") {
+  async function makePipelineFixture(available: boolean, target: "babylon" | "unity" | "godot" | "unreal") {
     const { CROSS_ENGINE_CORE_CAPABILITIES, buildCrossEngineAssetPlan } = await loadCrossEnginePlanModule();
     const root = makePipelineWorkspace(target);
 
@@ -232,11 +239,30 @@ describe("Gamos M3.3 cross-engine plan acceptance", () => {
         ? {
             engineFamily: target,
             installed: true,
-            rawVersion: target === "babylon" ? "24.14.0" : "6000.0.23f1",
+            rawVersion:
+              target === "babylon"
+                ? "24.14.0"
+                : target === "godot"
+                  ? "4.2.2.stable.official.15073afe3"
+                  : target === "unreal"
+                    ? "5.3.2-1234567"
+                    : "6000.0.23f1",
+            // The unreal RC connector's HTTP/WS ops need no display on THIS
+            // machine (the editor's own display is maintainer-side — readiness
+            // §4.2 attach model); every other family here is genuinely headless.
             headlessCapable: true,
             displayServerRequired: false,
           }
-        : { engineFamily: target, installed: false, notes: `${target} toolchain not found on this machine`, headlessCapable: false, displayServerRequired: false },
+        : {
+            engineFamily: target,
+            installed: false,
+            notes:
+              target === "unreal"
+                ? "no Remote Control endpoint answered: rc-endpoint-absent"
+                : `${target} toolchain not found on this machine`,
+            headlessCapable: false,
+            displayServerRequired: false,
+          },
     ];
     const machineDiscovery = buildMachineDiscoveryRecord(root, discovered, { platform: "linux", arch: "x64" }, PIPELINE_NOW);
 
@@ -248,7 +274,9 @@ describe("Gamos M3.3 cross-engine plan acceptance", () => {
     // capability families) — the fail-closed authority stays with the embedded
     // engine-state guards: unavailable engines throw BEFORE any step.
     const resolution = resolveGamingIntent({
-      message: `Plan the cross-engine game asset pipeline from Blender into ${target === "babylon" ? "Babylon" : "Unity"}.`,
+      message: `Plan the cross-engine game asset pipeline from Blender into ${
+        target === "babylon" ? "Babylon" : target === "unity" ? "Unity" : target === "godot" ? "Godot" : "Unreal"
+      }.`,
       workspaceRoot: root,
       projectDetection: detectProjectEngines(root),
       machineDiscovery,
@@ -273,13 +301,22 @@ describe("Gamos M3.3 cross-engine plan acceptance", () => {
     });
 
     const plan = buildCrossEngineAssetPlan({
-      planId: target === "babylon" ? "cross-engine-babylon-001" : "cross-engine-unity-001",
+      planId: `cross-engine-${target}-001`,
       conceptRef: { conceptId: "concept-001", conceptSha256: "a".repeat(64) },
       acceptanceRecord: { recordId: "acc-001", recordSha256: "b".repeat(64) },
       workspaceRoot: root,
       source: { projectIdentity: "source-blender", blendFile: "source-blender/hero.blend" },
-      target: { engine: target, projectIdentity: `target-${target}`, projectRoot: `target-${target}` },
-      format: target === "babylon" ? "glb" : "fbx",
+      target:
+        target === "unreal"
+          ? {
+              engine: "unreal" as const,
+              projectIdentity: `target-${target}`,
+              projectRoot: `target-${target}`,
+              objectPath: "/Game/Gamos/GamosAsset.GamosAsset",
+              propertyNames: ["StaticMesh", "Name"],
+            }
+          : { engine: target, projectIdentity: `target-${target}`, projectRoot: `target-${target}` },
+      format: target === "babylon" || target === "godot" ? "glb" : "fbx",
       interchange: { upAxis: "y" },
       maxConcurrency: 2,
       now: PIPELINE_NOW,
@@ -351,5 +388,85 @@ describe("Gamos M3.3 cross-engine plan acceptance", () => {
     const actors = toActorGraph(analysis.graph!);
     const names = actors.nodes.map((a: { name?: string }) => a.name ?? "");
     expect(names).toContain("gamos-cross-engine-unity-001-import-asset");
+  });
+
+  it("the Godot pipeline plan (five hop-chain steps: import → build → runtime-verify) compiles clean with its step agents (M4 WP-7)", async () => {
+    const { root, context, plan } = await makePipelineFixture(true, "godot");
+    const artifact = buildGamePlanWorkflowScript(parseGamePlan(plan), context);
+    expect(artifact.stepSites.map((s) => s.stepId)).toEqual([
+      "export-asset",
+      "validate-export",
+      "import-asset",
+      "build-project",
+      "verify-runtime",
+    ]);
+    expect(artifact.guards.map((g) => g.family).sort()).toEqual(["blender", "godot"]);
+    const result = compileWorkflowScript(artifact.scriptText);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ok).toBe(true);
+    const analysis = analyzeWorkflowScript(artifact.scriptText);
+    expect(analysis.ok).toBe(true);
+    const actors = toActorGraph(analysis.graph!);
+    const names = actors.nodes.map((a: { name?: string }) => a.name ?? "");
+    for (const stepId of ["export-asset", "validate-export", "import-asset", "build-project", "verify-runtime"]) {
+      expect(names).toContain(`gamos-cross-engine-godot-001-${stepId}`);
+    }
+    // the manifest handoff instruction reaches the godot import leg
+    const manifestPath = [root, "staging", "gamos-asset.glb.manifest.json"].join("/");
+    expect(artifact.scriptText).toContain(manifestPath);
+    expect(artifact.scriptText).toContain("expectedIntegrity");
+  });
+
+  it("the engines-unavailable godot variant still compiles — the blender + godot guards are fail-closed runtime semantics, and the godot state is honestly unavailable (M4 WP-7)", async () => {
+    const { context, plan } = await makePipelineFixture(false, "godot");
+    const artifact = buildGamePlanWorkflowScript(parseGamePlan(plan), context);
+    expect(artifact.guards.some((g) => g.family === "blender" && g.state === "unavailable")).toBe(true);
+    expect(artifact.guards.some((g) => g.family === "godot" && g.state === "unavailable")).toBe(true);
+    const text = artifact.scriptText;
+    const guardPos = text.indexOf("throw new Error");
+    const firstAgent = text.indexOf("agent(");
+    expect(guardPos).toBeGreaterThanOrEqual(0);
+    expect(guardPos).toBeLessThan(firstAgent);
+    const result = compileWorkflowScript(artifact.scriptText);
+    expect(result.ok).toBe(true);
+  });
+
+  it("the Unreal pipeline plan (five RC verification steps: attach → describe → property-read) compiles clean with its step agents (M4 WP-7)", async () => {
+    const { context, plan } = await makePipelineFixture(true, "unreal");
+    const artifact = buildGamePlanWorkflowScript(parseGamePlan(plan), context);
+    expect(artifact.stepSites.map((s) => s.stepId)).toEqual([
+      "export-asset",
+      "validate-export",
+      "attach-editor",
+      "describe-target",
+      "verify-target",
+    ]);
+    expect(artifact.guards.map((g) => g.family).sort()).toEqual(["blender", "unreal"]);
+    const result = compileWorkflowScript(artifact.scriptText);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.ok).toBe(true);
+    const analysis = analyzeWorkflowScript(artifact.scriptText);
+    expect(analysis.ok).toBe(true);
+    const actors = toActorGraph(analysis.graph!);
+    const names = actors.nodes.map((a: { name?: string }) => a.name ?? "");
+    for (const stepId of ["export-asset", "validate-export", "attach-editor", "describe-target", "verify-target"]) {
+      expect(names).toContain(`gamos-cross-engine-unreal-001-${stepId}`);
+    }
+    // no manifest handoff instruction exists for the unreal legs (no consumer)
+    expect(artifact.scriptText).not.toContain("expectedIntegrity");
+  });
+
+  it("the engines-unavailable unreal variant (rc-endpoint-absent) still compiles — the blender + unreal guards fail closed before any step (M4 WP-7)", async () => {
+    const { context, plan } = await makePipelineFixture(false, "unreal");
+    const artifact = buildGamePlanWorkflowScript(parseGamePlan(plan), context);
+    expect(artifact.guards.some((g) => g.family === "blender" && g.state === "unavailable")).toBe(true);
+    expect(artifact.guards.some((g) => g.family === "unreal" && g.state === "unavailable")).toBe(true);
+    const text = artifact.scriptText;
+    const guardPos = text.indexOf("throw new Error");
+    const firstAgent = text.indexOf("agent(");
+    expect(guardPos).toBeGreaterThanOrEqual(0);
+    expect(guardPos).toBeLessThan(firstAgent);
+    const result = compileWorkflowScript(artifact.scriptText);
+    expect(result.ok).toBe(true);
   });
 });
