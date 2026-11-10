@@ -387,3 +387,140 @@ describe("M4 Godot engine-plugin meta (gamos/engine-plugin@2)", () => {
     expect(meta.engineVersions).toBe(">=4.2");
   });
 });
+
+// ---------------------------------------------------------------------------
+// M4 WP-4 (Worker B lane) — the canonical Unreal engine capability records and
+// the unreal-engine plugin meta, per docs/gamos/M4-CAPABILITY-CONTRACTS.md
+// §3/§4.2 (the binding field-level contract). These are the §7 mirror-image
+// tests for the unreal family, INCLUDING the honest-availability fail-closed
+// rows: they fail because the required behavior is MISSING (no unreal/*
+// records, no unreal-engine meta) — not because of syntax, import or runner
+// failure.
+// ---------------------------------------------------------------------------
+
+describe("Canonical M4 Unreal engine capability records (M4 WP-4, Worker B)", () => {
+  it("ships records for all five unreal capabilities with append-only ids", () => {
+    const ids = ENGINE_PLUGIN_CAPABILITIES.filter((r) => r.engineFamily === "unreal").map((r) => r.id).sort();
+    expect(ids).toEqual([
+      "unreal/connection.inspect",
+      "unreal/function.invoke",
+      "unreal/object.inspect",
+      "unreal/property.read",
+      "unreal/property.write",
+    ]);
+  });
+
+  it("registers every unreal record without error (complete execution-safety metadata)", () => {
+    const unrealRecords = ENGINE_PLUGIN_CAPABILITIES.filter((r) => r.engineFamily === "unreal");
+    expect(unrealRecords.length).toBe(5);
+    for (const record of unrealRecords) {
+      expect(() => registerCapability(record)).not.toThrow();
+    }
+  });
+
+  it("unreal reads declare the loopback-rc-endpoint network permission; live-editor mutations add engine-gui — never headless", () => {
+    const byId = new Map(ENGINE_PLUGIN_CAPABILITIES.map((r) => [r.id, r]));
+    for (const id of ["unreal/connection.inspect", "unreal/object.inspect", "unreal/property.read"]) {
+      const specs = byId.get(id)!.permissions;
+      expect(specs.map((p) => `${p.kind}:${p.scope}`)).toEqual(["network-access:loopback-rc-endpoint"]);
+    }
+    for (const id of ["unreal/property.write", "unreal/function.invoke"]) {
+      const specs = byId.get(id)!.permissions.map((p) => `${p.kind}:${p.scope}`).sort();
+      expect(specs).toEqual(["engine-gui:declared-workspace", "network-access:loopback-rc-endpoint"]);
+      // engine-gui is live-editor semantics — it is NOT satisfied by
+      // engine-headless (no downgrade; readiness §5 / handoff §6).
+      expect(byId.get(id)!.permissions.some((p) => p.kind === "engine-headless")).toBe(false);
+    }
+  });
+
+  it("mutations register recoverable (the five-part chain is the upgrade condition); reads register reversible", () => {
+    const byId = new Map(ENGINE_PLUGIN_CAPABILITIES.map((r) => [r.id, r]));
+    for (const id of ["unreal/connection.inspect", "unreal/object.inspect", "unreal/property.read"]) {
+      expect(byId.get(id)!.reversibility.kind).toBe("reversible");
+    }
+    for (const id of ["unreal/property.write", "unreal/function.invoke"]) {
+      const reversibility = byId.get(id)!.reversibility;
+      expect(reversibility.kind).toBe("recoverable");
+      // the recoverable notes MUST name the mandatory five-part chain — never
+      // reversible on promise (readiness §2.2 U-T3, shared contract rule 5)
+      expect(reversibility.notes).toContain("five-part");
+    }
+  });
+
+  it("unreal compatibility uses the family grammar (>=5.3), never universal SemVer", () => {
+    for (const r of ENGINE_PLUGIN_CAPABILITIES.filter((r) => r.engineFamily === "unreal")) {
+      expect(r.compatibility.engineVersions).toBe(">=5.3");
+      expect(validateEngineVersionsPredicate("unreal", r.compatibility.engineVersions!)).toBe(true);
+    }
+  });
+
+  it("no unreal record claims unconditional availability — conditional with the real prerequisites only (honest availability)", () => {
+    for (const r of ENGINE_PLUGIN_CAPABILITIES.filter((r) => r.engineFamily === "unreal")) {
+      expect(r.availability.state).toBe("conditional");
+      expect(r.availability.prerequisites).toEqual(["unreal-editor-discovered", "rc-listener-verified-loopback"]);
+    }
+  });
+
+  it("conditional unreal records fail closed when prerequisites are NOT satisfied — the honest reason names the real prerequisite ids", () => {
+    const registry = registerEnginePluginCapabilities();
+    for (const id of [
+      "unreal/connection.inspect",
+      "unreal/object.inspect",
+      "unreal/property.read",
+      "unreal/property.write",
+      "unreal/function.invoke",
+    ]) {
+      const resolved = resolveCapability(registry, { id });
+      expect(resolved.ok, `${id} must fail closed without the editor prerequisites`).toBe(false);
+      if (!resolved.ok) {
+        expect(resolved.error.code).toBe("missing-prerequisite");
+        expect(resolved.error.reason).toContain("unreal-editor-discovered");
+        expect(resolved.error.reason).toContain("rc-listener-verified-loopback");
+      }
+    }
+  });
+
+  it("every unreal record carries a verification spec (never exit-code-only)", () => {
+    for (const r of ENGINE_PLUGIN_CAPABILITIES.filter((r) => r.engineFamily === "unreal")) {
+      expect(r.verification.method).toMatch(/^(output-schema|artifact-hash|filesystem-probe|engine-query)$/);
+      expect(r.verification.spec.length).toBeGreaterThan(20);
+    }
+  });
+
+  it("function.invoke is the per-function allowlisted discipline — no generic unrestricted call (readiness §4.2)", () => {
+    const byId = new Map(ENGINE_PLUGIN_CAPABILITIES.map((r) => [r.id, r]));
+    const record = byId.get("unreal/function.invoke")!;
+    // The reviewed per-function allowlist is EMPTY at 1.0.0 — no function has
+    // passed review yet, so every functionName fails closed client-side until
+    // an entry lands with its own reviewed argument schema (a version bump per
+    // added function — the append-only encoding this record pins).
+    expect(record.version).toBe("1.0.0");
+    expect(record.idempotency.repeatable).toBe(false);
+    expect(record.description).toContain("allowlist");
+    expect(record.description).toContain("DISABLED");
+  });
+});
+
+describe("M4 Unreal engine-plugin meta (gamos/engine-plugin@2)", () => {
+  it("ships the unreal-engine meta whose every declared capability resolves", () => {
+    const meta = ENGINE_PLUGIN_METAS.find((m) => m.pluginId === "unreal-engine");
+    expect(meta).toBeDefined();
+    const registry = registerEnginePluginCapabilities();
+    expect(validateEnginePluginMeta(meta!, registry).ok).toBe(true);
+  });
+
+  it("ATTACHES to a running editor — no executable declared (spawns nothing); headless support NONE; display server REQUIRED; family grammar >=5.3", () => {
+    const meta = ENGINE_PLUGIN_METAS.find((m) => m.pluginId === "unreal-engine")!;
+    expect(meta.executable).toBeUndefined();
+    expect(meta.headlessSupport).toBe("none");
+    expect(meta.requiresDisplayServer).toBe(true);
+    expect(meta.engineVersions).toBe(">=5.3");
+    expect([...meta.capabilities].sort()).toEqual([
+      "unreal/connection.inspect",
+      "unreal/function.invoke",
+      "unreal/object.inspect",
+      "unreal/property.read",
+      "unreal/property.write",
+    ]);
+  });
+});
