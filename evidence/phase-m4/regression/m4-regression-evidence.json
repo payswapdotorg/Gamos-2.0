@@ -1,5 +1,5 @@
 {
-  "purpose": "M4 WP-9 (delivery plan order 9) regression evidence: the full section-8 matrix run on the exact M4 merge head c3813c99e838775a6a487da9157b7b922d8a458a (the WP-8 TL integration head), with the four acceptance gates evaluated honestly — M4-G1/G3/G4 with executed evidence, M4-G2 blocked on the maintainer-provided UE5 environment (delivery plan section 10; the zero-spend mandate forbids working around it). This is the CI-equivalent local run record; the GitHub-hosted CI re-run is pending the standing credential-blocked push of 2bb31e7a..c3813c99 (recorded in evidence/roadmap/M4.json notes).",
+  "purpose": "M4 WP-9 (delivery plan order 9) regression evidence: the full section-8 matrix run on the exact M4 merge head c3813c99e838775a6a487da9157b7b922d8a458a (the WP-8 TL integration head), with the four acceptance gates evaluated honestly — M4-G1/G3/G4 with executed evidence, M4-G2 blocked on the maintainer-provided UE5 environment (delivery plan section 10; the zero-spend mandate forbids working around it). This is the CI-equivalent local run record; the GitHub-hosted CI re-run EXECUTED 2026-11-11 on the delivered head 7217d581 — all six workflows green (recorded in evidence/roadmap/M4.json notes).",
   "recorded_at": "2026-11-10T13:30:00Z",
   "tested_commit": "c3813c99e838775a6a487da9157b7b922d8a458a",
   "integration_branch": "gamos/development",
@@ -27,7 +27,7 @@
     },
     "M4-G4": {
       "status": "passed",
-      "basis": "Five engine suites green in their honest states on the merge head: unity 98 passed | 4 skipped (the real-editor integrations honestly non-passing: unavailable-license — never silently counted); blender real (runtime suite 119+1 with the real Blender regression legs at 280 s, plus the hop's real export legs); babylon 69/69 (real npm/vite build, dev-server health check, byte-identical asset serving); godot 75/75 against the real pinned engine; unreal 48/48 contract-level (mock RC only). Inherited ZCode surfaces operational: bootstrap catalog 7/7 + plugins 47/47, core engine-plugin mutation authorization 5/5, the m2 capability CLI journey-exact (exit 0, verdict ok, registryRecords 23, five shipped manifests provenanceCommitIsSourceOfRecord=true, unresolved exactly unity/scene.modify). The Electron UI journey suites (m1/m2/m3 e2e) are CI-bound: CI-green at the last pushed head 2bb31e7a; the CI re-run on c3813c99+ is pending the credential-blocked push (honest standing state, not a local gap)."
+      "basis": "Five engine suites green in their honest states on the merge head: unity 98 passed | 4 skipped (the real-editor integrations honestly non-passing: unavailable-license — never silently counted); blender real (runtime suite 119+1 with the real Blender regression legs at 280 s, plus the hop's real export legs); babylon 69/69 (real npm/vite build, dev-server health check, byte-identical asset serving); godot 75/75 against the real pinned engine; unreal 48/48 contract-level (mock RC only). Inherited ZCode surfaces operational: bootstrap catalog 7/7 + plugins 47/47, core engine-plugin mutation authorization 5/5, the m2 capability CLI journey-exact (exit 0, verdict ok, registryRecords 23, five shipped manifests provenanceCommitIsSourceOfRecord=true, unresolved exactly unity/scene.modify). The Electron UI journey suites (m1/m2/m3 e2e) are CI-bound and CI-GREEN on the delivered head 7217d581 (2026-11-11 — the standing push executed; all six workflows success, incl. the first-ever pushed-head runs of gamos-m4-godot-e2e and gamos-m4-unreal-e2e)."
     }
   },
   "section8_matrix": [
@@ -160,7 +160,7 @@
     {
       "row": "Application journeys (inherited ZCode parity, M1, M2, M3; Godot + Unreal journeys)",
       "command": "the m2 capability CLI journey-exact (above) + the engine plugin suites above (the Godot/Unreal journeys added by WP-2/WP-5); the Electron UI journey suites (gamos-m1/m2/m3-e2e workflows) are CI-bound",
-      "result": "locally: the journey-exact CLI exit 0 verdict ok and every engine suite green in its honest state; CI: green at the last pushed head 2bb31e7a (gamos-governance 42720962130, gamos-m1-e2e 42720961931, gamos-m3-e2e 42720961992 on the WP-1 head 8f3d0068); the CI re-run on the WP-3..WP-9 heads is pending the standing credential-blocked push",
+      "result": "locally: the journey-exact CLI exit 0 verdict ok and every engine suite green in its honest state; CI: ALL SIX WORKFLOWS GREEN on the delivered head 7217d581 (2026-11-11 standing push: gamos-governance 42969209860, gamos-m1-e2e 42969209833, gamos-m2-e2e 42969209854, gamos-m3-e2e 42969209824, gamos-m4-godot-e2e 42969209821, gamos-m4-unreal-e2e 42969209926 — the m4 godot/unreal workflows' first pushed-head runs, both green)",
       "exit_code": 0,
       "log": "logs/m2-capability-cli.json"
     },
